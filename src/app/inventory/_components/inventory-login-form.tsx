@@ -1,0 +1,102 @@
+"use client";
+
+import { useActionState } from "react";
+import { LoaderCircle, Lock, Mail, ShieldCheck } from "lucide-react";
+
+import { login } from "@/app/inventory/_actions/auth";
+import { initialLoginActionState } from "@/app/inventory/_actions/auth-state";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
+export function InventoryLoginForm() {
+  const [state, formAction, pending] = useActionState(
+    login,
+    initialLoginActionState,
+  );
+
+  return (
+    <div className="rounded-[1.75rem] bg-white p-6 shadow-[0_24px_72px_rgba(15,23,42,0.14)] ring-1 ring-stone-200/80 md:rounded-[2rem] md:p-8">
+      <div className="mb-6 text-center md:mb-8">
+        <div className="mb-4 inline-flex size-14 items-center justify-center rounded-[1.1rem] bg-[linear-gradient(135deg,#1f2937_0%,#4b5563_100%)] shadow-lg md:size-16">
+          <div className="size-8 rounded-[0.9rem] bg-white/20 backdrop-blur-sm md:size-10" />
+        </div>
+        <h1 className="text-2xl font-bold text-stone-900 md:text-3xl">
+          Vijay Trivedi Group
+        </h1>
+        <p className="mt-2 text-sm text-stone-500 md:text-base">
+          Marble Inventory 
+        </p>
+      </div>
+
+      <form action={formAction} className="space-y-4 md:space-y-5">
+        <div className="space-y-2">
+          <label
+            htmlFor="email"
+            className="block text-sm font-medium text-stone-700"
+          >
+            Email Address
+          </label>
+          <div className="relative">
+            <Mail className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-stone-400" />
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              placeholder="admin@marble.com"
+              className="h-12 rounded-xl border-stone-200 bg-white pl-11 pr-4 text-sm shadow-none md:h-13"
+              required
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label
+            htmlFor="password"
+            className="block text-sm font-medium text-stone-700"
+          >
+            Password
+          </label>
+          <div className="relative">
+            <Lock className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-stone-400" />
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              placeholder="••••••••"
+              className="h-12 rounded-xl border-stone-200 bg-white pl-11 pr-4 text-sm shadow-none md:h-13"
+              required
+            />
+          </div>
+        </div>
+
+        {state.error ? (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {state.error}
+          </div>
+        ) : null}
+
+        <Button
+          type="submit"
+          className="h-12 w-full rounded-xl bg-[linear-gradient(90deg,#1f2937_0%,#4b5563_100%)] text-sm font-medium text-white shadow-none transition-all duration-200 hover:scale-[1.02] hover:shadow-lg disabled:hover:scale-100"
+          disabled={pending}
+        >
+          {pending ? (
+            <>
+              <LoaderCircle className="size-4 animate-spin" />
+              Signing In
+            </>
+          ) : (
+            "Sign In Securely"
+          )}
+        </Button>
+      </form>
+
+      <div className="mt-6 flex items-center justify-center gap-2 text-sm text-stone-500">
+        <ShieldCheck className="size-4" />
+        <p>Secure encrypted connection</p>
+      </div>
+    </div>
+  );
+}
