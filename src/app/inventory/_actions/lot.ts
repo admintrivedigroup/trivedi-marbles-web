@@ -137,6 +137,7 @@ export async function saveLot(formData: FormData): Promise<SaveLotResult> {
         ? `Lot number "${lotNumber}" already exists. Please use a different lot number.`
         : `Unable to save lot. ${lotError?.message ?? "Unknown error."}`,
       slabCount: 0,
+      slabIds: [],
       status: "error",
     };
   }
