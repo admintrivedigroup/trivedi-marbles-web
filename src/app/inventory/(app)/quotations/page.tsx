@@ -15,6 +15,7 @@ export default async function QuotationsPage({ searchParams }: QuotationsPagePro
     getInventorySlabs({
       warehouseId: "",
       statusId: "",
+      sortBy: "newest",
       allowedWarehouseIds: profile?.warehouseIds ?? null,
     }),
     getInTransitSlabIds(),

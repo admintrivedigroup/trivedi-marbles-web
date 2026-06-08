@@ -19,7 +19,7 @@ export type DashboardStats = {
 export async function getDashboardStats(
   allowedWarehouseIds: string[] | null = null,
 ): Promise<DashboardStats> {
-  const { slabs } = await getInventorySlabs({ warehouseId: "", statusId: "", allowedWarehouseIds });
+  const { slabs } = await getInventorySlabs({ warehouseId: "", statusId: "", sortBy: "newest", allowedWarehouseIds });
 
   const totalSlabs = slabs.length;
   const totalSqft = slabs.reduce((sum, slab) => sum + (slab.sqft ?? 0), 0);
