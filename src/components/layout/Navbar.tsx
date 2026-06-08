@@ -132,15 +132,22 @@ export default function Navbar() {
             isAboutVideoActive && "pointer-events-none translate-y-[-8px] opacity-0",
           )}
         >
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="text-[0.68rem] font-medium uppercase tracking-[0.14em] transition-colors hover:text-secondary 2xl:text-sm"
-            >
-              {item.label}
-            </Link>
-          ))}
+          {navItems.map((item) => {
+            const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "relative text-[0.68rem] font-medium uppercase tracking-[0.14em] transition-colors hover:text-secondary 2xl:text-sm",
+                  "after:absolute after:-bottom-1 after:left-0 after:h-px after:w-full after:origin-right after:scale-x-0 after:bg-secondary after:transition-transform after:duration-300 hover:after:origin-left hover:after:scale-x-100",
+                  isActive && "text-secondary after:!origin-left after:scale-x-100",
+                )}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
         </div>
 
         <button
@@ -168,16 +175,18 @@ export default function Navbar() {
             <div className="mb-12 flex items-center justify-between">
               <Link
                 href="/"
-                className="flex items-center gap-4 text-2xl font-serif font-bold uppercase tracking-wider"
+                className="flex items-center gap-3"
               >
                 <Image
                   src="/images/vijay-trivedi-logo.webp"
                   alt="Trivedi Marbles logo"
-                  width={64}
-                  height={64}
-                  className="h-12 w-12 object-contain"
+                  width={48}
+                  height={48}
+                  className="h-10 w-10 object-contain"
                 />
-                <span>Trivedi</span>
+                <span className="font-serif text-sm font-bold uppercase tracking-[0.08em] leading-snug">
+                  Trivedi Marbles Pvt. Ltd.
+                </span>
               </Link>
               <button
                 type="button"
@@ -188,15 +197,21 @@ export default function Navbar() {
               </button>
             </div>
             <div className="flex flex-col items-start gap-6 font-serif text-2xl">
-              {navItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="transition-colors hover:text-secondary"
-                >
-                  {item.label}
-                </Link>
-              ))}
+              {navItems.map((item) => {
+                const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "transition-colors hover:text-secondary",
+                      isActive && "text-secondary",
+                    )}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
             </div>
           </motion.div>
         )}

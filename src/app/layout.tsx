@@ -41,9 +41,12 @@ export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html
       lang="en"
+      data-scroll-behavior="smooth"
       className={`${inter.variable} ${geistMono.variable} ${cormorantGaramond.variable} bg-background text-foreground antialiased`}
     >
-      <body className="min-h-screen font-sans">{children}</body>
+      <body className="min-h-screen font-sans">
+        {children}
+      </body>
     </html>
   );
 }

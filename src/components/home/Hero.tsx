@@ -1,6 +1,8 @@
 "use client";
 
+import { useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { motion, useScroll, useTransform } from "motion/react";
 import {
   Anchor,
@@ -28,17 +30,33 @@ const premiumMarbles = marbles.slice(0, 3);
 const gridMarbles = marbles.slice(3, 6);
 
 const trustItems = [
-  { icon: ShieldCheck, title: "Since 1949" },
-  { icon: Anchor, title: "Own Mining" },
-  { icon: CheckCircle, title: "Premium Quality" },
-  { icon: TrendingUp, title: "Bulk Supply" },
+  {
+    icon: ShieldCheck,
+    title: "Since 1949",
+    desc: "Over 75 years of heritage in premium natural stone.",
+  },
+  {
+    icon: Anchor,
+    title: "Own Mining",
+    desc: "Direct from D.K. Trivedi & Sons quarry in Ambaji.",
+  },
+  {
+    icon: CheckCircle,
+    title: "Premium Quality",
+    desc: "Every slab hand-selected for consistency and beauty.",
+  },
+  {
+    icon: TrendingUp,
+    title: "Bulk Supply",
+    desc: "Large-scale supply for residential and commercial projects.",
+  },
 ];
 
 const applications = [
-  { title: "Living Spaces", img: livingRoom },
-  { title: "Hotels & Lobbies", img: hotelLobby },
-  { title: "Luxurious Baths", img: bathroom },
-  { title: "Grand Staircases", img: staircase },
+  { title: "Living Spaces", img: livingRoom, href: "/collection" },
+  { title: "Hotels & Lobbies", img: hotelLobby, href: "/collection" },
+  { title: "Luxurious Baths", img: bathroom, href: "/collection" },
+  { title: "Grand Staircases", img: staircase, href: "/collection" },
 ];
 
 const testimonials = [
@@ -63,18 +81,24 @@ const testimonials = [
 ];
 
 export default function Hero() {
-  const { scrollYProgress } = useScroll();
+  const heroSectionRef = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: heroSectionRef,
+    offset: ["start start", "end start"],
+  });
   const heroY = useTransform(scrollYProgress, [0, 1], ["0%", "50%"]);
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
+  const heroOpacity = useTransform(scrollYProgress, [0, 1], [1, 0]);
 
   return (
     <div className="relative w-full bg-background">
-      <section className="relative flex min-h-[100svh] items-center justify-center overflow-hidden">
+      <section ref={heroSectionRef} className="relative flex min-h-svh items-center justify-center overflow-hidden">
         <motion.div style={{ y: heroY, opacity: heroOpacity }} className="absolute inset-0 z-0">
-          <img
+          <Image
             src={heroBg}
             alt="Luxury marble background"
-            className="h-full w-full object-cover"
+            fill
+            className="object-cover"
+            priority
           />
           <div className="absolute inset-0 bg-primary/60 backdrop-blur-[2px]" />
         </motion.div>
@@ -109,12 +133,14 @@ export default function Hero() {
             >
               Explore Collection
             </Link>
-            <Link
-              href="/contact"
-              className="border-2 border-white bg-black/20 px-8 py-4 text-center text-sm font-medium uppercase tracking-widest !text-white shadow-[0_0_0_1px_rgba(255,255,255,0.15)] backdrop-blur-sm transition-colors duration-300 hover:bg-white hover:!text-primary"
+            <a
+              href="https://wa.me/919099996869?text=Hi%2C%20I%27d%20like%20to%20request%20a%20quote%20for%20your%20marble%20collection."
+              target="_blank"
+              rel="noreferrer"
+              className="border-2 border-white bg-black/20 px-8 py-4 text-center text-sm font-medium uppercase tracking-widest text-white! shadow-[0_0_0_1px_rgba(255,255,255,0.15)] backdrop-blur-sm transition-colors duration-300 hover:bg-white hover:text-primary!"
             >
               Get a Quote
-            </Link>
+            </a>
           </motion.div>
         </div>
       </section>
@@ -131,9 +157,12 @@ export default function Hero() {
                 className="flex flex-col items-center px-4 text-center"
               >
                 <Icon className="mb-3 h-6 w-6 text-secondary" />
-                <h3 className="text-sm font-medium uppercase tracking-widest">
+                <h3 className="mb-1 text-sm font-medium uppercase tracking-widest">
                   {item.title}
                 </h3>
+                <p className="max-w-40 text-xs leading-relaxed text-white/60">
+                  {item.desc}
+                </p>
               </FadeIn>
             );
           })}
@@ -146,14 +175,14 @@ export default function Hero() {
             <h2 className="mb-6 font-serif text-5xl text-primary md:text-6xl">
               Curated Collection
             </h2>
-            <p className="max-w-2xl text-lg leading-relaxed text-[#6f6258]">
+            <p className="max-w-2xl text-lg leading-relaxed text-muted-foreground">
               Discover our most sought-after marble slabs, hand-selected for
               unparalleled beauty and strength.
             </p>
           </div>
         </FadeIn>
 
-        <div className="mb-32 flex flex-col gap-32 md:gap-48">
+        <div className="mb-16 flex flex-col gap-24 md:mb-32 md:gap-48">
           {premiumMarbles.map((marble, index) => {
             const reverse = index % 2 !== 0;
 
@@ -166,11 +195,12 @@ export default function Hero() {
                 transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
                 className={`flex flex-col items-center gap-12 md:gap-24 ${reverse ? "md:flex-row-reverse" : "md:flex-row"}`}
               >
-                <div className="group relative aspect-[3/4] w-full overflow-hidden bg-gray-100 shadow-xl md:w-1/2 md:aspect-[4/5]">
-                  <img
+                <div className="group relative aspect-3/4 w-full overflow-hidden bg-gray-100 shadow-xl md:w-1/2 md:aspect-4/5">
+                  <Image
                     src={marble.image}
                     alt={marble.name}
-                    className="h-full w-full object-cover transition-transform duration-[1.5s] ease-out group-hover:scale-105"
+                    fill
+                    className="object-cover transition-transform duration-[1.5s] ease-out group-hover:scale-105"
                   />
                   <div className="absolute inset-0 bg-primary/5 opacity-0 transition-opacity duration-700 group-hover:opacity-100" />
                 </div>
@@ -181,7 +211,7 @@ export default function Hero() {
                   <h3 className="mb-6 font-serif text-4xl text-primary md:text-5xl">
                     {marble.name}
                   </h3>
-                  <p className="mb-10 text-lg leading-relaxed text-[#5f554d]">
+                  <p className="mb-10 text-lg leading-relaxed text-muted-foreground">
                     {marble.description}
                   </p>
                   <Link
@@ -196,77 +226,85 @@ export default function Hero() {
           })}
         </div>
 
-        <div className="my-32 h-px w-full bg-border/40" />
+        <div className="my-12 h-px w-full bg-border/40 md:my-24" />
 
-        <div className="mb-16 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+        <div className="mb-16">
           <h3 className="font-serif text-3xl text-primary md:text-4xl">
             More from the Collection
           </h3>
-          <Link
-            href="/collection"
-            className="w-max border-b border-primary pb-1 text-sm uppercase tracking-widest transition-colors hover:border-secondary hover:text-secondary"
-          >
-            View All
-          </Link>
         </div>
 
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 md:gap-12 lg:grid-cols-3">
           {gridMarbles.map((marble, index) => (
-            <FadeIn key={marble.id} delay={index * 0.15}>
+            <FadeIn key={marble.id} direction="scale" delay={index * 0.15}>
               <Link href={`/collection/${marble.id}`} className="group block h-full">
-                <div className="relative mb-6 aspect-[4/5] overflow-hidden bg-gray-100 transition-shadow duration-500 group-hover:shadow-2xl">
-                  <img
+                <div className="relative mb-6 aspect-4/5 overflow-hidden bg-gray-100 transition-shadow duration-500 group-hover:shadow-2xl">
+                  <Image
                     src={marble.image}
                     alt={marble.name}
-                    className="h-full w-full object-cover transition-transform duration-[1.5s] ease-out group-hover:scale-[1.03]"
+                    fill
+                    className="object-cover transition-transform duration-[1.5s] ease-out group-hover:scale-[1.03]"
                   />
                   <div className="absolute inset-0 bg-black/5 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
                 </div>
-                <h4 className="mb-2 font-serif text-2xl text-primary">{marble.name}</h4>
-                <p className="text-sm leading-relaxed text-[#6f6258]">
-                  {marble.description}
-                </p>
+                <div className="transition-transform duration-500 group-hover:-translate-y-1">
+                  <h4 className="mb-2 font-serif text-2xl text-primary">{marble.name}</h4>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    {marble.description}
+                  </p>
+                </div>
               </Link>
             </FadeIn>
           ))}
+        </div>
+
+        <div className="mt-12 text-center">
+          <Link
+            href="/collection"
+            className="inline-block border-b border-primary pb-1 text-sm uppercase tracking-widest transition-colors hover:border-secondary hover:text-secondary"
+          >
+            View All
+          </Link>
         </div>
       </section>
 
       <section className="relative overflow-hidden bg-white py-24">
         <div className="absolute right-0 top-0 hidden h-full w-1/3 bg-primary/5 lg:block" />
         <div className="relative z-10 mx-auto grid max-w-7xl grid-cols-1 items-center gap-16 px-6 lg:grid-cols-2 lg:px-12">
-          <FadeIn>
+          <FadeIn direction="left">
             <div className="relative aspect-square">
-              <img
+              <Image
                 src={mining}
                 alt="Trivedi mining operations"
-                className="h-full w-full object-cover shadow-2xl"
+                fill
+                className="object-cover shadow-2xl"
               />
-              <div className="absolute -bottom-8 -right-8 hidden aspect-[4/3] w-2/3 border-8 border-white bg-gray-200 md:block">
-                <img
+              <div className="absolute -bottom-8 -right-8 hidden aspect-4/3 w-2/3 border-8 border-white bg-gray-200 md:block">
+                <Image
                   src={architecture}
                   alt="Luxury architecture"
-                  className="h-full w-full object-cover"
+                  fill
+                  className="object-cover"
                 />
               </div>
             </div>
           </FadeIn>
-          <FadeIn delay={0.2} className="lg:pl-12">
+          <FadeIn direction="right" delay={0.2} className="lg:pl-12">
             <span className="mb-4 block text-sm font-medium uppercase tracking-[0.2em] text-secondary">
               Our Heritage
             </span>
             <h2 className="mb-6 font-serif text-4xl leading-tight text-primary md:text-5xl">
               Mastering the Art of Stone Since 1949
             </h2>
-            <p className="mb-6 leading-relaxed text-[#74685d]">
-              Incorporated in 1984 , Trivedi Marbles Pvt. Ltd. is reckoned as a trusted name in the marble sector. We have been offering high-quality Ambaji White to our clients since our inception and recently have expanded our product portfolio to include new & exotic materials from the quarry of D.K. Trivedi & Sons.
+            <p className="mb-6 leading-relaxed text-muted-foreground">
+              Incorporated in 1984, Trivedi Marbles Pvt. Ltd. is reckoned as a trusted name in the marble sector. We have been offering high-quality Ambaji White to our clients since our inception and recently have expanded our product portfolio to include new & exotic materials from the quarry of D.K. Trivedi & Sons.
             </p>
-            <p className="mb-10 leading-relaxed text-[#74685d]">
+            <p className="mb-10 leading-relaxed text-muted-foreground">
               Trivedi Marbles, along with its sister concerns M/s. Trivedi Marmo and M/s. D.K.Trivedi Marbles has its manufacturing and wholesaling facility in Ambaji, and a retail outlet in Ahmedabad, Gujarat (India).
             </p>
             <Link
               href="/about"
-              className="inline-block bg-primary px-8 py-4 text-sm uppercase tracking-widest !text-white transition-colors duration-300 hover:bg-secondary hover:!text-white"
+              className="inline-block bg-primary px-8 py-4 text-sm uppercase tracking-widest text-white! transition-colors duration-300 hover:bg-secondary hover:text-white!"
             >
               Discover Our Story
             </Link>
@@ -288,17 +326,23 @@ export default function Hero() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           {applications.map((app, index) => (
             <FadeIn key={app.title} delay={index * 0.1}>
-              <div className="group relative aspect-[4/5] cursor-pointer overflow-hidden">
-                <img
+              <Link href={app.href} className="group relative block aspect-4/5 overflow-hidden">
+                <Image
                   src={app.img}
                   alt={app.title}
-                  className="h-full w-full object-cover opacity-80 transition-transform duration-700 group-hover:scale-110 group-hover:opacity-100"
+                  fill
+                  className="object-cover opacity-80 transition-transform duration-700 group-hover:scale-110 group-hover:opacity-100"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                <h3 className="absolute bottom-6 left-6 font-serif text-xl tracking-wide">
-                  {app.title}
-                </h3>
-              </div>
+                <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent transition-all duration-500 group-hover:from-black/90 group-hover:via-black/50" />
+                <div className="absolute bottom-0 left-0 right-0 p-6">
+                  <p className="mb-1 translate-y-3 text-xs font-medium uppercase tracking-widest text-secondary opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100">
+                    Explore →
+                  </p>
+                  <h3 className="font-serif text-xl tracking-wide transition-transform duration-500 group-hover:-translate-y-1">
+                    {app.title}
+                  </h3>
+                </div>
+              </Link>
             </FadeIn>
           ))}
         </div>
@@ -309,7 +353,7 @@ export default function Hero() {
           <h2 className="mb-4 text-center font-serif text-4xl text-primary md:text-5xl">
             Signature Gallery
           </h2>
-          <p className="mx-auto max-w-2xl text-center text-[#6f6258]">
+          <p className="mx-auto max-w-2xl text-center text-muted-foreground">
             A glimpse into the architectural marvels born from Trivedi Marbles.
           </p>
         </FadeIn>
@@ -318,25 +362,28 @@ export default function Hero() {
           {signatureProjects.map((project, index) => (
             <FadeIn
               key={project.id}
+              direction="scale"
               delay={(index % 3) * 0.1}
               className="break-inside-avoid"
             >
               <div
                 className={project.heightClassName ? `${project.heightClassName} overflow-hidden` : "overflow-hidden"}
               >
-                <img
+                <Image
                   src={project.image}
                   alt={project.imageAlt}
+                  width={1200}
+                  height={900}
                   className={`block w-full cursor-pointer object-cover transition-transform duration-700 hover:scale-105 ${
-                    project.heightClassName ? "h-full" : ""
+                    project.heightClassName ? "h-full" : "h-auto"
                   }`}
                 />
               </div>
               <div className="mt-4 px-1">
-                <p className="font-serif text-xl text-[#C9A24A]">
+                <p className="font-serif text-xl text-secondary">
                   {project.title}
                 </p>
-                <p className="mt-1 text-sm uppercase tracking-wider text-[#7a6b5f]">
+                <p className="mt-1 text-sm uppercase tracking-wider text-muted-foreground">
                   {project.location}
                 </p>
               </div>
@@ -347,7 +394,7 @@ export default function Hero() {
         <div className="mt-16 text-center">
           <Link
             href="/projects"
-            className="inline-block border border-primary px-10 py-4 text-sm uppercase tracking-widest text-primary transition-colors duration-300 hover:bg-primary hover:!text-white"
+            className="inline-block border border-primary px-10 py-4 text-sm uppercase tracking-widest text-primary transition-colors duration-300 hover:bg-primary hover:text-white!"
           >
             View All Projects
           </Link>
@@ -366,25 +413,34 @@ export default function Hero() {
                 delay={index * 0.2}
                 className="flex flex-col items-center text-center"
               >
-                {testimonial.image ? (
-                  <img
-                    src={testimonial.image}
-                    alt={testimonial.author}
-                    className="mb-8 h-32 w-32 rounded-full object-cover shadow-sm"
-                  />
-                ) : (
-                  <div className="mb-8 font-serif text-7xl leading-none text-secondary">
-                    &quot;
-                  </div>
-                )}
-                <p className="mb-8 flex-grow text-lg italic text-[#5f554d]">
+                <div className="relative mb-4">
+                  <motion.span
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: index * 0.2 + 0.3, ease: [0.22, 1, 0.36, 1] }}
+                    className="absolute -left-3 -top-2 font-serif text-5xl leading-none text-secondary/40 select-none"
+                  >
+                    &ldquo;
+                  </motion.span>
+                  {testimonial.image ? (
+                    <Image
+                      src={testimonial.image}
+                      alt={testimonial.author}
+                      width={128}
+                      height={128}
+                      className="rounded-full object-cover shadow-sm"
+                    />
+                  ) : null}
+                </div>
+                <p className="mb-8 mt-4 grow text-lg italic text-muted-foreground">
                   &quot;{testimonial.text}&quot;
                 </p>
                 <div>
                   <h4 className="font-serif text-xl text-primary">
                     {testimonial.author}
                   </h4>
-                  <span className="text-sm uppercase tracking-wider text-[#7a6b5f]">
+                  <span className="text-sm uppercase tracking-wider text-muted-foreground">
                     {testimonial.role}
                   </span>
                 </div>
@@ -396,7 +452,7 @@ export default function Hero() {
 
       <section className="relative flex items-center justify-center overflow-hidden px-6 py-32 text-center">
         <div className="absolute inset-0 z-0">
-          <img src={heroBg} alt="Marble background CTA" className="h-full w-full object-cover" />
+          <Image src={heroBg} alt="Marble background CTA" fill className="object-cover" />
           <div className="absolute inset-0 bg-primary/90" />
         </div>
         <div className="relative z-10 mx-auto max-w-3xl">
@@ -409,11 +465,11 @@ export default function Hero() {
                 href="/collection"
                 className="bg-white px-10 py-4 text-sm uppercase tracking-widest text-primary transition-colors duration-300 hover:bg-secondary hover:text-white"
               >
-                Request Catalog
+                Explore Collection
               </Link>
               <Link
                 href="/contact"
-                className="border border-white/80 bg-white/12 px-10 py-4 text-sm font-medium uppercase tracking-widest !text-white shadow-[0_12px_30px_rgba(0,0,0,0.2)] backdrop-blur-sm transition-colors duration-300 hover:bg-white hover:!text-black"
+                className="border border-white/80 bg-white/12 px-10 py-4 text-sm font-medium uppercase tracking-widest text-white! shadow-[0_12px_30px_rgba(0,0,0,0.2)] backdrop-blur-sm transition-colors duration-300 hover:bg-white hover:text-black!"
               >
                 Contact Us
               </Link>

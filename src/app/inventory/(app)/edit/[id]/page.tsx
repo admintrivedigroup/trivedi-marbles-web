@@ -1,36 +1,46 @@
-import { InventoryScreenPlaceholder } from "@/app/inventory/_components/inventory-screen-placeholder";
+import { notFound } from "next/navigation";
 
-type EditStockPageProps = {
-  params: Promise<{
-    id: string;
-  }>;
+import { EditSlab } from "@/app/inventory/_components/edit-slab";
+import { getSlabForEdit } from "@/app/inventory/_lib/slab-edit";
+import { getInTransitSlabIds } from "@/app/inventory/_lib/transfers";
+
+type EditSlabPageProps = {
+  params: Promise<{ id: string }>;
 };
 
-export default async function EditStockPage({ params }: EditStockPageProps) {
+export default async function EditSlabPage({ params }: EditSlabPageProps) {
   const { id } = await params;
+  const [{ error, slab }, inTransitSlabIds] = await Promise.all([
+    getSlabForEdit(id),
+    getInTransitSlabIds(),
+  ]);
+
+  if (inTransitSlabIds.has(id)) {
+    return (
+      <div className="px-4 py-8 md:px-8">
+        <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-4 text-sm text-blue-700">
+          <p className="font-semibold">Slab is In Transit</p>
+          <p className="mt-1">This slab cannot be edited while it is being transferred to another warehouse. Please wait until the transfer is received or cancelled.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !slab) {
+    return (
+      <div className="px-4 py-8 md:px-8">
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      </div>
+    );
+  }
+
+  if (!slab) notFound();
 
   return (
-    <InventoryScreenPlaceholder
-      eyebrow="Edit Stock"
-      title="Dynamic edit routing is ready for the shared AddStock screen."
-      description="The exported router uses AddStock.tsx for both create and edit flows. This Next route mirrors that behavior with a dynamic [id] segment."
-      panels={[
-        {
-          label: "Source Component",
-          value: "AddStock.tsx",
-          description: "This page should reuse the same Figma screen as the create route, but hydrated with an existing slab record.",
-        },
-        {
-          label: "Slab ID",
-          value: id,
-          description: "The dynamic route parameter is available and ready to drive future data loading.",
-        },
-        {
-          label: "Route",
-          value: "/inventory/edit/[id]",
-          description: "This mirrors the React Router child path 'edit/:id'.",
-        },
-      ]}
-    />
+    <div className="p-4 md:p-8">
+      <EditSlab slab={slab} />
+    </div>
   );
 }

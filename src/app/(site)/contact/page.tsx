@@ -1,11 +1,7 @@
-import {
-  Mail,
-  MapPin,
-  Phone,
-  Send,
-} from "lucide-react";
+import { Mail, MapPin, Phone } from "lucide-react";
 
 import { FadeIn } from "@/components/animations/FadeIn";
+import { ContactForm } from "@/components/contact/ContactForm";
 import { LocationSection } from "@/components/contact/LocationSection";
 
 function WhatsAppIcon() {
@@ -22,7 +18,7 @@ function WhatsAppIcon() {
 
 export default function ContactPage() {
   return (
-    <div className="mx-auto min-h-screen w-full max-w-screen-xl bg-background px-6 pb-24 pt-32 md:px-12 lg:px-24">
+    <div className="mx-auto min-h-screen w-full max-w-7xl bg-background px-6 pb-24 pt-32 md:px-12 lg:px-24">
       <FadeIn className="mb-16 text-center">
         <span className="mb-4 block text-sm font-medium uppercase tracking-[0.2em] text-secondary">
           Get in Touch
@@ -37,7 +33,7 @@ export default function ContactPage() {
       </FadeIn>
 
       <div className="grid grid-cols-1 gap-16 lg:grid-cols-2 lg:gap-24">
-        <FadeIn delay={0.2} className="space-y-12">
+        <FadeIn direction="left" delay={0.2} className="space-y-12">
           <div>
             <h3 className="mb-6 border-b border-border pb-4 font-serif text-2xl text-primary">
               Corporate Office &amp; Factory
@@ -99,75 +95,8 @@ export default function ContactPage() {
           </div>
         </FadeIn>
 
-        <FadeIn delay={0.4}>
-          <form className="space-y-8 border border-border bg-white p-8 shadow-[0_0_50px_rgba(0,0,0,0.03)] md:p-12">
-            <h3 className="mb-8 font-serif text-3xl text-primary">
-              Send an Inquiry
-            </h3>
-            <div className="space-y-6 text-sm">
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                <div>
-                  <label className="mb-2 block text-xs uppercase tracking-widest text-muted-foreground">
-                    First Name
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full border-b border-border bg-transparent pb-3 outline-none transition-colors focus:border-secondary"
-                    placeholder="John"
-                  />
-                </div>
-                <div>
-                  <label className="mb-2 block text-xs uppercase tracking-widest text-muted-foreground">
-                    Last Name
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full border-b border-border bg-transparent pb-3 outline-none transition-colors focus:border-secondary"
-                    placeholder="Doe"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="mb-2 block text-xs uppercase tracking-widest text-muted-foreground">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  className="w-full border-b border-border bg-transparent pb-3 outline-none transition-colors focus:border-secondary"
-                  placeholder="john@example.com"
-                />
-              </div>
-              <div>
-                <label className="mb-2 block text-xs uppercase tracking-widest text-muted-foreground">
-                  Project Type
-                </label>
-                <select className="w-full border-b border-border bg-transparent pb-3 text-primary outline-none transition-colors focus:border-secondary">
-                  <option value="">Select an option</option>
-                  <option value="residential">Residential</option>
-                  <option value="commercial">Commercial</option>
-                  <option value="hotel">Hotel / Hospitality</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-              <div>
-                <label className="mb-2 block text-xs uppercase tracking-widest text-muted-foreground">
-                  Message
-                </label>
-                <textarea
-                  rows={4}
-                  className="w-full resize-none border-b border-border bg-transparent pb-3 outline-none transition-colors focus:border-secondary"
-                  placeholder="Tell us about your requirements..."
-                />
-              </div>
-            </div>
-            <button
-              type="button"
-              className="flex w-full items-center justify-center gap-3 bg-primary py-5 text-sm uppercase tracking-widest text-white transition-colors hover:bg-secondary"
-            >
-              <Send className="h-4 w-4" />
-              Submit Inquiry
-            </button>
-          </form>
+        <FadeIn direction="right" delay={0.4}>
+          <ContactForm />
         </FadeIn>
       </div>
       <LocationSection />

@@ -32,10 +32,11 @@ export async function requireInventoryClaims() {
   return claims;
 }
 
-export async function redirectAuthenticatedInventoryUser() {
+export async function redirectAuthenticatedInventoryUser(next?: string) {
   const claims = await getInventoryClaims();
 
   if (claims?.sub) {
-    redirect("/inventory/dashboard");
+    const safePath = next?.startsWith("/inventory/") ? next : "/inventory/dashboard";
+    redirect(safePath);
   }
 }

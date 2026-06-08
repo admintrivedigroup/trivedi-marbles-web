@@ -1,4 +1,13 @@
-import { InventoryScreenPlaceholder } from "@/app/inventory/_components/inventory-screen-placeholder";
+import { notFound } from "next/navigation";
+
+import { SlabDetail } from "@/app/inventory/_components/slab-detail";
+import {
+  getSlabById,
+  getSlabImages,
+  getSlabMovements,
+} from "@/app/inventory/_lib/slab-detail";
+import { getInTransitSlabIds } from "@/app/inventory/_lib/transfers";
+import { getCurrentUserProfile } from "@/app/inventory/_lib/user-profile";
 
 type SlabDetailPageProps = {
   params: Promise<{
@@ -6,33 +15,38 @@ type SlabDetailPageProps = {
   }>;
 };
 
-export default async function SlabDetailPage({
-  params,
-}: SlabDetailPageProps) {
+export default async function SlabDetailPage({ params }: SlabDetailPageProps) {
   const { id } = await params;
 
+  const [{ error, slab }, movements, images, profile, inTransitSlabIds] = await Promise.all([
+    getSlabById(id),
+    getSlabMovements(id),
+    getSlabImages(id),
+    getCurrentUserProfile(),
+    getInTransitSlabIds(),
+  ]);
+
+  if (error) {
+    return (
+      <div className="px-4 py-8 md:px-8">
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      </div>
+    );
+  }
+
+  if (!slab) {
+    notFound();
+  }
+
   return (
-    <InventoryScreenPlaceholder
-      eyebrow="Slab Detail"
-      title="The slab detail route is ready for the dedicated Figma detail screen."
-      description="This page maps the exported SlabDetail.tsx route onto a dynamic Next segment so individual slab records can get their own detail view."
-      panels={[
-        {
-          label: "Source Component",
-          value: "SlabDetail.tsx",
-          description: "This will become the slab overview screen with photos, metrics, and actions once you send that component.",
-        },
-        {
-          label: "Slab ID",
-          value: id,
-          description: "The dynamic route parameter is already available for future fetching and rendering.",
-        },
-        {
-          label: "Route",
-          value: "/inventory/slab/[id]",
-          description: "This mirrors the React Router child path 'slab/:id'.",
-        },
-      ]}
+    <SlabDetail
+      slab={slab}
+      movements={movements}
+      images={images}
+      canViewCostPrice={profile?.permissions.view_cost_price ?? false}
+      isInTransit={inTransitSlabIds.has(id)}
     />
   );
 }

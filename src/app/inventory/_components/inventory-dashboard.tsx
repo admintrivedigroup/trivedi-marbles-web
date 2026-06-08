@@ -1,9 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import {
   AlertCircle,
   Clock,
-  DollarSign,
   MapPin,
   Package,
   TrendingUp,
@@ -22,7 +22,7 @@ import {
   YAxis,
 } from "recharts";
 
-import { activities, alerts, slabs } from "@/data/inventory";
+import type { DashboardStats } from "@/app/inventory/_lib/dashboard";
 
 const chartColors = ["#1f2937", "#4b5563", "#6b7280", "#9ca3af", "#d1d5db"];
 
@@ -54,36 +54,86 @@ function StatCard({
   );
 }
 
-export function InventoryDashboard() {
-  const totalSlabs = slabs.length;
-  const totalSqft = slabs.reduce((sum, slab) => sum + slab.sqft, 0);
-  const ahmedabadStock = slabs.filter((slab) => slab.location === "Ahmedabad").length;
-  const ambajiStock = slabs.filter((slab) => slab.location === "Ambaji").length;
-  const reserved = slabs.filter((slab) => slab.status === "Reserved").length;
-  const stockValue = slabs
-    .filter((slab) => slab.status !== "Sold")
-    .reduce((sum, slab) => sum + slab.sellPrice * slab.sqft, 0);
+function formatStockValue(value: number) {
+  if (value >= 100_000) {
+    return `${(value / 100_000).toFixed(1)}L`;
+  }
+  if (value >= 1_000) {
+    return `${(value / 1_000).toFixed(0)}K`;
+  }
+  return value.toLocaleString("en-IN");
+}
 
-  const locationData = [
-    { name: "Ahmedabad", value: ahmedabadStock },
-    { name: "Ambaji", value: ambajiStock },
-  ];
+type PriceBasis = "selling" | "cost" | "dealer";
 
-  const typeData = slabs.reduce<{ count: number; name: string }[]>((acc, slab) => {
-    if (slab.status === "Sold") {
-      return acc;
-    }
+function StockValueCard({
+  stockValueBySelling,
+  stockValueByCost,
+  stockValueByDealer,
+  canViewCostPrice,
+}: {
+  stockValueBySelling: number;
+  stockValueByCost: number;
+  stockValueByDealer: number;
+  canViewCostPrice: boolean;
+}) {
+  const [priceBasis, setPriceBasis] = useState<PriceBasis>("selling");
 
-    const existing = acc.find((item) => item.name === slab.category);
+  const stockValue =
+    priceBasis === "cost"
+      ? stockValueByCost
+      : priceBasis === "dealer"
+        ? stockValueByDealer
+        : stockValueBySelling;
 
-    if (existing) {
-      existing.count += 1;
-    } else {
-      acc.push({ name: slab.category, count: 1 });
-    }
+  return (
+    <article className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:rounded-2xl md:p-6">
+      <div className="flex flex-col items-start gap-3 md:flex-row md:items-center md:gap-4">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 md:h-12 md:w-12 md:rounded-xl">
+          <span className="text-3xl font-bold md:text-4xl">₹</span>
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs text-gray-500 md:text-sm">Stock Value</p>
+          <p className="text-xl font-bold text-gray-900 md:text-2xl">
+            {formatStockValue(stockValue)}
+          </p>
+        </div>
+      </div>
+      {canViewCostPrice && (
+        <div className="mt-3 border-t border-gray-100 pt-3">
+          <select
+            value={priceBasis}
+            onChange={(e) => setPriceBasis(e.target.value as PriceBasis)}
+            className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-600 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800"
+          >
+            <option value="selling">by Selling Price</option>
+            <option value="cost">by Cost Price</option>
+            <option value="dealer">by Dealer Price</option>
+          </select>
+        </div>
+      )}
+    </article>
+  );
+}
 
-    return acc;
-  }, []);
+const warehouseTones = [
+  "bg-green-50 text-green-600",
+  "bg-violet-50 text-violet-600",
+  "bg-sky-50 text-sky-600",
+  "bg-rose-50 text-rose-600",
+];
+
+export function InventoryDashboard({
+  stats,
+  canViewCostPrice,
+}: {
+  stats: DashboardStats;
+  canViewCostPrice: boolean;
+}) {
+  const locationData = stats.warehouseCounts.map(({ name, count }) => ({
+    name,
+    value: count,
+  }));
 
   return (
     <div className="space-y-6 md:space-y-8">
@@ -98,38 +148,35 @@ export function InventoryDashboard() {
         <StatCard
           icon={Package}
           label="Total Slabs"
-          value={String(totalSlabs)}
+          value={String(stats.totalSlabs)}
           tone="bg-gray-100 text-gray-700"
         />
         <StatCard
           icon={TrendingUp}
           label="Total Sqft"
-          value={totalSqft.toLocaleString("en-IN")}
+          value={stats.totalSqft.toLocaleString("en-IN")}
           tone="bg-blue-50 text-blue-600"
         />
-        <StatCard
-          icon={MapPin}
-          label="Ahmedabad"
-          value={String(ahmedabadStock)}
-          tone="bg-green-50 text-green-600"
-        />
-        <StatCard
-          icon={MapPin}
-          label="Ambaji"
-          value={String(ambajiStock)}
-          tone="bg-violet-50 text-violet-600"
-        />
+        {stats.warehouseCounts.map(({ name, count }, index) => (
+          <StatCard
+            key={name}
+            icon={MapPin}
+            label={name}
+            value={String(count)}
+            tone={warehouseTones[index % warehouseTones.length]}
+          />
+        ))}
         <StatCard
           icon={Clock}
           label="Reserved"
-          value={String(reserved)}
+          value={String(stats.reservedCount)}
           tone="bg-orange-50 text-orange-600"
         />
-        <StatCard
-          icon={DollarSign}
-          label="Stock Value"
-          value={`Rs. ${(stockValue / 1000).toFixed(0)}K`}
-          tone="bg-emerald-50 text-emerald-600"
+        <StockValueCard
+          stockValueBySelling={stats.stockValueBySelling}
+          canViewCostPrice={canViewCostPrice}
+          stockValueByCost={stats.stockValueByCost}
+          stockValueByDealer={stats.stockValueByDealer}
         />
       </section>
 
@@ -138,47 +185,55 @@ export function InventoryDashboard() {
           <h3 className="mb-4 text-base font-bold text-gray-900 md:mb-6 md:text-lg">
             Stock by Location
           </h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <PieChart>
-              <Pie
-                data={locationData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, value }) => `${name}: ${value}`}
-                outerRadius={100}
-                dataKey="value"
-              >
-                {locationData.map((entry, index) => (
-                  <Cell
-                    key={`${entry.name}-${index}`}
-                    fill={chartColors[index % chartColors.length]}
-                  />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
+          {locationData.length === 0 ? (
+            <p className="py-16 text-center text-sm text-gray-400">No data yet</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
+                <Pie
+                  data={locationData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, value }) => `${name}: ${value}`}
+                  outerRadius={100}
+                  dataKey="value"
+                >
+                  {locationData.map((entry, index) => (
+                    <Cell
+                      key={`${entry.name}-${index}`}
+                      fill={chartColors[index % chartColors.length]}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
         </article>
 
         <article className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:rounded-2xl md:p-6">
           <h3 className="mb-4 text-base font-bold text-gray-900 md:mb-6 md:text-lg">
             Stock by Marble Type
           </h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={typeData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis
-                dataKey="name"
-                stroke="#9ca3af"
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis stroke="#9ca3af" tickLine={false} axisLine={false} />
-              <Tooltip />
-              <Bar dataKey="count" fill="#1f2937" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          {stats.typeData.length === 0 ? (
+            <p className="py-16 text-center text-sm text-gray-400">No data yet</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={stats.typeData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis
+                  dataKey="name"
+                  stroke="#9ca3af"
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis stroke="#9ca3af" tickLine={false} axisLine={false} />
+                <Tooltip />
+                <Bar dataKey="count" fill="#1f2937" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </article>
       </section>
 
@@ -187,44 +242,56 @@ export function InventoryDashboard() {
           <h3 className="mb-4 text-base font-bold text-gray-900 md:text-lg">
             Recent Activity
           </h3>
-          <div className="space-y-4">
-            {activities.map((activity) => (
-              <div
-                key={activity.id}
-                className="flex items-start gap-3 border-b border-gray-100 pb-4 last:border-0 last:pb-0"
-              >
-                <div className="mt-2 h-2 w-2 rounded-full bg-gray-900" />
-                <div className="flex-1">
-                  <p className="text-sm text-gray-900">{activity.text}</p>
-                  <p className="mt-1 text-xs text-gray-500">{activity.time}</p>
+          {stats.recentActivity.length === 0 ? (
+            <p className="py-6 text-center text-sm text-gray-400">
+              No activity yet
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {stats.recentActivity.map((activity) => (
+                <div
+                  key={activity.id}
+                  className="flex items-start gap-3 border-b border-gray-100 pb-4 last:border-0 last:pb-0"
+                >
+                  <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-gray-900" />
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-900">{activity.text}</p>
+                    <p className="mt-1 text-xs text-gray-500">{activity.time}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </article>
 
         <article className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:rounded-2xl md:p-6">
           <h3 className="mb-4 text-base font-bold text-gray-900 md:text-lg">
             Alerts
           </h3>
-          <div className="space-y-4">
-            {alerts.map((alert) => {
-              const toneClass =
-                alert.severity === "medium"
-                  ? "bg-orange-50 text-orange-600"
-                  : "bg-blue-50 text-blue-600";
+          {stats.alerts.length === 0 ? (
+            <p className="py-6 text-center text-sm text-gray-400">
+              No alerts
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {stats.alerts.map((alert) => {
+                const toneClass =
+                  alert.severity === "medium"
+                    ? "bg-orange-50 text-orange-600"
+                    : "bg-blue-50 text-blue-600";
 
-              return (
-                <div
-                  key={alert.id}
-                  className={`flex items-start gap-3 rounded-xl p-4 ${toneClass}`}
-                >
-                  <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
-                  <p className="text-sm text-gray-900">{alert.text}</p>
-                </div>
-              );
-            })}
-          </div>
+                return (
+                  <div
+                    key={alert.id}
+                    className={`flex items-start gap-3 rounded-xl p-4 ${toneClass}`}
+                  >
+                    <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+                    <p className="text-sm text-gray-900">{alert.text}</p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </article>
       </section>
     </div>

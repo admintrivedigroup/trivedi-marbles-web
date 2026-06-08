@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import Image from "next/image";
 import { motion, useScroll, useTransform } from "motion/react";
 import { Quote } from "lucide-react";
 
@@ -14,7 +15,7 @@ const milestones = [
   {
     year: "1948",
     title: "The Vision Begins (A Legacy is Born)",
-    desc: "Founded by Late Shri Dalchand Khushaldas Trivedi with a mission to restore India’s temple heritage and revive traditional craftsmanship.",
+    desc: "Founded by Late Shri Dalcharam Khushaldas Trivedi with a mission to restore India’s temple heritage and revive traditional craftsmanship.",
   },
   {
     year: "1949",
@@ -36,6 +37,7 @@ const milestones = [
 export default function AboutPage() {
   const introRef = useRef<HTMLElement | null>(null);
   const storyRef = useRef<HTMLElement | null>(null);
+  const timelineRef = useRef<HTMLDivElement | null>(null);
 
   const { scrollYProgress: introProgress } = useScroll({
     target: introRef,
@@ -52,6 +54,12 @@ export default function AboutPage() {
   const introContentOpacity = useTransform(introProgress, [0, 0.75], [1, 0]);
 
   const storyOverlayOpacity = useTransform(storyProgress, [0, 0.45, 1], [0.72, 0.45, 0.7]);
+
+  const { scrollYProgress: timelineProgress } = useScroll({
+    target: timelineRef,
+    offset: ["start center", "end center"],
+  });
+  const lineScaleY = useTransform(timelineProgress, [0, 1], [0, 1]);
   const storyContentY = useTransform(storyProgress, [0, 1], ["10%", "-10%"]);
   const storyImageY = useTransform(storyProgress, [0, 1], ["8%", "-8%"]);
 
@@ -65,10 +73,11 @@ export default function AboutPage() {
           style={{ scale: introImageScale, y: introImageY }}
           className="absolute inset-0 opacity-40 mix-blend-overlay"
         >
-          <img
+          <Image
             src={mining}
             alt="Trivedi mining"
-            className="h-full w-full object-cover grayscale"
+            fill
+            className="object-cover grayscale"
           />
         </motion.div>
         <motion.div
@@ -102,7 +111,8 @@ export default function AboutPage() {
             preload="metadata"
             aria-hidden="true"
           >
-            <source src="/videos/bg_video.webm" type="video/webm" />
+            <source src="/videos/bg_video.mp4" type="video/mp4" />
+          <source src="/videos/bg_video.webm" type="video/webm" />
           </motion.video>
         </div>
         <motion.div
@@ -115,7 +125,7 @@ export default function AboutPage() {
           className="relative flex min-h-[900px] items-center justify-center px-6 py-24 md:px-12 lg:px-24"
         >
           <div className="grid w-full max-w-6xl grid-cols-1 items-start gap-10 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:gap-16">
-            <FadeIn className="h-full">
+            <FadeIn direction="left" className="h-full">
               <div className="mx-auto flex h-full max-w-xl flex-col justify-center space-y-6 rounded-[28px] border border-white/40 bg-white/72 p-8 text-center text-lg leading-relaxed text-stone-900 shadow-[0_24px_60px_rgba(15,23,42,0.14)] backdrop-blur-md md:p-10 md:text-left">
                 <div className="space-y-3">
                   <span className="block text-sm font-medium uppercase tracking-[0.28em] text-stone-500">
@@ -132,12 +142,14 @@ export default function AboutPage() {
                 </p>
               </div>
             </FadeIn>
-            <FadeIn delay={0.2} className="mx-auto w-full max-w-2xl">
+            <FadeIn direction="right" delay={0.2} className="mx-auto w-full max-w-2xl">
               <div className="space-y-6">
                 <div className="overflow-hidden rounded-[28px] shadow-[0_28px_80px_rgba(15,23,42,0.22)]">
-                  <img
+                  <Image
                     src={factory}
                     alt="Trivedi factory"
+                    width={1200}
+                    height={900}
                     className="h-auto w-full object-cover"
                   />
                 </div>
@@ -161,27 +173,54 @@ export default function AboutPage() {
             <div className="mx-auto h-1 w-16 bg-secondary" />
           </FadeIn>
 
-          <div className="relative space-y-24 before:absolute before:inset-0 before:ml-5 before:h-full before:w-0.5 before:-translate-x-px before:bg-gradient-to-b before:from-transparent before:via-white/20 before:to-transparent md:before:mx-auto md:before:translate-x-0">
-            {milestones.map((milestone, index) => (
-              <FadeIn
-                key={milestone.year}
-                delay={index * 0.1}
-                className="group relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse"
-              >
-                <div className="z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-secondary bg-primary text-xs text-secondary shadow md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2">
-                  ✦
-                </div>
-                <div className="w-[calc(100%-4rem)] rounded p-4 text-left md:w-[calc(50%-3rem)] md:group-odd:text-right">
-                  <div className="mb-2 flex items-center justify-between md:justify-normal md:group-odd:flex-row-reverse">
-                    <span className="font-serif text-3xl text-secondary">
+          <div ref={timelineRef} className="relative">
+            {/* Centered animated line */}
+            <div className="pointer-events-none absolute inset-0 flex justify-center">
+              <motion.div
+                style={{ scaleY: lineScaleY, transformOrigin: "top" }}
+                className="w-0.5 bg-linear-to-b from-white/5 via-white/50 to-white/5"
+              />
+            </div>
+
+            <div className="space-y-24">
+              {milestones.map((milestone, index) => {
+                const isLeft = index % 2 !== 0;
+                const textBlock = (
+                  <div>
+                    <span className="mb-2 block font-serif text-3xl text-secondary">
                       {milestone.year}
                     </span>
+                    <h3 className="mb-2 font-serif text-xl">{milestone.title}</h3>
+                    <p className="leading-relaxed text-white/60">{milestone.desc}</p>
                   </div>
-                  <h3 className="mb-2 font-serif text-xl">{milestone.title}</h3>
-                  <p className="leading-relaxed text-white/60">{milestone.desc}</p>
-                </div>
-              </FadeIn>
-            ))}
+                );
+                const dot = (
+                  <div className="z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-secondary bg-primary text-xs text-secondary shadow">
+                    ✦
+                  </div>
+                );
+
+                return (
+                  <FadeIn key={milestone.year} delay={index * 0.1}>
+                    {/* Mobile: dot centered above text */}
+                    <div className="flex flex-col items-center gap-4 text-center md:hidden">
+                      {dot}
+                      {textBlock}
+                    </div>
+                    {/* Desktop: fixed 3-column grid — left text | dot | right text */}
+                    <div className="hidden md:grid md:grid-cols-[1fr_2.5rem_1fr] md:items-center">
+                      <div className="pr-10 text-right">
+                        {isLeft ? textBlock : null}
+                      </div>
+                      <div className="flex justify-center">{dot}</div>
+                      <div className="pl-10">
+                        {!isLeft ? textBlock : null}
+                      </div>
+                    </div>
+                  </FadeIn>
+                );
+              })}
+            </div>
           </div>
         </div>
       </section>

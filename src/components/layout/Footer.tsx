@@ -68,13 +68,13 @@ export default function Footer() {
             high-quality marble slabs, and bulk supply for architects, builders,
             and luxury home projects.
           </p>
-          <div className="flex gap-4">
+          <div className="flex gap-3">
             <a
               href="https://www.instagram.com/trivedimarblespvtltd/"
               target="_blank"
               rel="noreferrer"
               aria-label="Instagram"
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-[#E4405F] text-white"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 text-stone-400 transition-all duration-300 hover:border-[#E4405F] hover:bg-[#E4405F] hover:text-white"
             >
               <InstagramIcon />
             </a>
@@ -83,7 +83,7 @@ export default function Footer() {
               target="_blank"
               rel="noreferrer"
               aria-label="Facebook"
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1877F2] text-white"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 text-stone-400 transition-all duration-300 hover:border-[#1877F2] hover:bg-[#1877F2] hover:text-white"
             >
               <FacebookIcon />
             </a>
@@ -92,7 +92,7 @@ export default function Footer() {
               target="_blank"
               rel="noreferrer"
               aria-label="LinkedIn"
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0A66C2] text-white"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 text-stone-400 transition-all duration-300 hover:border-[#0A66C2] hover:bg-[#0A66C2] hover:text-white"
             >
               <LinkedinIcon />
             </a>
@@ -101,7 +101,7 @@ export default function Footer() {
               target="_blank"
               rel="noreferrer"
               aria-label="WhatsApp"
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-[#25D366] text-white"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 text-stone-400 transition-all duration-300 hover:border-[#25D366] hover:bg-[#25D366] hover:text-white"
             >
               <WhatsAppIcon />
             </a>
@@ -142,12 +142,12 @@ export default function Footer() {
       <div className="flex flex-col items-center justify-between gap-4 border-t border-gray-800 pt-8 text-sm text-stone-400 md:flex-row">
         <p>&copy; {currentYear} Trivedi Marbles. All rights reserved.</p>
         <div className="flex gap-6">
-          <a href="#" className="hover:text-white">
+          <Link href="/privacy-policy" className="hover:text-white">
             Privacy Policy
-          </a>
-          <a href="#" className="hover:text-white">
+          </Link>
+          <Link href="/terms" className="hover:text-white">
             Terms of Service
-          </a>
+          </Link>
         </div>
       </div>
     </footer>

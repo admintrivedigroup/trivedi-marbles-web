@@ -76,12 +76,32 @@ export async function updateSession(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
   const isAuthenticated = !error && Boolean(data?.claims?.sub);
+  const isInventoryRootRoute = pathname === "/inventory";
+  const publicInventoryRoutes = new Set([
+    "/inventory/login",
+    "/inventory/forgot-password",
+    "/inventory/reset-password",
+  ]);
   const isInventoryLoginRoute = pathname === "/inventory/login";
+  const isPublicInventoryRoute =
+    publicInventoryRoutes.has(pathname) ||
+    /^\/inventory\/slab\/[^/]+\/view$/.test(pathname);
   const isProtectedInventoryRoute =
-    pathname.startsWith("/inventory/") && !isInventoryLoginRoute;
+    (isInventoryRootRoute || pathname.startsWith("/inventory/")) &&
+    !isPublicInventoryRoute;
+
+  if (isInventoryRootRoute) {
+    return redirectWithSession(
+      request,
+      supabaseResponse,
+      isAuthenticated ? "/inventory/dashboard" : "/inventory/login",
+    );
+  }
 
   if (isInventoryLoginRoute && isAuthenticated) {
-    return redirectWithSession(request, supabaseResponse, "/inventory/dashboard");
+    const nextParam = request.nextUrl.searchParams.get("next");
+    const safePath = nextParam?.startsWith("/inventory/") ? nextParam : "/inventory/dashboard";
+    return redirectWithSession(request, supabaseResponse, safePath);
   }
 
   if (isProtectedInventoryRoute && !isAuthenticated) {

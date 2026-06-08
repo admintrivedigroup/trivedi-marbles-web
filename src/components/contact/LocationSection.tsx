@@ -9,7 +9,8 @@ import { cn } from "@/lib/utils";
 
 const AHMEDABAD_MAP_EMBED_URL =
   "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3669.741900490303!2d72.52164847535549!3d23.10654221318925!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x395e9d3f15555555%3A0x3e1c1365cba580e2!2sTrivedi%20Marbles%20Pvt.%20Ltd.!5e0!3m2!1sen!2sin!4v1776423819684!5m2!1sen!2sin";
-const AMBAJI_MAP_EMBED_URL = "";
+const AMBAJI_MAP_EMBED_URL =
+  "https://www.google.com/maps/embed?pb=!1m10!1m8!1m3!1d619.1422113291104!2d72.85636689831513!3d24.331313070806427!3m2!1i1024!2i768!4f13.1!5e1!3m2!1sen!2sin!4v1780913660666!5m2!1sen!2sin\" width=\"600\" height=\"450\" style=\"border:0;\" allowfullscreen=\"\" loading=\"lazy\" referrerpolicy=\"no-referrer-when-downgrade\"></iframe>";
 
 type Location = {
   id: string;
@@ -122,6 +123,7 @@ export function LocationSection() {
 
                     <Button
                       asChild
+                      variant="ghost"
                       className="h-11 rounded-full border border-[#d4af37]/40 bg-transparent px-5 text-xs uppercase tracking-[0.24em] text-[#f2d57a] hover:bg-[#d4af37] hover:text-black"
                     >
                       <a
