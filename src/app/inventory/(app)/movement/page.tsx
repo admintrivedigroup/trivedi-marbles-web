@@ -17,6 +17,7 @@ export default async function StockMovementPage({
     getInventorySlabs({
       warehouseId: "",
       statusId: "",
+      sortBy: "newest",
       allowedWarehouseIds: warehouseIds,
     }),
     getRecentMovements({ dateFrom: histFrom, dateTo: histTo }),
