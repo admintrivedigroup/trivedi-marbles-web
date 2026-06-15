@@ -15,7 +15,7 @@ type Html5QrcodeScanner = {
     onSuccess: (text: string) => void,
     onError: undefined,
   ) => Promise<null>;
-  stop: () => Promise<null>;
+  stop: () => Promise<void>;
 };
 
 async function safeStop(scanner: Html5QrcodeScanner | null, isRunning: React.MutableRefObject<boolean>) {
@@ -70,7 +70,7 @@ export function QrScanner({ onClose }: QrScannerProps) {
       const { Html5Qrcode } = await import("html5-qrcode");
       if (unmounted) return;
 
-      const scanner = new Html5Qrcode(id) as Html5QrcodeScanner;
+      const scanner = new Html5Qrcode(id) as unknown as Html5QrcodeScanner;
       scannerRef.current = scanner;
 
       if (!window.isSecureContext) {
