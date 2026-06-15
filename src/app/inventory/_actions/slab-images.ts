@@ -62,7 +62,6 @@ export async function saveSlabImages(
       return { error: `Failed to save photos. ${error.message}`, savedCount: 0 };
     }
 
-    const uniqueSlabIds = [...new Set(images.map((img) => img.slabId))];
     for (const slabId of uniqueSlabIds) {
       const count = images.filter((img) => img.slabId === slabId).length;
       logAudit({
