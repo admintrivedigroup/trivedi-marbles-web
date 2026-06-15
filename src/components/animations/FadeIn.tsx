@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { motion } from "motion/react";
+import type { TargetAndTransition } from "motion/react";
 
 type FadeInDirection = "up" | "down" | "left" | "right" | "scale" | "none";
 
@@ -13,7 +14,7 @@ type FadeInProps = {
   duration?: number;
 };
 
-const initialVariants: Record<FadeInDirection, object> = {
+const initialVariants: Record<FadeInDirection, TargetAndTransition> = {
   up:    { opacity: 0, y: 30 },
   down:  { opacity: 0, y: -30 },
   left:  { opacity: 0, x: -48 },
@@ -22,7 +23,7 @@ const initialVariants: Record<FadeInDirection, object> = {
   none:  { opacity: 0 },
 };
 
-const animateVariants: Record<FadeInDirection, object> = {
+const animateVariants: Record<FadeInDirection, TargetAndTransition> = {
   up:    { opacity: 1, y: 0 },
   down:  { opacity: 1, y: 0 },
   left:  { opacity: 1, x: 0 },
