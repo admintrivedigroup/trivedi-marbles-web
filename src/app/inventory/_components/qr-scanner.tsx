@@ -14,8 +14,8 @@ type Html5QrcodeScanner = {
     config: { fps: number; qrbox: { width: number; height: number } },
     onSuccess: (text: string) => void,
     onError: undefined,
-  ) => Promise<void>;
-  stop: () => Promise<void>;
+  ) => Promise<null>;
+  stop: () => Promise<null>;
 };
 
 async function safeStop(scanner: Html5QrcodeScanner | null, isRunning: React.MutableRefObject<boolean>) {
