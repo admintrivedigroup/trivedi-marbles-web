@@ -1,13 +1,17 @@
 "use client";
 
-import { Fragment, startTransition, useRef, useState } from "react";
+import { Fragment, startTransition, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ArrowUpDown, ArrowUpRight, ChevronLeft, ChevronRight, Download, Edit, Filter, Package, Search } from "lucide-react";
+import { ArrowUpDown, ArrowUpRight, Check, ChevronLeft, ChevronRight, DollarSign, Download, Edit, Filter, Package, Search, Trash2, X } from "lucide-react";
 
-import { withCloudinaryTransforms } from "@/lib/cloudinary/upload";
+import { withCloudinaryThumbnail } from "@/lib/cloudinary/upload";
 import { useLookupOptions } from "@/app/inventory/_components/lookup-options-context";
 import type { InventoryListSlab, SortBy } from "@/app/inventory/_lib/inventory-list";
+import { formatNumber, formatThickness, getStatusColor } from "@/app/inventory/_lib/format";
+import { batchDeleteLots } from "@/app/inventory/_actions/batch-delete-lots";
+import { updateSlabStatus, type SlabStatusName } from "@/app/inventory/_actions/update-slab-status";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 type InventoryListProps = {
   error: string | null;
@@ -16,6 +20,9 @@ type InventoryListProps = {
   canAddStock: boolean;
   inTransitSlabIds?: Set<string>;
   sortBy?: SortBy;
+  totalLots: number;
+  totalPages: number;
+  totalSlabs: number;
 };
 
 const SORT_OPTIONS: { value: SortBy; label: string }[] = [
@@ -36,29 +43,6 @@ type LotGroup = {
 
 const LOTS_PER_PAGE = 20;
 
-function getStatusColor(status: string | null) {
-  switch (status) {
-    case "Available":
-      return "bg-green-100 text-green-700";
-    case "Reserved":
-      return "bg-orange-100 text-orange-700";
-    case "Sold":
-      return "bg-gray-100 text-gray-700";
-    case "In Transit":
-      return "bg-blue-100 text-blue-700";
-    default:
-      return "bg-gray-100 text-gray-700";
-  }
-}
-
-function formatNumber(value: number | null) {
-  return value === null ? "-" : value.toLocaleString("en-IN");
-}
-
-function formatThicknessLabel(value: string | null) {
-  if (!value) return "-";
-  return /^\d+(\.\d+)?$/.test(value) ? `${value}mm` : value;
-}
 
 function formatSize(length: number | null, width: number | null) {
   if (length === null || width === null) return "-";
@@ -74,7 +58,7 @@ function SlabThumbnail({ imageUrl, className }: { imageUrl: string | null; class
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={withCloudinaryTransforms(imageUrl)}
+        src={withCloudinaryThumbnail(imageUrl)}
         alt="Slab"
         className={`rounded-lg object-cover shadow-sm ${className}`}
       />
@@ -113,6 +97,16 @@ function getLotStatusSummary(slabs: InventoryListSlab[]): [string, number][] {
   return Object.entries(counts);
 }
 
+function getLotAvailableRatio(slabs: InventoryListSlab[]): { available: number; reserved: number; sold: number; total: number } {
+  let available = 0, reserved = 0, sold = 0;
+  for (const s of slabs) {
+    if (s.statusName === "Available") available++;
+    else if (s.statusName === "Reserved") reserved++;
+    else if (s.statusName === "Sold") sold++;
+  }
+  return { available, reserved, sold, total: slabs.length };
+}
+
 function getLotTotalSqft(slabs: InventoryListSlab[]): number {
   return slabs.reduce((sum, s) => sum + (s.sqft ?? 0), 0);
 }
@@ -124,8 +118,8 @@ function getLotPriceRange(slabs: InventoryListSlab[]): string {
   if (prices.length === 0) return "-";
   const min = Math.min(...prices);
   const max = Math.max(...prices);
-  if (min === max) return `Rs. ${formatNumber(min)}`;
-  return `Rs. ${formatNumber(min)} – ${formatNumber(max)}`;
+  if (min === max) return `₹${formatNumber(min)}`;
+  return `₹${formatNumber(min)} – ₹${formatNumber(max)}`;
 }
 
 function getPageNumbers(current: number, total: number): (number | "...")[] {
@@ -140,6 +134,56 @@ function getPageNumbers(current: number, total: number): (number | "...")[] {
   if (current < total - 2) pages.push("...");
   pages.push(total);
   return pages;
+}
+
+function SlabQuickActions({
+  slabId,
+  statusName,
+  isInTransit,
+  onSuccess,
+}: {
+  slabId: string;
+  statusName: string | null;
+  isInTransit: boolean;
+  onSuccess: () => void;
+}) {
+  const [isPending, startTransition] = useTransition();
+
+  function change(status: SlabStatusName) {
+    startTransition(async () => {
+      const result = await updateSlabStatus(slabId, status);
+      if (!result.error) onSuccess();
+    });
+  }
+
+  if (isInTransit || statusName === "In Transit") return null;
+
+  return (
+    <>
+      {statusName === "Available" && (
+        <button
+          type="button"
+          title="Mark as Sold"
+          disabled={isPending}
+          onClick={(e) => { e.stopPropagation(); change("Sold"); }}
+          className="rounded-lg p-2 text-green-600 transition-colors hover:bg-green-50 disabled:opacity-30"
+        >
+          <DollarSign className="h-4 w-4" />
+        </button>
+      )}
+      {(statusName === "Reserved" || statusName === "Sold") && (
+        <button
+          type="button"
+          title={statusName === "Reserved" ? "Release reservation" : "Mark as Available"}
+          disabled={isPending}
+          onClick={(e) => { e.stopPropagation(); change("Available"); }}
+          className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 disabled:opacity-30"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      )}
+    </>
+  );
 }
 
 function PaginationControls({
@@ -210,15 +254,22 @@ function PaginationControls({
   );
 }
 
-export function InventoryList({ error, slabs, canViewCostPrice, canAddStock, inTransitSlabIds = new Set(), sortBy = "newest" }: InventoryListProps) {
+export function InventoryList({ error, slabs, canViewCostPrice, canAddStock, inTransitSlabIds = new Set(), sortBy = "newest", totalLots, totalPages, totalSlabs }: InventoryListProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { options } = useLookupOptions();
+  const [isPending, startBatchTransition] = useTransition();
 
   const [searchTerm, setSearchTerm] = useState(() => searchParams.get("q") ?? "");
   const [expandedLots, setExpandedLots] = useState<Set<string>>(new Set());
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // --- Selection state ---
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedLotIds, setSelectedLotIds] = useState<Set<string>>(new Set());
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const warehouseId = searchParams.get("warehouse") ?? "";
   const statusId = searchParams.get("status") ?? "";
@@ -249,30 +300,62 @@ export function InventoryList({ error, slabs, canViewCostPrice, canAddStock, inT
   }
 
   function toggleLot(lotId: string) {
+    if (isSelectMode) {
+      setSelectedLotIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(lotId)) next.delete(lotId);
+        else next.add(lotId);
+        return next;
+      });
+      return;
+    }
     setExpandedLots((prev) => {
       const next = new Set(prev);
-      if (next.has(lotId)) {
-        next.delete(lotId);
-      } else {
-        next.add(lotId);
-      }
+      if (next.has(lotId)) next.delete(lotId);
+      else next.add(lotId);
       return next;
+    });
+  }
+
+  function toggleSelectMode() {
+    setIsSelectMode((v) => !v);
+    setSelectedLotIds(new Set());
+    setActionError(null);
+  }
+
+  function selectAllOnPage() {
+    setSelectedLotIds(new Set(paginatedLots.map((l) => l.lotId)));
+  }
+
+  function confirmDelete() {
+    setShowDeleteConfirm(false);
+    const ids = Array.from(selectedLotIds).filter((id) => !id.startsWith("__slab_"));
+    if (ids.length === 0) return;
+    startBatchTransition(async () => {
+      const result = await batchDeleteLots(ids);
+      if (result.error) {
+        setActionError(result.error);
+      } else {
+        setSelectedLotIds(new Set());
+        router.refresh();
+      }
     });
   }
 
   const isFiltering = searchTerm.length > 0 || warehouseId !== "" || statusId !== "";
 
-  const allLots = groupSlabsByLot(slabs);
-  const totalPages = Math.max(1, Math.ceil(allLots.length / LOTS_PER_PAGE));
+  // Slabs are already scoped to the current page by the server; just group them.
+  const paginatedLots = groupSlabsByLot(slabs);
   const activePage = Math.min(urlPage, totalPages);
-  const paginatedLots = allLots.slice(
-    (activePage - 1) * LOTS_PER_PAGE,
-    activePage * LOTS_PER_PAGE,
-  );
 
   function isLotExpanded(lotId: string) {
-    return isFiltering || expandedLots.has(lotId);
+    return !isSelectMode && (isFiltering || expandedLots.has(lotId));
   }
+
+  // Only real lots (not orphan slabs) can be selected for deletion.
+  // selectableLots is scoped to the current page (selecting across pages is not supported).
+  const selectableLots = paginatedLots.filter((l) => !l.lotId.startsWith("__slab_"));
+  const selectedCount = selectedLotIds.size;
 
   const exportHref = (() => {
     const params = new URLSearchParams();
@@ -299,30 +382,67 @@ export function InventoryList({ error, slabs, canViewCostPrice, canAddStock, inT
             Inventory
           </h1>
           <p className="text-gray-500">
-            {allLots.length} {allLots.length === 1 ? "lot" : "lots"} &middot;{" "}
-            {slabs.length} slabs
+            {totalLots} {totalLots === 1 ? "lot" : "lots"} &middot;{" "}
+            {totalSlabs} slabs
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <a
-            href={exportHref}
-            className="flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-3 font-medium text-gray-700 transition-colors hover:bg-gray-50"
-            title="Export current view to CSV"
-          >
-            <Download className="h-4 w-4" />
-            Export CSV
-          </a>
-          {canAddStock && (
-            <Link
-              href="/inventory/add"
-              className="flex items-center justify-center gap-2 rounded-xl bg-gray-900 px-6 py-3 font-medium text-white! transition-all hover:scale-[1.02] hover:shadow-lg hover:text-white! [&_svg]:text-white!"
-            >
-              <Package className="h-5 w-5" />
-              Add New Lot
-            </Link>
+          {isSelectMode ? (
+            <>
+              <span className="text-sm text-gray-500">{selectedCount} selected</span>
+              {selectableLots.length > 0 && (
+                <button
+                  type="button"
+                  onClick={selectAllOnPage}
+                  className="text-sm text-gray-700 underline hover:text-gray-900"
+                >
+                  Select all {selectableLots.length}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={toggleSelectMode}
+                className="rounded-xl border border-gray-200 px-4 py-3 font-medium text-gray-700 transition-colors hover:bg-gray-50"
+              >
+                Done
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={toggleSelectMode}
+                className="rounded-xl border border-gray-200 px-4 py-3 font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
+              >
+                Select
+              </button>
+              <a
+                href={exportHref}
+                className="flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-3 font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                title="Export current filters to Excel (.xlsx)"
+              >
+                <Download className="h-4 w-4" />
+                Export Excel
+              </a>
+              {canAddStock && (
+                <Link
+                  href="/inventory/add"
+                  className="flex items-center justify-center gap-2 rounded-xl bg-gray-900 px-6 py-3 font-medium text-white! transition-all hover:scale-[1.02] hover:shadow-lg hover:text-white! [&_svg]:text-white!"
+                >
+                  <Package className="h-5 w-5" />
+                  Add New Lot
+                </Link>
+              )}
+            </>
           )}
         </div>
       </div>
+
+      {actionError ? (
+        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 md:mb-6">
+          {actionError}
+        </div>
+      ) : null}
 
       {error ? (
         <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 md:mb-6">
@@ -408,6 +528,7 @@ export function InventoryList({ error, slabs, canViewCostPrice, canAddStock, inT
               <table className="w-full">
                 <thead className="border-b border-gray-200 bg-gray-50">
                   <tr>
+                    {isSelectMode && <th className="w-10 px-4 py-4" />}
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">
                       Photo
                     </th>
@@ -451,15 +572,39 @@ export function InventoryList({ error, slabs, canViewCostPrice, canAddStock, inT
                     const statusSummary = getLotStatusSummary(lot.slabs);
                     const totalSqft = getLotTotalSqft(lot.slabs);
                     const priceRange = getLotPriceRange(lot.slabs);
+                    const availRatio = getLotAvailableRatio(lot.slabs);
+                    const isSelectable = !lot.lotId.startsWith("__slab_");
+                    const isSelected = selectedLotIds.has(lot.lotId);
 
                     return (
                       <Fragment key={lot.lotId}>
                         {/* Lot header row */}
                         <tr
                           onClick={() => toggleLot(lot.lotId)}
-                          className="cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors"
+                          className={`cursor-pointer transition-colors ${
+                            isSelectMode && isSelected
+                              ? "bg-gray-900/5 hover:bg-gray-900/10"
+                              : "bg-gray-50 hover:bg-gray-100"
+                          }`}
                         >
-                          <td colSpan={11} className="px-6 py-3">
+                          {isSelectMode && (
+                            <td className="px-4 py-3">
+                              {isSelectable ? (
+                                <span
+                                  className="flex h-5 w-5 items-center justify-center rounded border-2 transition-colors"
+                                  style={{
+                                    background: isSelected ? "#111827" : "white",
+                                    borderColor: isSelected ? "#111827" : "#d1d5db",
+                                  }}
+                                >
+                                  {isSelected && <Check className="h-3 w-3 text-white" />}
+                                </span>
+                              ) : (
+                                <span className="block h-5 w-5" />
+                              )}
+                            </td>
+                          )}
+                          <td colSpan={isSelectMode ? 10 : 11} className="px-6 py-3">
                             <div className="flex items-center gap-3 flex-wrap">
                               <ChevronRight
                                 className={`h-4 w-4 shrink-0 text-gray-500 transition-transform duration-200 ${expanded ? "rotate-90" : ""}`}
@@ -496,7 +641,7 @@ export function InventoryList({ error, slabs, canViewCostPrice, canAddStock, inT
                                     {count} {status}
                                   </span>
                                 ))}
-                                {!lot.lotId.startsWith("__slab_") && (
+                                {!isSelectMode && !lot.lotId.startsWith("__slab_") && (
                                   <Link
                                     href={`/inventory/lot/${lot.lotId}`}
                                     onClick={(e) => e.stopPropagation()}
@@ -508,6 +653,15 @@ export function InventoryList({ error, slabs, canViewCostPrice, canAddStock, inT
                                 )}
                               </div>
                             </div>
+                            {availRatio.total > 0 && (
+                              <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-gray-100">
+                                <div className="flex h-full">
+                                  <div style={{ width: `${(availRatio.available / availRatio.total) * 100}%` }} className="bg-green-400" />
+                                  <div style={{ width: `${(availRatio.reserved / availRatio.total) * 100}%` }} className="bg-orange-400" />
+                                  <div style={{ width: `${(availRatio.sold / availRatio.total) * 100}%` }} className="bg-gray-300" />
+                                </div>
+                              </div>
+                            )}
                           </td>
                         </tr>
 
@@ -521,6 +675,7 @@ export function InventoryList({ error, slabs, canViewCostPrice, canAddStock, inT
                                 onClick={() => router.push(`/inventory/slab/${slab.id}`)}
                                 className={`cursor-pointer transition-colors border-l-4 border-l-transparent hover:border-l-gray-200 ${isInTransit ? "bg-blue-50/40 hover:bg-blue-50" : "bg-white hover:bg-gray-50"}`}
                               >
+                                {isSelectMode && <td />}
                                 <td className="pl-14 pr-6 py-4">
                                   <SlabThumbnail imageUrl={slab.thumbnailUrl} className="h-14 w-14" />
                                 </td>
@@ -544,7 +699,7 @@ export function InventoryList({ error, slabs, canViewCostPrice, canAddStock, inT
                                   {formatNumber(slab.sqft)}
                                 </td>
                                 <td className="px-6 py-4 text-gray-700">
-                                  {formatThicknessLabel(slab.thicknessName)}
+                                  {formatThickness(slab.thicknessName) ?? "-"}
                                 </td>
                                 <td className="px-6 py-4 text-gray-700">
                                   {getDisplayText(slab.warehouseName)}
@@ -565,11 +720,17 @@ export function InventoryList({ error, slabs, canViewCostPrice, canAddStock, inT
                                 </td>
                                 {canViewCostPrice && (
                                   <td className="px-6 py-4 font-semibold text-gray-900">
-                                    Rs. {formatNumber(slab.sellingPrice)}
+                                    ₹{formatNumber(slab.sellingPrice)}
                                   </td>
                                 )}
                                 <td className="px-6 py-4">
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-1">
+                                    <SlabQuickActions
+                                      slabId={slab.id}
+                                      statusName={slab.statusName}
+                                      isInTransit={isInTransit}
+                                      onSuccess={() => router.refresh()}
+                                    />
                                     {isInTransit ? (
                                       <span
                                         className="cursor-not-allowed rounded-lg p-2 opacity-30"
@@ -606,11 +767,17 @@ export function InventoryList({ error, slabs, canViewCostPrice, canAddStock, inT
               const expanded = isLotExpanded(lot.lotId);
               const statusSummary = getLotStatusSummary(lot.slabs);
               const totalSqft = getLotTotalSqft(lot.slabs);
+              const isSelectable = !lot.lotId.startsWith("__slab_");
+              const isSelected = selectedLotIds.has(lot.lotId);
 
               return (
                 <div
                   key={lot.lotId}
-                  className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm"
+                  className={`overflow-hidden rounded-xl border bg-white shadow-sm transition-all ${
+                    isSelectMode && isSelected
+                      ? "border-gray-900 ring-2 ring-gray-900/20"
+                      : "border-gray-100"
+                  }`}
                 >
                   {/* Lot header */}
                   <button
@@ -618,9 +785,25 @@ export function InventoryList({ error, slabs, canViewCostPrice, canAddStock, inT
                     onClick={() => toggleLot(lot.lotId)}
                     className="flex w-full items-start gap-3 px-4 py-4 text-left"
                   >
-                    <ChevronRight
-                      className={`mt-0.5 h-5 w-5 shrink-0 text-gray-500 transition-transform duration-200 ${expanded ? "rotate-90" : ""}`}
-                    />
+                    {isSelectMode ? (
+                      isSelectable ? (
+                        <span
+                          className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors"
+                          style={{
+                            background: isSelected ? "#111827" : "white",
+                            borderColor: isSelected ? "#111827" : "#d1d5db",
+                          }}
+                        >
+                          {isSelected && <Check className="h-3 w-3 text-white" />}
+                        </span>
+                      ) : (
+                        <span className="mt-0.5 block h-5 w-5 shrink-0" />
+                      )
+                    ) : (
+                      <ChevronRight
+                        className={`mt-0.5 h-5 w-5 shrink-0 text-gray-500 transition-transform duration-200 ${expanded ? "rotate-90" : ""}`}
+                      />
+                    )}
                     <div className="min-w-0 flex-1">
                       <div className="mb-1 flex items-center gap-2">
                         <span className="font-mono text-sm font-bold text-gray-900">
@@ -648,7 +831,7 @@ export function InventoryList({ error, slabs, canViewCostPrice, canAddStock, inT
                       <p className="text-sm text-gray-500">
                         {formatNumber(totalSqft)} sqft total <span className="font-light text-gray-400">(estimate)</span>
                       </p>
-                      {!lot.lotId.startsWith("__slab_") && (
+                      {!isSelectMode && !lot.lotId.startsWith("__slab_") && (
                         <Link
                           href={`/inventory/lot/${lot.lotId}`}
                           onClick={(e) => e.stopPropagation()}
@@ -715,7 +898,7 @@ export function InventoryList({ error, slabs, canViewCostPrice, canAddStock, inT
                               <div>
                                 <p className="text-gray-500">Thickness</p>
                                 <p className="text-gray-900">
-                                  {formatThicknessLabel(slab.thicknessName)}
+                                  {formatThickness(slab.thicknessName) ?? "-"}
                                 </p>
                               </div>
                               <div>
@@ -737,7 +920,7 @@ export function InventoryList({ error, slabs, canViewCostPrice, canAddStock, inT
                                 <div>
                                   <p className="text-xs text-gray-500">Price</p>
                                   <p className="font-semibold text-gray-900">
-                                    Rs. {formatNumber(slab.sellingPrice)}/sqft <span className="font-light text-gray-400">(estimate)</span>
+                                    ₹{formatNumber(slab.sellingPrice)}/sqft <span className="font-light text-gray-400">(estimate)</span>
                                   </p>
                                 </div>
                               )}
@@ -774,11 +957,50 @@ export function InventoryList({ error, slabs, canViewCostPrice, canAddStock, inT
           <PaginationControls
             page={activePage}
             totalPages={totalPages}
-            totalLots={allLots.length}
+            totalLots={totalLots}
             onPageChange={setPage}
           />
         </>
       )}
+
+      {/* Floating selection action bar */}
+      {isSelectMode && selectedCount > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-gray-200 bg-white px-4 py-3 shadow-lg">
+          <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3">
+            <span className="text-sm font-medium text-gray-700">
+              {selectedCount} lot{selectedCount !== 1 ? "s" : ""} selected
+            </span>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={() => { setActionError(null); setShowDeleteConfirm(true); }}
+                className="flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete ({selectedCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedLotIds(new Set())}
+                className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        title={`Delete ${selectedCount} lot${selectedCount !== 1 ? "s" : ""}?`}
+        description={`This will permanently delete the selected lots and all their slabs and photos. This cannot be undone.`}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={confirmDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
     </div>
   );
 }

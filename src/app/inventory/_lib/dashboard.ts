@@ -8,12 +8,14 @@ export type DashboardStats = {
   totalSqft: number;
   warehouseCounts: { name: string; count: number }[];
   reservedCount: number;
+  expiredReservationCount: number;
+  expiringSoonCount: number;
   stockValueBySelling: number;
   stockValueByCost: number;
   stockValueByDealer: number;
   typeData: { name: string; count: number }[];
   recentActivity: { id: string; text: string; time: string }[];
-  alerts: { id: string; severity: "low" | "medium"; text: string }[];
+  alerts: { id: string; severity: "low" | "medium" | "high"; text: string }[];
 };
 
 export async function getDashboardStats(
@@ -37,7 +39,22 @@ export async function getDashboardStats(
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => b.count - a.count);
 
-  const reservedCount = slabs.filter((s) => s.statusName === SLAB_STATUS.RESERVED).length;
+  const now = new Date();
+  const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+
+  const reservedSlabs = slabs.filter((s) => s.statusName === SLAB_STATUS.RESERVED);
+  const reservedCount = reservedSlabs.length;
+
+  const expiredReservationCount = reservedSlabs.filter((s) => {
+    if (!s.reservedUntil) return false;
+    return new Date(s.reservedUntil) < now;
+  }).length;
+
+  const expiringSoonCount = reservedSlabs.filter((s) => {
+    if (!s.reservedUntil) return false;
+    const d = new Date(s.reservedUntil);
+    return d >= now && d <= threeDaysFromNow;
+  }).length;
 
   const activeSlabs = slabs.filter((s) => s.statusName !== SLAB_STATUS.SOLD);
   const stockValueBySelling = activeSlabs.reduce(
@@ -82,13 +99,53 @@ export async function getDashboardStats(
     }));
 
   const alerts: DashboardStats["alerts"] = [];
-  if (reservedCount > 0) {
+
+  if (expiredReservationCount > 0) {
     alerts.push({
-      id: "reserved",
-      severity: "medium",
-      text: `${reservedCount} slab${reservedCount === 1 ? "" : "s"} currently reserved — confirm or release them.`,
+      id: "expired-reservations",
+      severity: "high",
+      text: `${expiredReservationCount} reservation${expiredReservationCount === 1 ? "" : "s"} expired — release or renew ${expiredReservationCount === 1 ? "it" : "them"} from the lot detail.`,
     });
   }
+
+  if (expiringSoonCount > 0) {
+    alerts.push({
+      id: "expiring-soon",
+      severity: "medium",
+      text: `${expiringSoonCount} reservation${expiringSoonCount === 1 ? "" : "s"} expiring within 3 days.`,
+    });
+  }
+
+  const activeReservedCount = reservedCount - expiredReservationCount - expiringSoonCount;
+  if (activeReservedCount > 0) {
+    alerts.push({
+      id: "reserved",
+      severity: "low",
+      text: `${activeReservedCount} slab${activeReservedCount === 1 ? "" : "s"} reserved.`,
+    });
+  }
+
+  // Lots where every slab is sold or reserved (none available)
+  const lotSlabCount = new Map<string, number>();
+  const lotAvailableCount = new Map<string, number>();
+  for (const slab of slabs) {
+    if (!slab.lotId) continue;
+    lotSlabCount.set(slab.lotId, (lotSlabCount.get(slab.lotId) ?? 0) + 1);
+    if (slab.statusName === SLAB_STATUS.AVAILABLE) {
+      lotAvailableCount.set(slab.lotId, (lotAvailableCount.get(slab.lotId) ?? 0) + 1);
+    }
+  }
+  const lotsWithNoAvailable = Array.from(lotSlabCount.keys()).filter(
+    (lotId) => (lotAvailableCount.get(lotId) ?? 0) === 0,
+  ).length;
+  if (lotsWithNoAvailable > 0) {
+    alerts.push({
+      id: "lots-no-available",
+      severity: "medium",
+      text: `${lotsWithNoAvailable} lot${lotsWithNoAvailable === 1 ? "" : "s"} with no available slabs — all sold or reserved.`,
+    });
+  }
+
   if (totalSlabs === 0) {
     alerts.push({
       id: "empty",
@@ -102,6 +159,8 @@ export async function getDashboardStats(
     totalSqft,
     warehouseCounts,
     reservedCount,
+    expiredReservationCount,
+    expiringSoonCount,
     stockValueBySelling,
     stockValueByCost,
     stockValueByDealer,

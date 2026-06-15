@@ -3,7 +3,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 
 import type { InventoryListSlab } from "./inventory-list";
-import { toNum, toStr, relName, relLotNumber } from "./normalize";
+import { toNum, toStr, relName } from "./normalize";
 
 export type LotInfo = {
   id: string;
@@ -12,7 +12,6 @@ export type LotInfo = {
   categoryName: string | null;
   thicknessName: string | null;
   warehouseName: string | null;
-  supplierName: string | null;
   purchaseDate: string | null;
   invoiceNumber: string | null;
   costPrice: number | null;
@@ -38,7 +37,7 @@ export async function getLotDetail(lotId: string): Promise<LotDetailResult> {
         .from("marble_lots")
         .select(
           `
-          id, lot_number, marble_name, supplier_name, purchase_date,
+          id, lot_number, marble_name, purchase_date,
           invoice_number, cost_price, selling_price, dealer_price, notes, created_at, show_on_website,
           marble_categories(name),
           thickness_options(name),
@@ -51,11 +50,10 @@ export async function getLotDetail(lotId: string): Promise<LotDetailResult> {
         .from("slabs")
         .select(
           `
-          id, slab_code, marble_name, length, width, sqft, rack_number,
+          id, slab_code, length, width, sqft, rack_number,
           cost_price, selling_price, dealer_price, notes, created_at, lot_id,
           reserved_for, reserved_until,
-          marble_categories(name), warehouses(name), slab_statuses(name),
-          thickness_options(name), marble_lots(lot_number),
+          warehouses(name), slab_statuses(name),
           slab_images(image_url, sort_order)
         `,
         )
@@ -85,7 +83,6 @@ export async function getLotDetail(lotId: string): Promise<LotDetailResult> {
       categoryName: relName(lotRow.marble_categories),
       thicknessName: relName(lotRow.thickness_options),
       warehouseName: relName(lotRow.warehouses),
-      supplierName: toStr(lotRow.supplier_name),
       purchaseDate: toStr(lotRow.purchase_date),
       invoiceNumber: toStr(lotRow.invoice_number),
       costPrice: toNum(lotRow.cost_price),
@@ -121,7 +118,7 @@ export async function getLotDetail(lotId: string): Promise<LotDetailResult> {
         return {
           id,
           slabCode: toStr(row.slab_code),
-          marbleName: toStr(row.marble_name),
+          marbleName: lot.marbleName,
           length: toNum(row.length),
           width: toNum(row.width),
           sqft: toNum(row.sqft),
@@ -132,12 +129,12 @@ export async function getLotDetail(lotId: string): Promise<LotDetailResult> {
           notes: toStr(row.notes),
           createdAt: toStr(row.created_at),
           lotId: row.lot_id != null ? String(row.lot_id) : null,
-          lotNumber: relLotNumber(row.marble_lots),
-          categoryName: relName(row.marble_categories),
+          lotNumber: lot.lotNumber,
+          categoryName: lot.categoryName,
           warehouseName: relName(row.warehouses),
           statusName: relName(row.slab_statuses),
           thumbnailUrl,
-          thicknessName: relName(row.thickness_options),
+          thicknessName: lot.thicknessName,
           reservedFor: toStr(row.reserved_for),
           reservedUntil: toStr(row.reserved_until),
         } satisfies InventoryListSlab;

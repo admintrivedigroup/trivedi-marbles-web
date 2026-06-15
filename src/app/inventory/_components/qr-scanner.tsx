@@ -36,7 +36,9 @@ export function QrScanner({ onClose }: QrScannerProps) {
   const isRunningRef = useRef(false);
   const doneRef = useRef(false);
 
-  const navigateToSlab = useCallback((text: string) => {
+  const navigateToPath = useCallback((text: string) => {
+    const lotMatch = text.match(/\/inventory\/lot\/([^/?#]+)/);
+    if (lotMatch) return `/inventory/lot/${lotMatch[1]}`;
     const slabMatch = text.match(/\/inventory\/slab\/([^/?#]+)/);
     if (slabMatch) return `/inventory/slab/${slabMatch[1]}`;
     return `/inventory/slab/${text}`;
@@ -47,11 +49,11 @@ export function QrScanner({ onClose }: QrScannerProps) {
       if (doneRef.current) return;
       doneRef.current = true;
       await safeStop(scannerRef.current, isRunningRef);
-      const path = navigateToSlab(text);
+      const path = navigateToPath(text);
       onClose();
       router.push(path);
     },
-    [navigateToSlab, onClose, router],
+    [navigateToPath, onClose, router],
   );
 
   const handleClose = useCallback(async () => {
@@ -109,7 +111,7 @@ export function QrScanner({ onClose }: QrScannerProps) {
       <div className="flex items-center justify-between px-4 py-4">
         <div className="flex items-center gap-2 text-white">
           <Camera className="h-5 w-5" />
-          <span className="font-semibold">Scan Slab QR</span>
+          <span className="font-semibold">Scan QR Code</span>
         </div>
         <button
           type="button"
@@ -135,7 +137,7 @@ export function QrScanner({ onClose }: QrScannerProps) {
       ) : (
         <div className="flex flex-1 flex-col items-center justify-center gap-4">
           <div id={scannerId.current} className="w-full max-w-sm overflow-hidden rounded-lg" />
-          <p className="text-sm text-white/60">Point your camera at a slab QR code</p>
+          <p className="text-sm text-white/60">Point your camera at a lot or slab QR code</p>
         </div>
       )}
     </div>

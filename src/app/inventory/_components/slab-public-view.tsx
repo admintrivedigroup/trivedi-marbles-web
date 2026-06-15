@@ -2,35 +2,25 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { MapPin, Package, Phone, MessageCircle, Layers } from "lucide-react";
+import { MapPin, Package, Phone, MessageCircle, Layers, X, ZoomIn } from "lucide-react";
 
 import { withCloudinaryTransforms } from "@/lib/cloudinary/upload";
 import type { InventoryListSlab } from "@/app/inventory/_lib/inventory-list";
 import type { SlabImage } from "@/app/inventory/_lib/slab-detail";
+import { formatThickness, getStatusBadgeStyle } from "@/app/inventory/_lib/format";
 
-const CONTACT_PHONE = "+919876543210"; // Update this to the business WhatsApp number
+const CONTACT_PHONE = "+919876543210";
 
 type SlabPublicViewProps = {
   slab: InventoryListSlab;
   images: SlabImage[];
 };
 
-function statusStyle(status: string | null) {
-  if (status === "Available") return "bg-green-100 text-green-700 border-green-200";
-  if (status === "Reserved") return "bg-orange-100 text-orange-700 border-orange-200";
-  if (status === "Sold") return "bg-gray-100 text-gray-500 border-gray-200";
-  return "bg-gray-100 text-gray-500 border-gray-200";
-}
-
-function fmtThickness(value: string | null) {
-  if (!value) return null;
-  return /^\d+(\.\d+)?$/.test(value) ? `${value}mm` : value;
-}
-
 export function SlabPublicView({ slab, images }: SlabPublicViewProps) {
   const [activeIdx, setActiveIdx] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
-  const thickness = fmtThickness(slab.thicknessName);
+  const thickness = formatThickness(slab.thicknessName);
   const subtitle = [slab.categoryName, thickness].filter(Boolean).join(" · ");
   const sizeText =
     slab.length && slab.width
@@ -58,18 +48,58 @@ export function SlabPublicView({ slab, images }: SlabPublicViewProps) {
         {/* Image gallery */}
         <div className="overflow-hidden rounded-2xl border border-gray-100 bg-gray-100 shadow-sm">
           {images.length > 0 ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={withCloudinaryTransforms(images[activeIdx].imageUrl)}
-              alt={`Slab ${slab.slabCode ?? ""}`}
-              className="aspect-4/3 w-full object-cover"
-            />
+            <button
+              type="button"
+              onClick={() => setLightboxOpen(true)}
+              className="group relative block w-full"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={withCloudinaryTransforms(images[activeIdx].imageUrl)}
+                alt={`Slab ${slab.slabCode ?? ""}`}
+                className="aspect-4/3 w-full object-cover"
+              />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/10 group-active:bg-black/20">
+                <div className="rounded-full bg-black/30 p-2 opacity-0 transition-opacity group-hover:opacity-100">
+                  <ZoomIn className="h-5 w-5 text-white" />
+                </div>
+              </div>
+            </button>
           ) : (
             <div className="flex aspect-4/3 items-center justify-center">
               <Package className="h-16 w-16 text-gray-300" />
             </div>
           )}
         </div>
+
+        {/* Lightbox */}
+        {lightboxOpen && images.length > 0 && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+            onClick={() => setLightboxOpen(false)}
+          >
+            <button
+              type="button"
+              onClick={() => setLightboxOpen(false)}
+              aria-label="Close"
+              className="absolute right-4 top-4 rounded-full bg-white/20 p-2 text-white hover:bg-white/30 active:bg-white/40"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={withCloudinaryTransforms(images[activeIdx].imageUrl)}
+              alt={`Slab ${slab.slabCode ?? ""}`}
+              className="max-h-[90vh] max-w-full rounded-xl object-contain shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+            {images.length > 1 && (
+              <p className="absolute bottom-4 text-sm text-white/60">
+                {activeIdx + 1} / {images.length}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Thumbnail strip */}
         {images.length > 1 && (
@@ -107,7 +137,7 @@ export function SlabPublicView({ slab, images }: SlabPublicViewProps) {
                 )}
               </div>
               <span
-                className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${statusStyle(slab.statusName)}`}
+                className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${getStatusBadgeStyle(slab.statusName)}`}
               >
                 {slab.statusName ?? "Unknown"}
               </span>

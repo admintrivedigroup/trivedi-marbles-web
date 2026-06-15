@@ -30,7 +30,6 @@ export async function saveLot(formData: FormData): Promise<SaveLotResult> {
   const statusId = String(formData.get("statusId") ?? "").trim();
   const thicknessId = String(formData.get("thicknessId") ?? "").trim();
   const warehouseId = String(formData.get("warehouseId") ?? "").trim();
-  const supplierName = String(formData.get("supplierName") ?? "").trim();
   const purchaseDate = String(formData.get("purchaseDate") ?? "").trim();
   const invoiceNumber = String(formData.get("invoiceNumber") ?? "").trim();
   const costPriceInput = String(formData.get("costPrice") ?? "").trim();
@@ -115,7 +114,6 @@ export async function saveLot(formData: FormData): Promise<SaveLotResult> {
       status_id: normalizeForeignKey(statusId),
       thickness_id: normalizeForeignKey(thicknessId),
       warehouse_id: normalizeForeignKey(warehouseId),
-      supplier_name: supplierName || null,
       purchase_date: purchaseDate || null,
       invoice_number: invoiceNumber || null,
       cost_price: costPriceResult.value,
@@ -147,10 +145,7 @@ export async function saveLot(formData: FormData): Promise<SaveLotResult> {
   const slabPayloads = slabs.map((slab) => ({
     lot_id: lotData.id,
     slab_code: slab.slabCode,
-    marble_name: marbleName,
-    category_id: normalizeForeignKey(categoryId),
     status_id: normalizeForeignKey(statusId),
-    thickness_id: normalizeForeignKey(thicknessId),
     warehouse_id: normalizeForeignKey(warehouseId),
     cost_price: costPriceResult.value,
     selling_price: sellingPriceResult.value,
@@ -189,7 +184,6 @@ export async function saveLot(formData: FormData): Promise<SaveLotResult> {
     diff: {
       marbleName,
       slabCount: slabs.length,
-      supplierName: supplierName || null,
     },
   }).catch(() => {});
 

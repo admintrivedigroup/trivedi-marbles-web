@@ -32,7 +32,6 @@ export async function updateLot(
   const statusId = String(formData.get("statusId") ?? "").trim();
   const thicknessId = String(formData.get("thicknessId") ?? "").trim();
   const warehouseId = String(formData.get("warehouseId") ?? "").trim();
-  const supplierName = String(formData.get("supplierName") ?? "").trim();
   const purchaseDate = String(formData.get("purchaseDate") ?? "").trim();
   const invoiceNumber = String(formData.get("invoiceNumber") ?? "").trim();
   const costPriceInput = String(formData.get("costPrice") ?? "").trim();
@@ -69,7 +68,7 @@ export async function updateLot(
 
   const { data: before } = await supabase
     .from("marble_lots")
-    .select("lot_number, marble_name, cost_price, selling_price, dealer_price, supplier_name")
+    .select("lot_number, marble_name, cost_price, selling_price, dealer_price")
     .eq("id", lotId)
     .single();
 
@@ -82,7 +81,6 @@ export async function updateLot(
       status_id: normalizeForeignKey(statusId),
       thickness_id: normalizeForeignKey(thicknessId),
       warehouse_id: normalizeForeignKey(warehouseId),
-      supplier_name: supplierName || null,
       purchase_date: purchaseDate || null,
       invoice_number: invoiceNumber || null,
       cost_price: costPriceResult.value,
@@ -103,13 +101,11 @@ export async function updateLot(
     };
   }
 
-  // Cascade shared fields to all slabs. Status and warehouse are per-slab and not overwritten.
+  // Cascade price fields to all slabs. Status, warehouse, marble_name, category, and thickness
+  // are not on slabs anymore — they are read from the lot via join.
   const { error: slabsError } = await supabase
     .from("slabs")
     .update({
-      marble_name: marbleName,
-      category_id: normalizeForeignKey(categoryId),
-      thickness_id: normalizeForeignKey(thicknessId),
       cost_price: costPriceResult.value,
       selling_price: sellingPriceResult.value,
       dealer_price: dealerPriceResult.value,
@@ -117,7 +113,7 @@ export async function updateLot(
     .eq("lot_id", lotId);
 
   if (slabsError) {
-    return { error: `Lot updated, but slab sync failed. ${slabsError.message}` };
+    return { error: `Lot updated, but slab price sync failed. ${slabsError.message}` };
   }
 
   logAudit({
@@ -134,7 +130,6 @@ export async function updateLot(
         costPrice: before?.cost_price ?? null,
         sellingPrice: before?.selling_price ?? null,
         dealerPrice: before?.dealer_price ?? null,
-        supplierName: before?.supplier_name ?? null,
       },
       after: {
         lotNumber,
@@ -142,7 +137,6 @@ export async function updateLot(
         costPrice: costPriceResult.value,
         sellingPrice: sellingPriceResult.value,
         dealerPrice: dealerPriceResult.value,
-        supplierName: supplierName || null,
       },
     },
   }).catch(() => {});

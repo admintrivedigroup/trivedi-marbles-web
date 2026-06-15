@@ -5,6 +5,7 @@ import {
   getSlabById,
   getSlabImages,
   getSlabMovements,
+  getSlabReservationHistory,
 } from "@/app/inventory/_lib/slab-detail";
 import { getInTransitSlabIds } from "@/app/inventory/_lib/transfers";
 import { getCurrentUserProfile } from "@/app/inventory/_lib/user-profile";
@@ -18,12 +19,13 @@ type SlabDetailPageProps = {
 export default async function SlabDetailPage({ params }: SlabDetailPageProps) {
   const { id } = await params;
 
-  const [{ error, slab }, movements, images, profile, inTransitSlabIds] = await Promise.all([
+  const [{ error, slab }, movements, images, profile, inTransitSlabIds, reservationHistory] = await Promise.all([
     getSlabById(id),
     getSlabMovements(id),
     getSlabImages(id),
     getCurrentUserProfile(),
     getInTransitSlabIds(),
+    getSlabReservationHistory(id),
   ]);
 
   if (error) {
@@ -47,6 +49,7 @@ export default async function SlabDetailPage({ params }: SlabDetailPageProps) {
       images={images}
       canViewCostPrice={profile?.permissions.view_cost_price ?? false}
       isInTransit={inTransitSlabIds.has(id)}
+      reservationHistory={reservationHistory}
     />
   );
 }

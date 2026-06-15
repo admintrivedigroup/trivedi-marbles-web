@@ -51,7 +51,6 @@ type LotFormValues = {
   purchaseDate: string;
   sellingPrice: string;
   statusId: string;
-  supplierName: string;
   thicknessId: string;
   warehouseId: string;
 };
@@ -102,7 +101,6 @@ function createInitialLotForm({
     purchaseDate: "",
     sellingPrice: "",
     statusId: statusOptions[0]?.id ?? "",
-    supplierName: "",
     thicknessId: thicknessOptions[0]?.id ?? "",
     warehouseId: warehouseOptions[0]?.id ?? "",
   };

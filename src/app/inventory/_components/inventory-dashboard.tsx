@@ -276,9 +276,11 @@ export function InventoryDashboard({
             <div className="space-y-4">
               {stats.alerts.map((alert) => {
                 const toneClass =
-                  alert.severity === "medium"
-                    ? "bg-orange-50 text-orange-600"
-                    : "bg-blue-50 text-blue-600";
+                  alert.severity === "high"
+                    ? "bg-red-50 text-red-600"
+                    : alert.severity === "medium"
+                      ? "bg-orange-50 text-orange-600"
+                      : "bg-blue-50 text-blue-600";
 
                 return (
                   <div

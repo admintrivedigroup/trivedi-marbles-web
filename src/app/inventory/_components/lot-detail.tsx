@@ -6,7 +6,9 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Calendar,
+  Check,
   Clock,
+  Copy,
   DollarSign,
   Edit,
   FileText,
@@ -19,7 +21,6 @@ import {
   Receipt,
   Tag,
   Trash2,
-  Truck,
   X,
 } from "lucide-react";
 
@@ -31,11 +32,23 @@ import {
   type SlabStatusName,
 } from "@/app/inventory/_actions/update-slab-status";
 import { updateLotSlabsStatus } from "@/app/inventory/_actions/update-lot-status";
+import { batchUpdateSlabsStatus } from "@/app/inventory/_actions/batch-update-slab-status";
+import { batchDeleteSlabs } from "@/app/inventory/_actions/batch-delete-slabs";
+import { batchUpdateSlabPrice } from "@/app/inventory/_actions/batch-update-slab-price";
+import { cloneLot } from "@/app/inventory/_actions/clone-lot";
 import { deleteSlab } from "@/app/inventory/_actions/delete-slab";
 import { deleteLot } from "@/app/inventory/_actions/delete-lot";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ReserveDialog, type ReservationData } from "@/app/inventory/_components/reserve-dialog";
 import { toggleLotWebsite } from "@/app/inventory/_actions/toggle-lot-website";
+import {
+  formatNumber as fmtNum,
+  formatCurrency as fmtCurrency,
+  formatDate as fmtDate,
+  formatThickness as fmtThickness,
+  formatSize as fmtSize,
+  getStatusColor,
+} from "@/app/inventory/_lib/format";
 
 type LotDetailProps = {
   lot: LotInfo;
@@ -60,48 +73,6 @@ type PendingSlabDelete = {
   slabCode: string | null;
 };
 
-function getStatusColor(status: string | null) {
-  switch (status) {
-    case "Available":
-      return "bg-green-100 text-green-700";
-    case "Reserved":
-      return "bg-orange-100 text-orange-700";
-    case "Sold":
-      return "bg-gray-100 text-gray-600";
-    default:
-      return "bg-gray-100 text-gray-600";
-  }
-}
-
-function fmtNum(value: number | null) {
-  return value === null ? "-" : value.toLocaleString("en-IN");
-}
-
-function fmtCurrency(value: number | null) {
-  if (value === null) return "-";
-  return `₹${value.toLocaleString("en-IN")}`;
-}
-
-function fmtDate(value: string | null) {
-  if (!value) return null;
-  const d = new Date(value);
-  if (isNaN(d.getTime())) return value;
-  return d.toLocaleDateString("en-IN", {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-  });
-}
-
-function fmtThickness(value: string | null) {
-  if (!value) return null;
-  return /^\d+(\.\d+)?$/.test(value) ? `${value}mm` : value;
-}
-
-function fmtSize(length: number | null, width: number | null) {
-  if (!length || !width) return null;
-  return `${fmtNum(length)}' × ${fmtNum(width)}'`;
-}
 
 function SlabThumbnail({ imageUrl }: { imageUrl: string | null }) {
   if (imageUrl) {
@@ -199,16 +170,24 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("All");
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [pendingReserveSlab, setPendingReserveSlab] = useState<PendingReserveSlab | null>(null);
-  const [showBulkReserveDialog, setShowBulkReserveDialog] = useState(false);
-  const [showBulkSoldConfirm, setShowBulkSoldConfirm] = useState(false);
-  const [showBulkUnreserveConfirm, setShowBulkUnreserveConfirm] = useState(false);
-  const [showBulkUnsellConfirm, setShowBulkUnsellConfirm] = useState(false);
+  type ActiveModal =
+    | "bulk-reserve" | "bulk-sold" | "bulk-unreserve" | "bulk-unsell"
+    | "delete-lot" | "clone-lot"
+    | "selection-reserve" | "selection-sold" | "selection-unreserve" | "selection-unsell" | "selection-delete" | "selection-price"
+    | null;
+
+  const [activeModal, setActiveModal] = useState<ActiveModal>(null);
   const [pendingSlabDelete, setPendingSlabDelete] = useState<PendingSlabDelete | null>(null);
-  const [showDeleteLotConfirm, setShowDeleteLotConfirm] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [priceBasis, setPriceBasis] = useState<"cost" | "selling" | "dealer">("selling");
   const [showOnWebsite, setShowOnWebsite] = useState(lot.showOnWebsite);
+  const [cloneLotNumber, setCloneLotNumber] = useState("");
+  const [priceFormValues, setPriceFormValues] = useState({ cost: "", sell: "", dealer: "" });
   const [isTogglingWebsite, setIsTogglingWebsite] = useState(false);
+
+  // --- Selection state ---
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const counts = {
     All: slabs.length,
@@ -222,6 +201,9 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
       ? slabs
       : slabs.filter((s) => s.statusName === statusFilter);
 
+  const now = new Date();
+  const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+
   const totalSqft = slabs.reduce((sum, s) => sum + (s.sqft ?? 0), 0);
   const selectedLotPrice =
     priceBasis === "cost"
@@ -233,6 +215,19 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
     selectedLotPrice !== null && totalSqft > 0
       ? selectedLotPrice * totalSqft
       : null;
+
+  // Derived selection data
+  const selectedSlabs = slabs.filter((s) => selectedIds.has(s.id));
+  const selectionAvailableIds = selectedSlabs
+    .filter((s) => s.statusName === "Available")
+    .map((s) => s.id);
+  const selectionReservedIds = selectedSlabs
+    .filter((s) => s.statusName === "Reserved")
+    .map((s) => s.id);
+  const selectionSoldIds = selectedSlabs
+    .filter((s) => s.statusName === "Sold")
+    .map((s) => s.id);
+  const selectionSellableIds = [...selectionAvailableIds, ...selectionReservedIds];
 
   function requestStatusChange(
     slabId: string,
@@ -272,7 +267,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
   }
 
   function handleBulkReserveConfirm(data: ReservationData) {
-    setShowBulkReserveDialog(false);
+    setActiveModal(null);
     startTransition(async () => {
       const result = await updateLotSlabsStatus(lot.id, "Reserved", data);
       if (result.error) { setActionError(result.error); } else { router.refresh(); }
@@ -280,7 +275,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
   }
 
   function confirmBulkSold() {
-    setShowBulkSoldConfirm(false);
+    setActiveModal(null);
     startTransition(async () => {
       const result = await updateLotSlabsStatus(lot.id, "Sold");
       if (result.error) { setActionError(result.error); } else { router.refresh(); }
@@ -288,7 +283,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
   }
 
   function confirmBulkUnreserve() {
-    setShowBulkUnreserveConfirm(false);
+    setActiveModal(null);
     startTransition(async () => {
       const result = await updateLotSlabsStatus(lot.id, "UnreserveLot");
       if (result.error) { setActionError(result.error); } else { router.refresh(); }
@@ -296,7 +291,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
   }
 
   function confirmBulkUnsell() {
-    setShowBulkUnsellConfirm(false);
+    setActiveModal(null);
     startTransition(async () => {
       const result = await updateLotSlabsStatus(lot.id, "UnsellLot");
       if (result.error) { setActionError(result.error); } else { router.refresh(); }
@@ -318,7 +313,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
   }
 
   function confirmLotDelete() {
-    setShowDeleteLotConfirm(false);
+    setActiveModal(null);
     startTransition(async () => {
       const result = await deleteLot(lot.id);
       if (result.error) {
@@ -339,6 +334,115 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
     } else {
       setShowOnWebsite(result.showOnWebsite ?? !showOnWebsite);
     }
+  }
+
+  // --- Selection handlers ---
+  function toggleSelectMode() {
+    setIsSelectMode((v) => !v);
+    setSelectedIds(new Set());
+  }
+
+  function toggleSlab(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function selectAllVisible() {
+    setSelectedIds(new Set(visibleSlabs.map((s) => s.id)));
+  }
+
+  function handleSelectionReserveConfirm(data: ReservationData) {
+    setActiveModal(null);
+    if (selectionAvailableIds.length === 0) return;
+    const ids = selectionAvailableIds;
+    startTransition(async () => {
+      const result = await batchUpdateSlabsStatus(ids, "Reserved", lot.id, data);
+      if (result.error) { setActionError(result.error); }
+      else { setSelectedIds(new Set()); router.refresh(); }
+    });
+  }
+
+  function confirmSelectionSold() {
+    setActiveModal(null);
+    if (selectionSellableIds.length === 0) return;
+    const ids = selectionSellableIds;
+    startTransition(async () => {
+      const result = await batchUpdateSlabsStatus(ids, "Sold", lot.id);
+      if (result.error) { setActionError(result.error); }
+      else { setSelectedIds(new Set()); router.refresh(); }
+    });
+  }
+
+  function confirmSelectionUnreserve() {
+    setActiveModal(null);
+    if (selectionReservedIds.length === 0) return;
+    const ids = selectionReservedIds;
+    startTransition(async () => {
+      const result = await batchUpdateSlabsStatus(ids, "Available", lot.id);
+      if (result.error) { setActionError(result.error); }
+      else { setSelectedIds(new Set()); router.refresh(); }
+    });
+  }
+
+  function confirmSelectionUnsell() {
+    setActiveModal(null);
+    if (selectionSoldIds.length === 0) return;
+    const ids = selectionSoldIds;
+    startTransition(async () => {
+      const result = await batchUpdateSlabsStatus(ids, "Available", lot.id);
+      if (result.error) { setActionError(result.error); }
+      else { setSelectedIds(new Set()); router.refresh(); }
+    });
+  }
+
+  function confirmSelectionDelete() {
+    setActiveModal(null);
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    startTransition(async () => {
+      const result = await batchDeleteSlabs(ids, lot.id);
+      if (result.error) { setActionError(result.error); }
+      else { setSelectedIds(new Set()); router.refresh(); }
+    });
+  }
+
+  function confirmSelectionPriceUpdate() {
+    setActiveModal(null);
+    const ids = Array.from(selectedIds);
+    const cost = priceFormValues.cost ? Number(priceFormValues.cost) : null;
+    const sell = priceFormValues.sell ? Number(priceFormValues.sell) : null;
+    const dealer = priceFormValues.dealer ? Number(priceFormValues.dealer) : null;
+    if (cost === null && sell === null && dealer === null) {
+      setActionError("Enter at least one price to update.");
+      return;
+    }
+    startTransition(async () => {
+      const result = await batchUpdateSlabPrice(ids, lot.id, {
+        costPrice: cost,
+        sellingPrice: sell,
+        dealerPrice: dealer,
+      });
+      if (result.error) { setActionError(result.error); }
+      else { setSelectedIds(new Set()); setPriceFormValues({ cost: "", sell: "", dealer: "" }); router.refresh(); }
+    });
+  }
+
+  function confirmCloneLot() {
+    setActiveModal(null);
+    const newNumber = cloneLotNumber.trim();
+    if (!newNumber) { setActionError("New lot number is required."); return; }
+    startTransition(async () => {
+      const result = await cloneLot(lot.id, newNumber);
+      if (result.error) { setActionError(result.error); }
+      else if (result.newLotId) {
+        setCloneLotNumber("");
+        router.push(`/inventory/lot/${result.newLotId}`);
+      }
+    });
   }
 
   const thickness = fmtThickness(lot.thicknessName);
@@ -400,18 +504,51 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
       <div className="flex flex-col gap-6 lg:grid lg:grid-cols-3">
         {/* ── Left: Slab gallery ── */}
         <div className="lg:col-span-2">
-          {/* Status filter tabs */}
-          <div className="mb-4 flex flex-wrap gap-1.5">
-            {(["All", "Available", "Reserved", "Sold"] as StatusFilter[]).map(
-              (tab) => (
-                <StatusTab
-                  key={tab}
-                  label={tab}
-                  count={counts[tab]}
-                  active={statusFilter === tab}
-                  onClick={() => setStatusFilter(tab)}
-                />
-              ),
+          {/* Status filter tabs + Select toggle */}
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap gap-1.5">
+              {(["All", "Available", "Reserved", "Sold"] as StatusFilter[]).map(
+                (tab) => (
+                  <StatusTab
+                    key={tab}
+                    label={tab}
+                    count={counts[tab]}
+                    active={statusFilter === tab}
+                    onClick={() => setStatusFilter(tab)}
+                  />
+                ),
+              )}
+            </div>
+            {isSelectMode ? (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">
+                  {selectedIds.size} selected
+                </span>
+                {visibleSlabs.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={selectAllVisible}
+                    className="text-sm text-gray-700 underline hover:text-gray-900"
+                  >
+                    Select all {visibleSlabs.length}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={toggleSelectMode}
+                  className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-50"
+                >
+                  Done
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={toggleSelectMode}
+                className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
+              >
+                Select
+              </button>
             )}
           </div>
 
@@ -428,60 +565,96 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
               {visibleSlabs.map((slab) => {
                 const isReserved = slab.statusName === "Reserved";
                 const isSold = slab.statusName === "Sold";
+                const isSelected = selectedIds.has(slab.id);
+                const isExpired = isReserved && !!slab.reservedUntil && new Date(slab.reservedUntil) < now;
+                const isExpiringSoon = isReserved && !isExpired && !!slab.reservedUntil && new Date(slab.reservedUntil) <= threeDaysFromNow;
                 const size = fmtSize(slab.length, slab.width);
 
                 return (
                   <div
                     key={slab.id}
-                    className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm transition-shadow hover:shadow-md"
+                    className={`overflow-hidden rounded-xl border bg-white shadow-sm transition-all ${
+                      isSelected
+                        ? "border-gray-900 ring-2 ring-gray-900/20"
+                        : "border-gray-100 hover:shadow-md"
+                    }`}
                   >
                     {/* Clickable area: photo + info */}
-                    <Link href={`/inventory/slab/${slab.id}`} className="block">
-                      {/* Photo */}
-                      <SlabThumbnail imageUrl={slab.thumbnailUrl} />
-
-                      {/* Info */}
-                      <div className="px-3 pt-3 pb-2">
-                        <div className="mb-1.5 flex items-start justify-between gap-1">
-                          <span className="font-mono text-sm font-bold text-gray-900 leading-tight">
-                            {slab.slabCode ?? "—"}
-                          </span>
-                          <span
-                            className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${getStatusColor(slab.statusName)}`}
+                    <div className="relative">
+                      {/* Select mode overlay — captures clicks over photo+info */}
+                      {isSelectMode && (
+                        <button
+                          type="button"
+                          onClick={() => toggleSlab(slab.id)}
+                          className="absolute inset-0 z-10 cursor-pointer"
+                          aria-label={isSelected ? "Deselect slab" : "Select slab"}
+                        >
+                          <span className="absolute top-2 left-2 flex h-5 w-5 items-center justify-center rounded border-2 shadow-sm transition-colors"
+                            style={{
+                              background: isSelected ? "#111827" : "rgba(255,255,255,0.85)",
+                              borderColor: isSelected ? "#111827" : "#fff",
+                            }}
                           >
-                            {slab.statusName ?? "—"}
+                            {isSelected && <Check className="h-3 w-3 text-white" />}
                           </span>
+                        </button>
+                      )}
+                      <Link href={`/inventory/slab/${slab.id}`} className="block">
+                        {/* Photo */}
+                        <SlabThumbnail imageUrl={slab.thumbnailUrl} />
+
+                        {/* Info */}
+                        <div className="px-3 pt-3 pb-2">
+                          <div className="mb-1.5 flex items-start justify-between gap-1">
+                            <span className="font-mono text-sm font-bold text-gray-900 leading-tight">
+                              {slab.slabCode ?? "—"}
+                            </span>
+                            <span
+                              className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${getStatusColor(slab.statusName)}`}
+                            >
+                              {slab.statusName ?? "—"}
+                            </span>
+                          </div>
+                          {size ? (
+                            <p className="text-xs text-gray-500">
+                              {size} &middot; {fmtNum(slab.sqft)} sqft <span className="font-light text-gray-400">(estimate)</span>
+                            </p>
+                          ) : null}
+                          {(slab.warehouseName || slab.rackNumber) ? (
+                            <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-400">
+                              <MapPin className="h-3 w-3 shrink-0" />
+                              {[slab.warehouseName, slab.rackNumber]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </p>
+                          ) : null}
+                          {isReserved && (
+                            <div className="mt-1 space-y-0.5">
+                              {(isExpired || isExpiringSoon) && (
+                                <span className={`inline-block rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${isExpired ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-600"}`}>
+                                  {isExpired ? "Expired" : "Expiring soon"}
+                                </span>
+                              )}
+                              {slab.reservedFor && (
+                                <p className={`truncate text-xs font-medium ${isExpired ? "text-red-500" : "text-orange-600"}`}>
+                                  {slab.reservedFor}
+                                  {slab.reservedUntil ? (
+                                    <span className={`ml-1 font-normal ${isExpired ? "text-red-400" : "text-orange-400"}`}>
+                                      · until {fmtDate(slab.reservedUntil)}
+                                    </span>
+                                  ) : null}
+                                </p>
+                              )}
+                            </div>
+                          )}
                         </div>
-                        {size ? (
-                          <p className="text-xs text-gray-500">
-                            {size} &middot; {fmtNum(slab.sqft)} sqft <span className="font-light text-gray-400">(estimate)</span>
-                          </p>
-                        ) : null}
-                        {(slab.warehouseName || slab.rackNumber) ? (
-                          <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-400">
-                            <MapPin className="h-3 w-3 shrink-0" />
-                            {[slab.warehouseName, slab.rackNumber]
-                              .filter(Boolean)
-                              .join(" · ")}
-                          </p>
-                        ) : null}
-                        {isReserved && slab.reservedFor && (
-                          <p className="mt-1 truncate text-xs font-medium text-orange-600">
-                            {slab.reservedFor}
-                            {slab.reservedUntil ? (
-                              <span className="ml-1 font-normal text-orange-400">
-                                · until {fmtDate(slab.reservedUntil)}
-                              </span>
-                            ) : null}
-                          </p>
-                        )}
-                      </div>
-                    </Link>
+                      </Link>
+                    </div>
 
                     {/* Footer: price + actions */}
                     <div className="flex items-center justify-between border-t border-gray-100 px-3 py-2">
                       <span className="text-sm font-semibold text-gray-900">
-                        Rs. {fmtNum(slab.sellingPrice)}
+                        {fmtCurrency(slab.sellingPrice)}
                       </span>
                       <div className="flex items-center gap-0.5">
                         {isReserved ? (
@@ -639,19 +812,12 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
           </div>
 
           {/* Purchase info */}
-          {(lot.supplierName || lot.invoiceNumber || purchaseDate) ? (
+          {(lot.invoiceNumber || purchaseDate) ? (
             <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
               <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
                 Purchase Info
               </h2>
               <div className="space-y-3">
-                {lot.supplierName ? (
-                  <InfoRow
-                    icon={<Truck className="h-4 w-4" />}
-                    label="Supplier"
-                    value={lot.supplierName}
-                  />
-                ) : null}
                 {lot.invoiceNumber ? (
                   <InfoRow
                     icon={<Receipt className="h-4 w-4" />}
@@ -737,7 +903,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
             <button
               type="button"
               disabled={isPending || counts.Available === 0}
-              onClick={() => { setActionError(null); setShowBulkReserveDialog(true); }}
+              onClick={() => { setActionError(null); setActiveModal("bulk-reserve"); }}
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Clock className="h-4 w-4" />
@@ -748,7 +914,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
               <button
                 type="button"
                 disabled={isPending}
-                onClick={() => { setActionError(null); setShowBulkUnreserveConfirm(true); }}
+                onClick={() => { setActionError(null); setActiveModal("bulk-unreserve"); }}
                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-gray-500 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <X className="h-4 w-4" />
@@ -759,7 +925,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
             <button
               type="button"
               disabled={isPending || (counts.Available === 0 && counts.Reserved === 0)}
-              onClick={() => { setActionError(null); setShowBulkSoldConfirm(true); }}
+              onClick={() => { setActionError(null); setActiveModal("bulk-sold"); }}
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <DollarSign className="h-4 w-4" />
@@ -770,13 +936,23 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
               <button
                 type="button"
                 disabled={isPending}
-                onClick={() => { setActionError(null); setShowBulkUnsellConfirm(true); }}
+                onClick={() => { setActionError(null); setActiveModal("bulk-unsell"); }}
                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-gray-500 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <X className="h-4 w-4" />
                 Mark Lot as Available ({counts.Sold} sold)
               </button>
             )}
+
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={() => { setCloneLotNumber(""); setActionError(null); setActiveModal("clone-lot"); }}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Copy className="h-4 w-4" />
+              Clone Lot
+            </button>
 
             <Link
               href={`/inventory/quotations?lotId=${lot.id}`}
@@ -802,7 +978,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
             </a>
             <button
               type="button"
-              onClick={() => setShowDeleteLotConfirm(true)}
+              onClick={() => setActiveModal("delete-lot")}
               disabled={isPending}
               className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 px-4 py-3 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -813,6 +989,88 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
         </div>
       </div>
 
+      {/* Floating selection action bar */}
+      {isSelectMode && selectedIds.size > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-gray-200 bg-white px-4 py-3 shadow-lg">
+          <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3">
+            <span className="text-sm font-medium text-gray-700">
+              {selectedIds.size} slab{selectedIds.size !== 1 ? "s" : ""} selected
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {selectionAvailableIds.length > 0 && (
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => { setActionError(null); setActiveModal("selection-reserve"); }}
+                  className="flex items-center gap-1.5 rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-orange-600 disabled:opacity-50"
+                >
+                  <Clock className="h-3.5 w-3.5" />
+                  Reserve ({selectionAvailableIds.length})
+                </button>
+              )}
+              {selectionSellableIds.length > 0 && (
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => { setActionError(null); setActiveModal("selection-sold"); }}
+                  className="flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-700 disabled:opacity-50"
+                >
+                  <DollarSign className="h-3.5 w-3.5" />
+                  Mark Sold ({selectionSellableIds.length})
+                </button>
+              )}
+              {selectionReservedIds.length > 0 && (
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => { setActionError(null); setActiveModal("selection-unreserve"); }}
+                  className="flex items-center gap-1.5 rounded-lg bg-gray-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-700 disabled:opacity-50"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Unreserve ({selectionReservedIds.length})
+                </button>
+              )}
+              {selectionSoldIds.length > 0 && (
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => { setActionError(null); setActiveModal("selection-unsell"); }}
+                  className="flex items-center gap-1.5 rounded-lg bg-gray-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-700 disabled:opacity-50"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Mark Available ({selectionSoldIds.length})
+                </button>
+              )}
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={() => { setPriceFormValues({ cost: "", sell: "", dealer: "" }); setActionError(null); setActiveModal("selection-price"); }}
+                className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+              >
+                <Tag className="h-3.5 w-3.5" />
+                Update Prices
+              </button>
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={() => { setActionError(null); setActiveModal("selection-delete"); }}
+                className="flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete ({selectedIds.size})
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedIds(new Set())}
+                className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Individual slab reserve */}
       <ReserveDialog
         open={pendingReserveSlab !== null}
@@ -822,43 +1080,51 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
 
       {/* Bulk lot reserve */}
       <ReserveDialog
-        open={showBulkReserveDialog}
-        onCancel={() => setShowBulkReserveDialog(false)}
+        open={activeModal === "bulk-reserve"}
+        onCancel={() => setActiveModal(null)}
         onConfirm={handleBulkReserveConfirm}
+        bulk
+      />
+
+      {/* Selection reserve */}
+      <ReserveDialog
+        open={activeModal === "selection-reserve"}
+        onCancel={() => setActiveModal(null)}
+        onConfirm={handleSelectionReserveConfirm}
         bulk
       />
 
       {/* Bulk lot sold */}
       <ConfirmDialog
-        open={showBulkSoldConfirm}
+        open={activeModal === "bulk-sold"}
         title="Mark entire lot as sold?"
         description={`This will mark all ${counts.Available + counts.Reserved} available and reserved slabs in this lot as sold.`}
         confirmLabel="Mark All as Sold"
         cancelLabel="Cancel"
         onConfirm={confirmBulkSold}
-        onCancel={() => setShowBulkSoldConfirm(false)}
+        onCancel={() => setActiveModal(null)}
       />
 
       {/* Bulk unreserve */}
       <ConfirmDialog
-        open={showBulkUnreserveConfirm}
+        open={activeModal === "bulk-unreserve"}
         title="Unreserve entire lot?"
         description={`This will mark all ${counts.Reserved} reserved slabs as available again.`}
         confirmLabel="Unreserve All"
         cancelLabel="Cancel"
         onConfirm={confirmBulkUnreserve}
-        onCancel={() => setShowBulkUnreserveConfirm(false)}
+        onCancel={() => setActiveModal(null)}
       />
 
       {/* Bulk unsell */}
       <ConfirmDialog
-        open={showBulkUnsellConfirm}
+        open={activeModal === "bulk-unsell"}
         title="Mark entire lot as available?"
         description={`This will mark all ${counts.Sold} sold slabs as available again.`}
         confirmLabel="Mark All as Available"
         cancelLabel="Cancel"
         onConfirm={confirmBulkUnsell}
-        onCancel={() => setShowBulkUnsellConfirm(false)}
+        onCancel={() => setActiveModal(null)}
       />
 
       {/* Individual slab sold / unreserve */}
@@ -887,14 +1153,153 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
       />
 
       <ConfirmDialog
-        open={showDeleteLotConfirm}
+        open={activeModal === "delete-lot"}
         title="Delete this lot?"
         description={`This will permanently delete lot ${lot.lotNumber ?? ""} and all ${counts.All} slab${counts.All !== 1 ? "s" : ""} in it, including all photos. This cannot be undone.`}
         confirmLabel="Delete Lot"
         cancelLabel="Cancel"
         onConfirm={confirmLotDelete}
-        onCancel={() => setShowDeleteLotConfirm(false)}
+        onCancel={() => setActiveModal(null)}
       />
+
+      {/* Selection confirm dialogs */}
+      <ConfirmDialog
+        open={activeModal === "selection-sold"}
+        title={`Mark ${selectionSellableIds.length} slab${selectionSellableIds.length !== 1 ? "s" : ""} as sold?`}
+        description="This will mark the selected available and reserved slabs as sold."
+        confirmLabel="Mark as Sold"
+        cancelLabel="Cancel"
+        onConfirm={confirmSelectionSold}
+        onCancel={() => setActiveModal(null)}
+      />
+
+      <ConfirmDialog
+        open={activeModal === "selection-unreserve"}
+        title={`Unreserve ${selectionReservedIds.length} slab${selectionReservedIds.length !== 1 ? "s" : ""}?`}
+        description="This will mark the selected reserved slabs as available again."
+        confirmLabel="Unreserve"
+        cancelLabel="Cancel"
+        onConfirm={confirmSelectionUnreserve}
+        onCancel={() => setActiveModal(null)}
+      />
+
+      <ConfirmDialog
+        open={activeModal === "selection-unsell"}
+        title={`Mark ${selectionSoldIds.length} slab${selectionSoldIds.length !== 1 ? "s" : ""} as available?`}
+        description="This will mark the selected sold slabs as available again."
+        confirmLabel="Mark as Available"
+        cancelLabel="Cancel"
+        onConfirm={confirmSelectionUnsell}
+        onCancel={() => setActiveModal(null)}
+      />
+
+      <ConfirmDialog
+        open={activeModal === "selection-delete"}
+        title={`Delete ${selectedIds.size} slab${selectedIds.size !== 1 ? "s" : ""}?`}
+        description="This will permanently delete the selected slabs and all their photos. This cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={confirmSelectionDelete}
+        onCancel={() => setActiveModal(null)}
+      />
+
+      {/* Clone Lot dialog */}
+      {activeModal === "clone-lot" && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+            <h3 className="mb-1 text-base font-bold text-gray-900">Clone Lot</h3>
+            <p className="mb-4 text-sm text-gray-500">
+              Creates a new lot with the same marble, dimensions, and prices. All slabs are cloned as Available.
+            </p>
+            <label htmlFor="clone-lot-number" className="mb-1.5 block text-sm font-medium text-gray-700">
+              New Lot Number
+            </label>
+            <input
+              id="clone-lot-number"
+              type="text"
+              value={cloneLotNumber}
+              onChange={(e) => setCloneLotNumber(e.target.value)}
+              placeholder={`${lot.lotNumber ?? "LOT001"}-COPY`}
+              autoFocus
+              className="mb-4 w-full rounded-xl border border-gray-200 px-4 py-3 font-mono text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800"
+              onKeyDown={(e) => { if (e.key === "Enter") confirmCloneLot(); if (e.key === "Escape") setActiveModal(null); }}
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setActiveModal(null)}
+                className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isPending || !cloneLotNumber.trim()}
+                onClick={confirmCloneLot}
+                className="flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Copy className="h-4 w-4" />
+                Clone
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Price update dialog */}
+      {activeModal === "selection-price" && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+            <h3 className="mb-1 text-base font-bold text-gray-900">Update Prices</h3>
+            <p className="mb-4 text-sm text-gray-500">
+              Override prices for {selectedIds.size} selected slab{selectedIds.size !== 1 ? "s" : ""}. Leave a field blank to keep the existing value.
+            </p>
+            <div className="space-y-3 mb-5">
+              {(
+                [
+                  { id: "price-cost", label: "Cost Price", key: "cost" },
+                  { id: "price-sell", label: "Sell Price", key: "sell" },
+                  { id: "price-dealer", label: "Dealer Price", key: "dealer" },
+                ] as const
+              ).map(({ id, label, key }) => (
+                <div key={key}>
+                  <label htmlFor={id} className="mb-1 block text-sm font-medium text-gray-700">{label}</label>
+                  <div className="relative">
+                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-500">₹</span>
+                    <input
+                      id={id}
+                      type="number"
+                      min="0"
+                      step="1"
+                      placeholder="(unchanged)"
+                      value={priceFormValues[key]}
+                      onChange={(e) => setPriceFormValues((prev) => ({ ...prev, [key]: e.target.value }))}
+                      className="w-full rounded-xl border border-gray-200 py-3 pl-8 pr-4 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setActiveModal(null)}
+                className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={confirmSelectionPriceUpdate}
+                className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Update
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

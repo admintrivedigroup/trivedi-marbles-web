@@ -17,6 +17,8 @@ export type SaveSlabImagesResult = {
   savedCount: number;
 };
 
+const MAX_IMAGES_PER_SLAB = 8;
+
 export async function saveSlabImages(
   images: SlabImageInput[],
 ): Promise<SaveSlabImagesResult> {
@@ -27,6 +29,22 @@ export async function saveSlabImages(
     const {
       data: { user },
     } = await supabase.auth.getUser();
+
+    // Enforce per-slab image cap before inserting.
+    const uniqueSlabIds = [...new Set(images.map((img) => img.slabId))];
+    for (const slabId of uniqueSlabIds) {
+      const { count } = await supabase
+        .from("slab_images")
+        .select("id", { count: "exact", head: true })
+        .eq("slab_id", slabId);
+      const incoming = images.filter((img) => img.slabId === slabId).length;
+      if ((count ?? 0) + incoming > MAX_IMAGES_PER_SLAB) {
+        return {
+          error: `Each slab can have at most ${MAX_IMAGES_PER_SLAB} photos. This slab already has ${count ?? 0}.`,
+          savedCount: 0,
+        };
+      }
+    }
 
     const { data, error } = await supabase
       .from("slab_images")

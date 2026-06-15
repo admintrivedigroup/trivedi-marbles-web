@@ -102,7 +102,9 @@ export async function saveMovement(
     },
   }).catch(() => {});
 
-  revalidatePath("/inventory", "layout");
+  revalidatePath("/inventory/movement");
+  revalidatePath("/inventory/list");
+  revalidatePath("/inventory/dashboard");
   return { error: null, status: "success" };
 }
 
@@ -225,7 +227,9 @@ export async function saveBatchMovement(
     },
   }).catch(() => {});
 
-  revalidatePath("/inventory", "layout");
+  revalidatePath("/inventory/movement");
+  revalidatePath("/inventory/list");
+  revalidatePath("/inventory/dashboard");
   return { error: null, status: "success", transferred: slabsToMove.length };
 }
 
@@ -352,7 +356,9 @@ export async function createTransferRequest(
     },
   }).catch(() => {});
 
-  revalidatePath("/inventory", "layout");
+  revalidatePath("/inventory/movement");
+  revalidatePath("/inventory/list");
+  revalidatePath("/inventory/dashboard");
   return { error: null, status: "success", transferred: slabsToTransfer.length };
 }
 
@@ -485,7 +491,9 @@ export async function receiveTransfer(
     },
   }).catch(() => {});
 
-  revalidatePath("/inventory", "layout");
+  revalidatePath("/inventory/movement");
+  revalidatePath("/inventory/list");
+  revalidatePath("/inventory/dashboard");
   return { error: null, status: "success" };
 }
 
@@ -567,6 +575,8 @@ export async function cancelTransfer(
     },
   }).catch(() => {});
 
-  revalidatePath("/inventory", "layout");
+  revalidatePath("/inventory/movement");
+  revalidatePath("/inventory/list");
+  revalidatePath("/inventory/dashboard");
   return { error: null, status: "success" };
 }

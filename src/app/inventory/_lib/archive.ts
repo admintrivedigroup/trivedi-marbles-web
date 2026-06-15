@@ -68,16 +68,10 @@ export async function getArchivedItems(): Promise<ArchiveResult> {
       };
     });
 
-    // For each lot, count how many of its slabs are also archived
-    const lotIds = (lotData ?? []).map((l) => String(l.id));
-    let slabCountMap: Record<string, number> = {};
-    if (lotIds.length > 0) {
-      const { data: countData } = await supabase
-        .from("slabs")
-        .select("lot_id")
-        .in("lot_id", lotIds)
-        .not("deleted_at", "is", null);
-      for (const row of countData ?? []) {
+    // Count archived slabs per lot from the already-fetched slabData.
+    const slabCountMap: Record<string, number> = {};
+    for (const row of slabData ?? []) {
+      if (row.lot_id != null) {
         const key = String(row.lot_id);
         slabCountMap[key] = (slabCountMap[key] ?? 0) + 1;
       }

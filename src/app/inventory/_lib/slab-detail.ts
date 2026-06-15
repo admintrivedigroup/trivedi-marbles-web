@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 import type { InventoryListSlab } from "./inventory-list";
-import { toNum, toStr, relName, relLotNumber } from "./normalize";
+import { toNum, toStr, relName, relLot } from "./normalize";
 
 export type SlabDetailResult = {
   error: string | null;
@@ -28,7 +28,6 @@ export async function getSlabById(id: string): Promise<SlabDetailResult> {
       .select(`
         id,
         slab_code,
-        marble_name,
         length,
         width,
         sqft,
@@ -41,11 +40,10 @@ export async function getSlabById(id: string): Promise<SlabDetailResult> {
         lot_id,
         reserved_for,
         reserved_until,
-        marble_categories(name),
         warehouses(name),
         slab_statuses(name),
-        thickness_options(name),
-        marble_lots(lot_number)
+        marble_lots(lot_number, marble_name, marble_categories(name), thickness_options(name)),
+        slab_images(image_url, sort_order)
       `)
       .eq("id", id)
       .single();
@@ -67,12 +65,21 @@ export async function getSlabById(id: string): Promise<SlabDetailResult> {
 
     const lotId = row.lot_id != null ? String(row.lot_id) : null;
 
+    const images = Array.isArray(row.slab_images) ? row.slab_images as Array<{ image_url?: unknown; sort_order?: unknown }> : [];
+    const thumbnailUrl =
+      images
+        .slice()
+        .sort((a, b) => ((a.sort_order as number) ?? 0) - ((b.sort_order as number) ?? 0))
+        .map((img) => (typeof img.image_url === "string" ? img.image_url : null))
+        .find((url): url is string => url !== null) ?? null;
+
+    const lot = relLot(row.marble_lots);
     return {
       error: null,
       slab: {
         id: slabId,
         slabCode: toStr(row.slab_code),
-        marbleName: toStr(row.marble_name),
+        marbleName: toStr(lot?.marble_name),
         length: toNum(row.length),
         width: toNum(row.width),
         sqft: toNum(row.sqft),
@@ -83,14 +90,14 @@ export async function getSlabById(id: string): Promise<SlabDetailResult> {
         notes: toStr(row.notes),
         createdAt: toStr(row.created_at),
         lotId,
-        lotNumber: relLotNumber(row.marble_lots),
-        thumbnailUrl: null,
+        lotNumber: toStr(lot?.lot_number),
+        thumbnailUrl,
         reservedFor: toStr(row.reserved_for),
         reservedUntil: toStr(row.reserved_until),
-        categoryName: relName(row.marble_categories),
+        categoryName: relName(lot?.marble_categories),
         warehouseName: relName(row.warehouses),
         statusName: relName(row.slab_statuses),
-        thicknessName: relName(row.thickness_options),
+        thicknessName: relName(lot?.thickness_options),
       },
     };
   } catch (err) {
@@ -123,6 +130,46 @@ export async function getSlabImages(slabId: string): Promise<SlabImage[]> {
       publicId: String(row.public_id ?? ""),
       sortOrder: typeof row.sort_order === "number" ? row.sort_order : 0,
     }));
+  } catch {
+    return [];
+  }
+}
+
+export type ReservationHistoryEntry = {
+  id: string;
+  before: string | null;
+  after: string | null;
+  reservedFor: string | null;
+  reservedUntil: string | null;
+  userEmail: string | null;
+  createdAt: string;
+};
+
+export async function getSlabReservationHistory(slabId: string): Promise<ReservationHistoryEntry[]> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("audit_logs")
+      .select("id, diff, user_email, created_at")
+      .eq("target_id", slabId)
+      .eq("action", "slab.status_changed")
+      .order("created_at", { ascending: false })
+      .limit(20);
+
+    if (error) return [];
+
+    return (data ?? []).map((row: Record<string, unknown>) => {
+      const diff = (row.diff && typeof row.diff === "object" ? row.diff : {}) as Record<string, unknown>;
+      return {
+        id: String(row.id ?? ""),
+        before: diff.before ? String(diff.before) : null,
+        after: diff.after ? String(diff.after) : null,
+        reservedFor: diff.reservedFor ? String(diff.reservedFor) : null,
+        reservedUntil: diff.reservedUntil ? String(diff.reservedUntil) : null,
+        userEmail: row.user_email ? String(row.user_email) : null,
+        createdAt: String(row.created_at ?? ""),
+      };
+    });
   } catch {
     return [];
   }

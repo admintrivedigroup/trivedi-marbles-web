@@ -8,14 +8,7 @@ import { restoreLot } from "@/app/inventory/_actions/restore-lot";
 import { permanentDeleteSlab, permanentDeleteLot } from "@/app/inventory/_actions/permanent-delete";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { ArchivedLot, ArchivedSlab } from "@/app/inventory/_lib/archive";
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
+import { formatDate, formatRelativeTime } from "@/app/inventory/_lib/format";
 
 type ActionButtonsProps = {
   label: string;
@@ -189,7 +182,8 @@ export function InventoryArchive({
                           </span>
                           <span className="text-sm text-gray-400">·</span>
                           <span className="text-xs text-gray-400">
-                            Archived {formatDate(group.lot.deletedAt)}
+                            Archived {formatDate(group.lot.deletedAt) ?? group.lot.deletedAt}
+                            <span className="ml-1 text-gray-300">· {formatRelativeTime(group.lot.deletedAt)}</span>
                           </span>
                         </div>
                       </button>
@@ -278,7 +272,8 @@ export function InventoryArchive({
                         <p className="mt-0.5 text-sm text-gray-600">{slab.marbleName ?? "—"}</p>
                         <p className="text-xs text-gray-400">
                           {slab.sqft != null ? `${slab.sqft} sqft · ` : ""}
-                          Archived {formatDate(slab.deletedAt)}
+                          Archived {formatDate(slab.deletedAt) ?? slab.deletedAt}
+                          <span className="ml-1 text-gray-300">· {formatRelativeTime(slab.deletedAt)}</span>
                         </p>
                       </div>
                       <ActionButtons

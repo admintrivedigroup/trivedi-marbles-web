@@ -37,3 +37,14 @@ export function relLotNumber(value: unknown): string | null {
   }
   return null;
 }
+
+export function relLot(value: unknown): Record<string, unknown> | null {
+  if (Array.isArray(value)) {
+    const first = value[0] as Record<string, unknown> | undefined;
+    return first ?? null;
+  }
+  if (value && typeof value === "object") {
+    return value as Record<string, unknown>;
+  }
+  return null;
+}

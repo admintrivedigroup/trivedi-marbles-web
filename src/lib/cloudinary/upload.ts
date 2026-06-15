@@ -33,3 +33,8 @@ export async function uploadToCloudinary(
 export function withCloudinaryTransforms(url: string): string {
   return url.replace(/\/image\/upload\//, "/image/upload/f_webp,q_auto/");
 }
+
+// Use for thumbnails — caps at 300px so we don't serve a 2 MB image for a 56px square.
+export function withCloudinaryThumbnail(url: string): string {
+  return url.replace(/\/image\/upload\//, "/image/upload/w_300,h_300,c_limit,f_webp,q_auto/");
+}

@@ -71,7 +71,6 @@ export function EditLot({ lot }: { lot: LotForEdit }) {
     statusId: lot.statusId,
     thicknessId: lot.thicknessId,
     warehouseId: lot.warehouseId,
-    supplierName: lot.supplierName,
     purchaseDate: lot.purchaseDate,
     invoiceNumber: lot.invoiceNumber,
     costPrice: lot.costPrice,
@@ -275,22 +274,7 @@ export function EditLot({ lot }: { lot: LotForEdit }) {
             Purchase Info
             <span className="ml-2 text-sm font-normal text-gray-400">(optional)</span>
           </h3>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="supplierName" className="text-sm font-medium text-gray-700">
-                Supplier Name
-              </label>
-              <input
-                id="supplierName"
-                name="supplierName"
-                type="text"
-                value={form.supplierName}
-                onChange={handleChange}
-                placeholder="Rajesh Marble Co."
-                disabled={isPending}
-                className="rounded-xl border border-gray-200 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400"
-              />
-            </div>
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <label htmlFor="purchaseDate" className="text-sm font-medium text-gray-700">
                 Purchase Date

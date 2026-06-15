@@ -39,6 +39,29 @@ export async function GET(request: NextRequest) {
     allowedWarehouseIds: profile?.warehouseIds ?? null,
   });
 
+  // Resolve filter labels for the subtitle row
+  let warehouseName = "";
+  let statusName = "";
+  if (warehouseId || statusId) {
+    const { data: lookups } = await supabase
+      .from("warehouses")
+      .select("id, name")
+      .in("id", warehouseId ? [warehouseId] : []);
+    warehouseName = (lookups ?? []).find((r) => String(r.id) === warehouseId)?.name ?? "";
+
+    const { data: statuses } = await supabase
+      .from("slab_statuses")
+      .select("id, name")
+      .in("id", statusId ? [statusId] : []);
+    statusName = (statuses ?? []).find((r) => String(r.id) === statusId)?.name ?? "";
+  }
+
+  const filterParts: string[] = [];
+  if (warehouseName) filterParts.push(`Warehouse: ${warehouseName}`);
+  if (statusName) filterParts.push(`Status: ${statusName}`);
+  if (search) filterParts.push(`Search: "${search}"`);
+  const filterLabel = filterParts.length > 0 ? filterParts.join("  ·  ") : "All inventory";
+
   const wb = new ExcelJS.Workbook();
   wb.creator = "Trivedi Grani Marmo";
   wb.created = new Date();
@@ -87,8 +110,17 @@ export async function GET(request: NextRequest) {
   titleCell.alignment = { horizontal: "center", vertical: "middle" };
   ws.getRow(1).height = 30;
 
-  // ── Row 2: Column headers ──────────────────────────────────────────────────
-  const headerRow = ws.getRow(2);
+  // ── Row 2: Filter subtitle ─────────────────────────────────────────────────
+  ws.mergeCells(2, 1, 2, colDefs.length);
+  const subtitleCell = ws.getCell(2, 1);
+  subtitleCell.value     = filterLabel;
+  subtitleCell.font      = { italic: true, size: 9, color: { argb: "FFB0BEC5" } };
+  subtitleCell.fill      = { type: "pattern", pattern: "solid", fgColor: { argb: HEADER_BG } };
+  subtitleCell.alignment = { horizontal: "center", vertical: "middle" };
+  ws.getRow(2).height    = 16;
+
+  // ── Row 3: Column headers ──────────────────────────────────────────────────
+  const headerRow = ws.getRow(3);
   headerRow.height = 22;
   colDefs.forEach(({ label }, idx) => {
     const cell = headerRow.getCell(idx + 1);
@@ -99,7 +131,7 @@ export async function GET(request: NextRequest) {
     cell.border    = { bottom: { style: "medium", color: { argb: "FF1A3060" } } };
   });
 
-  // ── Rows 3+: Data ──────────────────────────────────────────────────────────
+  // ── Rows 4+: Data ──────────────────────────────────────────────────────────
   slabs.forEach((s, i) => {
     const row = ws.addRow({
       slabCode:      s.slabCode,
@@ -138,9 +170,9 @@ export async function GET(request: NextRequest) {
   });
 
   // ── Summary row ────────────────────────────────────────────────────────────
-  // Data occupies rows 3 … (2 + slabs.length)
-  const firstDataRow = 3;
-  const lastDataRow  = 2 + slabs.length;
+  // Data occupies rows 4 … (3 + slabs.length)
+  const firstDataRow = 4;
+  const lastDataRow  = 3 + slabs.length;
 
   const sumRow = ws.addRow([]);   // next row after data
   sumRow.height = 20;
@@ -170,9 +202,9 @@ export async function GET(request: NextRequest) {
   sqftCell.alignment = { horizontal: "right", vertical: "middle" };
   sqftCell.border    = { top: { style: "medium", color: { argb: HEADER_BG } } };
 
-  // ── Freeze top 2 rows, autofilter on header row ────────────────────────────
-  ws.views      = [{ state: "frozen", xSplit: 0, ySplit: 2, activeCell: "A3" }];
-  ws.autoFilter = { from: { row: 2, column: 1 }, to: { row: 2, column: colDefs.length } };
+  // ── Freeze top 3 rows, autofilter on header row ────────────────────────────
+  ws.views      = [{ state: "frozen", xSplit: 0, ySplit: 3, activeCell: "A4" }];
+  ws.autoFilter = { from: { row: 3, column: 1 }, to: { row: 3, column: colDefs.length } };
 
   const buffer   = await wb.xlsx.writeBuffer();
   const fileDate = new Date().toISOString().slice(0, 10);

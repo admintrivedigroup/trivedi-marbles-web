@@ -23,10 +23,9 @@ import {
 } from "lucide-react";
 
 import { withCloudinaryTransforms } from "@/lib/cloudinary/upload";
-import type { SlabImage } from "@/app/inventory/_lib/slab-detail";
+import type { SlabImage, SlabMovement, ReservationHistoryEntry } from "@/app/inventory/_lib/slab-detail";
 
 import type { InventoryListSlab } from "@/app/inventory/_lib/inventory-list";
-import type { SlabMovement } from "@/app/inventory/_lib/slab-detail";
 import {
   updateSlabStatus,
   type SlabStatusName,
@@ -34,62 +33,23 @@ import {
 import { deleteSlab } from "@/app/inventory/_actions/delete-slab";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ReserveDialog, type ReservationData } from "@/app/inventory/_components/reserve-dialog";
+import {
+  formatCurrency as fmtCurrency,
+  formatDate,
+  formatDateTime,
+  formatThickness,
+  getStatusColor,
+} from "@/app/inventory/_lib/format";
 
 type SlabDetailProps = {
   images: SlabImage[];
   movements: SlabMovement[];
+  reservationHistory: ReservationHistoryEntry[];
   slab: InventoryListSlab;
   canViewCostPrice: boolean;
   isInTransit?: boolean;
 };
 
-function getStatusColors(status: string | null) {
-  switch (status) {
-    case "Available":
-      return "bg-green-100 text-green-700";
-    case "Reserved":
-      return "bg-orange-100 text-orange-700";
-    case "Sold":
-      return "bg-gray-100 text-gray-600";
-    default:
-      return "bg-gray-100 text-gray-600";
-  }
-}
-
-function fmtCurrency(value: number | null) {
-  if (value === null) return "-";
-  return `₹${value.toLocaleString("en-IN")}`;
-}
-
-function fmtDate(value: string | null) {
-  if (!value) return "-";
-  const d = new Date(value);
-  if (isNaN(d.getTime())) return value;
-  const parts = new Intl.DateTimeFormat("en-IN", {
-    year: "numeric", month: "short", day: "2-digit",
-    timeZone: "Asia/Kolkata",
-  }).formatToParts(d);
-  const p = Object.fromEntries(parts.map(({ type, value: v }) => [type, v]));
-  return `${p.day} ${p.month} ${p.year}`;
-}
-
-function fmtDateTime(value: string) {
-  if (!value) return "-";
-  const d = new Date(value);
-  if (isNaN(d.getTime())) return value;
-  const parts = new Intl.DateTimeFormat("en-IN", {
-    year: "numeric", month: "short", day: "2-digit",
-    hour: "2-digit", minute: "2-digit",
-    timeZone: "Asia/Kolkata",
-  }).formatToParts(d);
-  const p = Object.fromEntries(parts.map(({ type, value: v }) => [type, v]));
-  return `${p.day} ${p.month} ${p.year} at ${p.hour}:${p.minute} ${p.dayPeriod ?? ""}`.trim();
-}
-
-function fmtThickness(value: string | null) {
-  if (!value) return "-";
-  return /^\d+(\.\d+)?$/.test(value) ? `${value}mm` : value;
-}
 
 function SpecRow({
   icon,
@@ -168,7 +128,7 @@ function MovementHistory({ movements }: { movements: SlabMovement[] }) {
                     <p className="mt-0.5 text-xs text-gray-400">{movement.notes}</p>
                   )}
                   <p className="mt-1 text-xs text-gray-400">
-                    {fmtDateTime(movement.createdAt)}
+                    {formatDateTime(movement.createdAt)}
                   </p>
                 </div>
               </div>
@@ -204,7 +164,49 @@ function MovementHistory({ movements }: { movements: SlabMovement[] }) {
   );
 }
 
-export function SlabDetail({ images, movements, slab, canViewCostPrice, isInTransit = false }: SlabDetailProps) {
+function ReservationHistory({ entries }: { entries: ReservationHistoryEntry[] }) {
+  if (entries.length === 0) return null;
+
+  function dotColor(after: string | null) {
+    if (after === "Reserved") return "bg-orange-400";
+    if (after === "Sold") return "bg-gray-300";
+    return "bg-green-400";
+  }
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+      <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-3.5">
+        <Clock className="h-4 w-4 text-gray-500" />
+        <h2 className="text-sm font-semibold text-gray-900">Reservation History</h2>
+        <span className="ml-auto text-xs text-gray-400">{entries.length} event{entries.length !== 1 ? "s" : ""}</span>
+      </div>
+      <div className="divide-y divide-gray-50">
+        {entries.map((entry, index) => (
+          <div key={entry.id} className="flex gap-3 px-4 py-3">
+            <div className="flex flex-col items-center gap-1">
+              <div className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${dotColor(entry.after)}`} />
+              {index < entries.length - 1 && <div className="w-px flex-1 bg-gray-100" />}
+            </div>
+            <div className="min-w-0 pb-1">
+              <p className="text-sm font-medium text-gray-900">
+                {entry.before ?? "—"} → {entry.after ?? "—"}
+                {entry.reservedFor && (
+                  <span className="ml-1.5 font-normal text-gray-600">for {entry.reservedFor}</span>
+                )}
+              </p>
+              {entry.reservedUntil && (
+                <p className="mt-0.5 text-xs text-gray-500">Until {formatDate(entry.reservedUntil) ?? entry.reservedUntil}</p>
+              )}
+              <p className="mt-1 text-xs text-gray-400">{formatDateTime(entry.createdAt)}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function SlabDetail({ images, movements, reservationHistory, slab, canViewCostPrice, isInTransit = false }: SlabDetailProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [pendingAction, setPendingAction] = useState<SlabStatusName | null>(
@@ -363,6 +365,9 @@ export function SlabDetail({ images, movements, slab, canViewCostPrice, isInTran
 
             {/* Movement history */}
             <MovementHistory movements={movements} />
+
+            {/* Reservation history */}
+            <ReservationHistory entries={reservationHistory} />
           </div>
 
           {/* Right column — detail card, grows to fill space */}
@@ -374,7 +379,7 @@ export function SlabDetail({ images, movements, slab, canViewCostPrice, isInTran
                   {slab.marbleName ?? "-"}
                 </h1>
                 <span
-                  className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${getStatusColors(slab.statusName)}`}
+                  className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${getStatusColor(slab.statusName)}`}
                 >
                   {slab.statusName ?? "Unknown"}
                 </span>
@@ -395,7 +400,7 @@ export function SlabDetail({ images, movements, slab, canViewCostPrice, isInTran
                 <SpecRow
                   icon={<Tag className="h-4 w-4" />}
                   label="Thickness"
-                  value={fmtThickness(slab.thicknessName)}
+                  value={formatThickness(slab.thicknessName) ?? "-"}
                 />
                 <SpecRow
                   icon={<MapPin className="h-4 w-4" />}
@@ -410,7 +415,7 @@ export function SlabDetail({ images, movements, slab, canViewCostPrice, isInTran
                 <SpecRow
                   icon={<Calendar className="h-4 w-4" />}
                   label="Added"
-                  value={fmtDate(slab.createdAt)}
+                  value={formatDate(slab.createdAt) ?? "-"}
                 />
                 <SpecRow
                   icon={<FileText className="h-4 w-4" />}
@@ -509,7 +514,7 @@ export function SlabDetail({ images, movements, slab, canViewCostPrice, isInTran
                     return (
                       <p className={`mt-0.5 text-xs ${isExpired ? "font-medium text-red-600" : "text-orange-600"}`}>
                         {isExpired ? "Expired · was due " : "Until "}
-                        {fmtDate(slab.reservedUntil)}
+                        {formatDate(slab.reservedUntil) ?? "-"}
                       </p>
                     );
                   })()}

@@ -20,7 +20,7 @@ type MovementRow = {
   to_location: string | null;
   notes: string | null;
   created_at: string;
-  slabs: { marble_name: string | null; slab_code: string | null } | null;
+  slabs: { slab_code: string | null; marble_lots: { marble_name: string | null } | null } | null;
 };
 
 type GetMovementsOptions = {
@@ -38,7 +38,7 @@ export async function getRecentMovements(options: GetMovementsOptions = {}): Pro
 
   let query = supabase
     .from("slab_movements")
-    .select("id, event_type, from_location, to_location, notes, created_at, slabs(marble_name, slab_code)")
+    .select("id, event_type, from_location, to_location, notes, created_at, slabs(slab_code, marble_lots(marble_name))")
     .order("created_at", { ascending: false });
 
   if (options.dateFrom) {
@@ -58,7 +58,7 @@ export async function getRecentMovements(options: GetMovementsOptions = {}): Pro
   return ((data ?? []) as unknown as MovementRow[]).map((row) => ({
     id: row.id,
     slabCode: row.slabs?.slab_code ?? null,
-    marbleName: row.slabs?.marble_name ?? null,
+    marbleName: row.slabs?.marble_lots?.marble_name ?? null,
     eventType: row.event_type,
     fromLocation: row.from_location,
     toLocation: row.to_location,
