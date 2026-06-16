@@ -31,6 +31,9 @@ const cormorantGaramond = Cormorant_Garamond({
 export const metadata: Metadata = {
   title: "Trivedi Marbles",
   description: "Luxury marble collections crafted for timeless spaces.",
+  icons: {
+    icon: "/images/vijay-trivedi-logo.webp",
+  },
 };
 
 type RootLayoutProps = {
