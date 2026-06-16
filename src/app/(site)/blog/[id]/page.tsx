@@ -24,9 +24,27 @@ export async function generateMetadata({ params }: BlogDetailPageProps): Promise
   const { id } = await params;
   const post = await getBlogPostById(id);
   if (!post) return {};
+  const ogImage = post.cover_image
+    ? [{ url: post.cover_image, width: 1200, height: 800, alt: post.title }]
+    : undefined;
   return {
     title: `${post.title} — The Journal`,
     description: post.excerpt,
+    alternates: { canonical: `/blog/${id}` },
+    openGraph: {
+      title: `${post.title} — The Journal`,
+      description: post.excerpt,
+      url: `/blog/${id}`,
+      type: "article",
+      publishedTime: post.date,
+      images: ogImage,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${post.title} — The Journal`,
+      description: post.excerpt,
+      images: post.cover_image ? [post.cover_image] : undefined,
+    },
   };
 }
 
@@ -50,7 +68,34 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
   const fallbackPosts = allPosts.filter((p) => p.id !== post.id).slice(0, 2);
   const suggestedPosts = relatedPosts.length > 0 ? relatedPosts : fallbackPosts;
 
+  const articleSchema = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: post.title,
+    description: post.excerpt,
+    datePublished: post.date,
+    ...(post.cover_image && { image: post.cover_image }),
+    author: {
+      "@type": "Organization",
+      name: "Trivedi Marbles Pvt Ltd",
+      url: "https://www.trivedimarbles.co.in",
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "Trivedi Marbles Pvt Ltd",
+      logo: {
+        "@type": "ImageObject",
+        url: "https://www.trivedimarbles.co.in/images/vijay-trivedi-logo.webp",
+      },
+    },
+  };
+
   return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
+      />
     <div className="min-h-screen w-full bg-background">
       {/* Hero */}
       <div className="relative flex h-[65vh] items-end overflow-hidden">
@@ -174,5 +219,6 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
         </section>
       ) : null}
     </div>
+    </>
   );
 }

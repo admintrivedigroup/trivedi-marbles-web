@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 
 import { FadeIn } from "@/components/animations/FadeIn";
@@ -6,6 +7,28 @@ import { getPublishedBlogPosts } from "@/lib/blog";
 import { BlogList } from "./_components/blog-list";
 
 export const revalidate = 3600;
+
+export const metadata: Metadata = {
+  title: "The Journal",
+  description:
+    "Insights, trends, and narratives from Trivedi Marbles — covering luxury natural stone, architectural design, and the art of selecting the perfect marble.",
+  alternates: { canonical: "/blog" },
+  openGraph: {
+    title: "The Journal | Trivedi Marbles Pvt Ltd",
+    description:
+      "Insights, trends, and narratives from Trivedi Marbles — covering luxury natural stone, architectural design, and the art of selecting the perfect marble.",
+    url: "/blog",
+    type: "website",
+    images: [{ url: "/images/ourheritage_home.webp", width: 1200, height: 800, alt: "The Trivedi Journal" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "The Journal | Trivedi Marbles Pvt Ltd",
+    description:
+      "Insights, trends, and narratives from Trivedi Marbles — covering luxury natural stone, architectural design, and the art of selecting the perfect marble.",
+    images: ["/images/ourheritage_home.webp"],
+  },
+};
 
 export default async function BlogPage() {
   const posts = await getPublishedBlogPosts();

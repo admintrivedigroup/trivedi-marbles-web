@@ -1,4 +1,28 @@
+import type { Metadata } from "next";
+
 import { FadeIn } from "@/components/animations/FadeIn";
+
+export const metadata: Metadata = {
+  title: "The Collection",
+  description:
+    "Explore our curated collection of premium natural marble slabs — Ambaji White, Fusion Black, Exotic Green, and live inventory lots available for immediate inquiry.",
+  alternates: { canonical: "/collection" },
+  openGraph: {
+    title: "The Collection | Trivedi Marbles Pvt Ltd",
+    description:
+      "Explore our curated collection of premium natural marble slabs — Ambaji White, Fusion Black, Exotic Green, and live inventory lots available for immediate inquiry.",
+    url: "/collection",
+    type: "website",
+    images: [{ url: "/images/ambaji_white_mirror.webp", width: 1200, height: 800, alt: "Premium marble collection by Trivedi Marbles" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "The Collection | Trivedi Marbles Pvt Ltd",
+    description:
+      "Explore our curated collection of premium natural marble slabs — Ambaji White, Fusion Black, Exotic Green, and live inventory lots available for immediate inquiry.",
+    images: ["/images/ambaji_white_mirror.webp"],
+  },
+};
 import { CollectionStaticSection } from "@/components/collection/CollectionStaticSection";
 import { CollectionGrid } from "@/components/collection/CollectionGrid";
 import { getWebsiteLots } from "@/lib/supabase/collection";

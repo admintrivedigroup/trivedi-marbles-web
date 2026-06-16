@@ -88,6 +88,19 @@ export function ContactForm() {
 
         <div>
           <label className="mb-2 block text-xs uppercase tracking-widest text-muted-foreground">
+            Contact Number <span className="text-secondary">*</span>
+          </label>
+          <input
+            name="phone"
+            type="tel"
+            required
+            placeholder="+91 98765 43210"
+            className="w-full border-b border-border bg-transparent pb-3 outline-none transition-colors focus:border-secondary"
+          />
+        </div>
+
+        <div>
+          <label className="mb-2 block text-xs uppercase tracking-widest text-muted-foreground">
             Project Type
           </label>
           <select

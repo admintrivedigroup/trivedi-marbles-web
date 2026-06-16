@@ -1,4 +1,28 @@
+import type { Metadata } from "next";
+
 import { products } from "@/data/products";
+
+export const metadata: Metadata = {
+  title: "Products",
+  description:
+    "Browse the full range of natural stone products from Trivedi Marbles — Ambaji White, Fusion Black, Exotic Green, and more premium marble varieties.",
+  alternates: { canonical: "/products" },
+  openGraph: {
+    title: "Products | Trivedi Marbles Pvt Ltd",
+    description:
+      "Browse the full range of natural stone products from Trivedi Marbles — Ambaji White, Fusion Black, Exotic Green, and more premium marble varieties.",
+    url: "/products",
+    type: "website",
+    images: [{ url: "/images/ambaji_white_mirror.webp", width: 1200, height: 800, alt: "Ambaji White marble slab" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Products | Trivedi Marbles Pvt Ltd",
+    description:
+      "Browse the full range of natural stone products from Trivedi Marbles — Ambaji White, Fusion Black, Exotic Green, and more premium marble varieties.",
+    images: ["/images/ambaji_white_mirror.webp"],
+  },
+};
 
 export default function ProductsPage() {
   return (

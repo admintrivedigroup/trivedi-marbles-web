@@ -1,6 +1,29 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 
 import { FadeIn } from "@/components/animations/FadeIn";
+
+export const metadata: Metadata = {
+  title: "Signature Projects",
+  description:
+    "A curated portfolio of landmark spaces and temple architecture clad in Trivedi Marbles stone — from luxury residences to iconic hospitality and religious projects.",
+  alternates: { canonical: "/projects" },
+  openGraph: {
+    title: "Signature Projects | Trivedi Marbles Pvt Ltd",
+    description:
+      "A curated portfolio of landmark spaces and temple architecture clad in Trivedi Marbles stone — from luxury residences to iconic hospitality and religious projects.",
+    url: "/projects",
+    type: "website",
+    images: [{ url: "/images/baps_temple_london.webp", width: 1200, height: 800, alt: "BAPS Temple London — clad in Trivedi Marbles stone" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Signature Projects | Trivedi Marbles Pvt Ltd",
+    description:
+      "A curated portfolio of landmark spaces and temple architecture clad in Trivedi Marbles stone — from luxury residences to iconic hospitality and religious projects.",
+    images: ["/images/baps_temple_london.webp"],
+  },
+};
 import { signatureProjects } from "@/data/marbles";
 
 export default function ProjectsPage() {

@@ -28,14 +28,32 @@ const cormorantGaramond = Cormorant_Garamond({
   style: ["normal", "italic"],
 });
 
+const DEFAULT_OG_IMAGE = {
+  url: "/images/ambaji_white_mirror.webp",
+  width: 1200,
+  height: 800,
+  alt: "Ambaji White marble slab by Trivedi Marbles Pvt Ltd",
+};
+
 export const metadata: Metadata = {
+  metadataBase: new URL("https://www.trivedimarbles.co.in"),
   title: {
-    default: "Trivedi Grani Marmo | Premium Marble Supplier in Ahmedabad",
-    template: "%s | Trivedi Grani Marmo",
+    default: "Trivedi Marbles | Premium Marble Supplier in Ahmedabad",
+    template: "%s | Trivedi Marbles Pvt Ltd",
   },
-  description: "Trivedi Grani Marmo is a premium marble supplier based in Ahmedabad, Gujarat. Explore our exclusive collection of luxury marble slabs for residential, commercial, and hospitality projects.",
+  description: "Trivedi Marbles Pvt Ltd is a premium marble supplier based in Ahmedabad, Gujarat. Explore our exclusive collection of luxury marble slabs for residential, commercial, and hospitality projects.",
   icons: {
     icon: "/images/vijay-trivedi-logo.webp",
+  },
+  openGraph: {
+    siteName: "Trivedi Marbles Pvt Ltd",
+    locale: "en_IN",
+    type: "website",
+    images: [DEFAULT_OG_IMAGE],
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: [DEFAULT_OG_IMAGE.url],
   },
 };
 

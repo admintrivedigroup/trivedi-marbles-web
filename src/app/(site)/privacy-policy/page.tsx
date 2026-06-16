@@ -5,6 +5,7 @@ import { FadeIn } from "@/components/animations/FadeIn";
 export const metadata: Metadata = {
   title: "Privacy Policy — Trivedi Marbles Pvt. Ltd.",
   description: "How Trivedi Marbles collects, uses, and protects your personal information.",
+  alternates: { canonical: "/privacy-policy" },
 };
 
 export default function PrivacyPolicyPage() {
@@ -26,7 +27,7 @@ export default function PrivacyPolicyPage() {
               Trivedi Marbles Pvt. Ltd. (&quot;we&quot;, &quot;our&quot;, or &quot;us&quot;) is a premium natural stone company
               headquartered at S.No.: 698/4, Ognaj, Opp. Vasant Nagar Township, Gota-Vadsar Road,
               Ahmedabad — 380060, Gujarat, India. This policy explains how we handle personal
-              information collected through our website at trivedigranimarmo.com.
+              information collected through our website at trivedimarbles.co.in.
             </p>
           </section>
 

@@ -5,6 +5,7 @@ import { FadeIn } from "@/components/animations/FadeIn";
 export const metadata: Metadata = {
   title: "Terms of Service — Trivedi Marbles Pvt. Ltd.",
   description: "Terms and conditions for using the Trivedi Marbles website and services.",
+  alternates: { canonical: "/terms" },
 };
 
 export default function TermsPage() {
@@ -23,7 +24,7 @@ export default function TermsPage() {
           <section>
             <h2 className="mb-4 font-serif text-2xl text-primary">1. Acceptance of Terms</h2>
             <p className="leading-relaxed">
-              By accessing and using the website at trivedigranimarmo.com (the &quot;Site&quot;), you agree
+              By accessing and using the website at trivedimarbles.co.in (the &quot;Site&quot;), you agree
               to be bound by these Terms of Service. If you do not agree to these terms, please do
               not use the Site. These terms apply to all visitors, users, and anyone else who
               accesses the Site.

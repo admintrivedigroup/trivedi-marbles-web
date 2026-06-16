@@ -38,11 +38,12 @@ export async function sendInquiry(
   const firstName = formData.get("firstName")?.toString().trim() ?? "";
   const lastName = formData.get("lastName")?.toString().trim() ?? "";
   const email = formData.get("email")?.toString().trim() ?? "";
+  const phone = formData.get("phone")?.toString().trim() ?? "";
   const projectType = formData.get("projectType")?.toString() ?? "";
   const message = formData.get("message")?.toString().trim() ?? "";
 
-  if (!firstName || !email || !message) {
-    return { success: false, error: "Please fill in your name, email, and message." };
+  if (!firstName || !email || !phone || !message) {
+    return { success: false, error: "Please fill in your name, email, contact number, and message." };
   }
 
   const fullName = `${firstName} ${lastName}`.trim();
@@ -93,6 +94,12 @@ export async function sendInquiry(
               </td>
             </tr>
             <tr>
+              <td style="padding:18px 24px;border-bottom:1px solid #e7dccd;">
+                <p style="margin:0 0 4px;font-family:Arial,sans-serif;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#c8a96a;">Contact Number</p>
+                <p style="margin:0;font-family:Arial,sans-serif;font-size:14px;color:#000000;">${phone}</p>
+              </td>
+            </tr>
+            <tr>
               <td style="padding:18px 24px;">
                 <p style="margin:0 0 4px;font-family:Arial,sans-serif;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#c8a96a;">Project Type</p>
                 <p style="margin:0;font-family:Arial,sans-serif;font-size:14px;color:#000000;">${projectType || "Not specified"}</p>
@@ -120,7 +127,7 @@ export async function sendInquiry(
           <p style="margin:0 0 6px;font-family:Arial,sans-serif;font-size:11px;color:#c8a96a;letter-spacing:2px;text-transform:uppercase;">Trivedi Grani Marmo</p>
           <p style="margin:0;font-family:Arial,sans-serif;font-size:11px;color:#666666;line-height:1.7;">
             S.No.: 698/4, Ognaj, Ahmedabad — 380060, Gujarat, India<br>
-            +91 90999 96869 &nbsp;·&nbsp; trivedigranimarmo.com
+            +91 90999 96869 &nbsp;·&nbsp; trivedimarbles.co.in
           </p>
         </td></tr>
 
