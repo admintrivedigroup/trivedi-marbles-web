@@ -29,8 +29,11 @@ const cormorantGaramond = Cormorant_Garamond({
 });
 
 export const metadata: Metadata = {
-  title: "Trivedi Marbles",
-  description: "Luxury marble collections crafted for timeless spaces.",
+  title: {
+    default: "Trivedi Grani Marmo | Premium Marble Supplier in Ahmedabad",
+    template: "%s | Trivedi Grani Marmo",
+  },
+  description: "Trivedi Grani Marmo is a premium marble supplier based in Ahmedabad, Gujarat. Explore our exclusive collection of luxury marble slabs for residential, commercial, and hospitality projects.",
   icons: {
     icon: "/images/vijay-trivedi-logo.webp",
   },

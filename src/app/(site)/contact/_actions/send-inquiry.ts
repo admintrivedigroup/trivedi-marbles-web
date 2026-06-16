@@ -62,7 +62,7 @@ export async function sendInquiry(
 
         <!-- Header -->
         <tr><td style="background:#000000;padding:36px 48px 32px;">
-          <img src="${process.env.NEXT_PUBLIC_SITE_URL}/images/vijay-trivedi-logo.webp" alt="Trivedi Grani Marmo" width="120" height="auto" style="display:block;margin-bottom:24px;max-height:60px;width:auto;" />
+          <img src="${process.env.NEXT_PUBLIC_SITE_URL}/images/vijay-trivedi-logo.webp" alt="Trivedi Grani Marmo" width="220" height="auto" style="display:block;margin-bottom:24px;width:220px;height:auto;" />
           <p style="margin:0 0 6px;font-family:Arial,sans-serif;font-size:11px;letter-spacing:4px;text-transform:uppercase;color:#c8a96a;">Trivedi Grani Marmo</p>
           <h1 style="margin:0;font-family:Georgia,serif;font-size:26px;font-weight:400;color:#ffffff;letter-spacing:1px;">New Website Inquiry</h1>
           <div style="margin-top:20px;height:1px;background:#c8a96a;opacity:0.4;"></div>
