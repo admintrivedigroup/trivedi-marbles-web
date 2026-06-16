@@ -8,7 +8,6 @@
     "dev:https": "next dev --experimental-https --webpack",
     "dev:lan:https": "next dev --hostname 0.0.0.0 --port 3000 --experimental-https --webpack",
     "build": "next build",
-    "build:cloudflare": "next build && opennextjs-cloudflare build",
     "start": "next start",
     "start:lan": "next start --hostname 0.0.0.0 --port 3000",
     "clean": "powershell -NoProfile -Command \"if (Test-Path .next) { Remove-Item -Recurse -Force .next }\"",
@@ -72,8 +71,6 @@
     "vaul": "^1.1.2"
   },
   "devDependencies": {
-    "@opennextjs/cloudflare": "^1.19.11",
-    "wrangler": "^4",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
