@@ -56,7 +56,7 @@ export function ContactForm() {
               name="firstName"
               type="text"
               required
-              placeholder="John"
+              placeholder="First name"
               className="w-full border-b border-border bg-transparent pb-3 outline-none transition-colors focus:border-secondary"
             />
           </div>
@@ -67,7 +67,7 @@ export function ContactForm() {
             <input
               name="lastName"
               type="text"
-              placeholder="Doe"
+              placeholder="Last name"
               className="w-full border-b border-border bg-transparent pb-3 outline-none transition-colors focus:border-secondary"
             />
           </div>
