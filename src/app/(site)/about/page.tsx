@@ -15,7 +15,7 @@ const milestones = [
   {
     year: "1948",
     title: "The Vision Begins (A Legacy is Born)",
-    desc: "Founded by Late Shri Dalcharam Khushaldas Trivedi with a mission to restore India’s temple heritage and revive traditional craftsmanship.",
+    desc: "Founded by Late Shri Dachharam Khushaldas Trivedi with a mission to restore India’s temple heritage and revive traditional craftsmanship.",
   },
   {
     year: "1949",
@@ -133,7 +133,7 @@ export default function AboutPage() {
                   </span>
                 </div>
                 <p>
-                  Our journey was started by late Mr. Dalcharam Khushaldas Trivedi, who was a visionary temple architect. He wanted to restore the ancient temple heritage of India. He renovated the ancient and well-known Indian temples at Ranakpur in Gujarat and Delwara in Rajasthan. He discovered and founded the quarry in the year 1949, in a small town of Ambaji, which today is well known as D.K. Trivedi & Sons Quarry.
+                  Our journey was started by late Mr. Dachharam Khushaldas Trivedi, who was a visionary temple architect. He wanted to restore the ancient temple heritage of India. He renovated the ancient and well-known Indian temples at Ranakpur in Gujarat and Delwara in Rajasthan. He discovered and founded the quarry in the year 1949, in a small town of Ambaji, which today is well known as D.K. Trivedi & Sons Quarry.
                 </p>
                 <p>
                   Our commitment to uncompromising quality and ethical mining

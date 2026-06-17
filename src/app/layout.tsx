@@ -29,10 +29,10 @@ const cormorantGaramond = Cormorant_Garamond({
 });
 
 const DEFAULT_OG_IMAGE = {
-  url: "/images/ambaji_white_mirror.webp",
+  url: "/images/vijay-trivedi-logo.webp",
   width: 1200,
-  height: 800,
-  alt: "Ambaji White marble slab by Trivedi Marbles Pvt Ltd",
+  height: 630,
+  alt: "Trivedi Marbles Pvt Ltd Logo",
 };
 
 export const metadata: Metadata = {

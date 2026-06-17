@@ -37,7 +37,7 @@ const trustItems = [
   },
   {
     icon: Anchor,
-    title: "Own Mining",
+    title: "Our Quarry",
     desc: "Direct from D.K. Trivedi & Sons quarry in Ambaji.",
   },
   {
