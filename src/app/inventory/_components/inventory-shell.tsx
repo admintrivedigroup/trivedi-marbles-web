@@ -9,6 +9,7 @@ import {
   ArrowLeftRight,
   BookOpen,
   ClipboardList,
+  Eye,
   FileText,
   LayoutDashboard,
   LogOut,
@@ -112,6 +113,12 @@ const navigationItems: NavigationItem[] = [
     label: "Archive",
     matchers: ["/inventory/archive"],
     roles: ["admin", "superadmin"],
+  },
+  {
+    href: "/inventory/visualize",
+    icon: Eye,
+    label: "Visualizer",
+    matchers: ["/inventory/visualize"],
   },
   {
     href: "/inventory/leads",

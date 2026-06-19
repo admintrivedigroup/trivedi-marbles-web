@@ -12,6 +12,7 @@ import {
   Clock,
   DollarSign,
   Edit2,
+  Eye,
   FileText,
   History,
   MapPin,
@@ -608,7 +609,16 @@ export function SlabDetail({ images, movements, reservationHistory, slab, canVie
                   Print Label
                 </a>
 
-                {/* Row 4 — Delete */}
+                {/* Row 4 — Visualize */}
+                <Link
+                  href={`/inventory/visualize/${slab.id}`}
+                  className="col-span-2 flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-medium text-white transition-all hover:bg-indigo-700 hover:shadow-md active:scale-[0.98]"
+                >
+                  <Eye className="h-4 w-4" />
+                  Visualize in Space
+                </Link>
+
+                {/* Row 5 — Delete */}
                 <button
                   type="button"
                   onClick={() => setShowDeleteConfirm(true)}
