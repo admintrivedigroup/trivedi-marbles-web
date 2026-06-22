@@ -1035,7 +1035,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
               <button
                 type="button"
                 disabled={isPending}
-                onClick={() => { setPriceFormValues({ cost: "", sell: "", dealer: "" }); setActionError(null); setActiveModal("selection-price"); }}
+                onClick={() => { setPriceFormValues({ sell: "", dealer: "" }); setActionError(null); setActiveModal("selection-price"); }}
                 className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
               >
                 <Tag className="h-3.5 w-3.5" />
