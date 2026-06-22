@@ -54,12 +54,22 @@ export function ExitButton({ href }: { href: string }) {
           }}
         >
           <div className="mb-10 flex flex-col items-center gap-5">
-            <div className="relative h-16 w-16 rounded-full bg-white/5 p-2 ring-1 ring-white/10">
+            <div className="flex items-center gap-3">
+              <div className="relative h-16 w-16 rounded-full bg-white/5 p-2 ring-1 ring-white/10">
+                <Image
+                  src="/images/vijay-trivedi-logo.webp"
+                  alt="Vijay Trivedi Group"
+                  fill
+                  className="object-contain p-2"
+                />
+              </div>
+              <span className="h-10 w-px shrink-0 bg-white/15" aria-hidden="true" />
               <Image
-                src="/images/vijay-trivedi-logo.webp"
-                alt="Trivedi Granit Marmo"
-                fill
-                className="object-contain p-2"
+                src="/images/TRIVEDI MARBLES PVT.LTD.webp"
+                alt="Trivedi Marbles Pvt. Ltd."
+                width={120}
+                height={48}
+                className="h-12 w-auto object-contain"
               />
             </div>
             <div className="text-center">

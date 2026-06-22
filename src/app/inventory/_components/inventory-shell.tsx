@@ -182,13 +182,21 @@ export function InventoryShell({
       >
         <div className="border-b border-gray-200 p-6">
           <div className="flex items-center justify-between">
-            <Link href="/inventory/dashboard" className="flex items-center gap-3">
+            <Link href="/inventory/dashboard" className="flex items-center gap-2">
               <Image
                 src="/images/vijay-trivedi-logo.webp"
-                alt="Trivedi Marbles logo"
+                alt="Vijay Trivedi Group logo"
                 width={48}
                 height={48}
-                className="h-10 w-10 object-contain"
+                className="h-9 w-9 shrink-0 object-contain"
+              />
+              <span className="h-7 w-px shrink-0 bg-gray-300" aria-hidden="true" />
+              <Image
+                src="/images/TRIVEDI MARBLES PVT.LTD.webp"
+                alt="Trivedi Marbles Pvt. Ltd. logo"
+                width={90}
+                height={36}
+                className="h-9 w-auto shrink-0 object-contain"
               />
               <div>
                 <p className="text-xs text-gray-500">Marble Inventory</p>
@@ -270,10 +278,18 @@ export function InventoryShell({
           <div className="flex flex-1 items-center gap-2">
             <Image
               src="/images/vijay-trivedi-logo.webp"
-              alt="Trivedi Marbles logo"
+              alt="Vijay Trivedi Group logo"
               width={40}
               height={40}
-              className="h-8 w-8 object-contain"
+              className="h-8 w-8 shrink-0 object-contain"
+            />
+            <span className="h-6 w-px shrink-0 bg-gray-300" aria-hidden="true" />
+            <Image
+              src="/images/TRIVEDI MARBLES PVT.LTD.webp"
+              alt="Trivedi Marbles Pvt. Ltd. logo"
+              width={80}
+              height={32}
+              className="h-8 w-auto shrink-0 object-contain"
             />
             <span className="font-bold text-gray-900">Marble Inventory</span>
           </div>

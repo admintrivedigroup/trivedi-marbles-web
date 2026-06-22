@@ -47,7 +47,6 @@ export default async function SlabDetailPage({ params }: SlabDetailPageProps) {
       slab={slab}
       movements={movements}
       images={images}
-      canViewCostPrice={profile?.permissions.view_cost_price ?? false}
       isInTransit={inTransitSlabIds.has(id)}
       reservationHistory={reservationHistory}
     />

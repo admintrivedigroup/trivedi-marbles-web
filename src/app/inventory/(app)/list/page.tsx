@@ -42,7 +42,6 @@ export default async function InventoryListPage({
         error={error}
         slabs={slabs}
         inTransitSlabIds={inTransitSlabIds}
-        canViewCostPrice={profile?.permissions.view_cost_price ?? false}
         canAddStock={profile?.permissions.add_stock ?? false}
         sortBy={sortBy}
         totalLots={totalLots}

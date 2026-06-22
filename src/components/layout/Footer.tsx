@@ -54,10 +54,18 @@ export default function Footer() {
           <div className="mb-6 flex items-center gap-4">
             <Image
               src="/images/vijay-trivedi-logo.webp"
-              alt="Trivedi Marbles logo"
+              alt="Vijay Trivedi Group logo"
               width={72}
               height={72}
               className="h-12 w-12 shrink-0 object-contain md:h-14 md:w-14"
+            />
+            <span className="h-10 w-px shrink-0 bg-white opacity-20" aria-hidden="true" />
+            <Image
+              src="/images/TRIVEDI MARBLES PVT.LTD.webp"
+              alt="Trivedi Marbles Pvt. Ltd. logo"
+              width={130}
+              height={56}
+              className="h-12 w-auto shrink-0 object-contain md:h-14"
             />
             <h2 className="text-3xl font-serif font-bold uppercase tracking-wider text-white">
               Trivedi Marbles Pvt. Ltd.

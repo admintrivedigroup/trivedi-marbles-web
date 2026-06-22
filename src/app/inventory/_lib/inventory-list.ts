@@ -16,7 +16,6 @@ type LotRelation =
 type InventorySlabRow = {
   // Note: all numeric fields typed as number|string|null to safely handle
   // Supabase returning either depending on column type; toNum() normalizes both.
-  cost_price: number | string | null;
   created_at: string | null;
   dealer_price: number | string | null;
   id: number | string | null;
@@ -38,7 +37,6 @@ type InventorySlabRow = {
 
 export type InventoryListSlab = {
   categoryName: string | null;
-  costPrice: number | null;
   createdAt: string | null;
   dealerPrice: number | null;
   id: string;
@@ -92,7 +90,6 @@ const SLAB_SELECT = `
   width,
   sqft,
   rack_number,
-  cost_price,
   selling_price,
   dealer_price,
   notes,
@@ -134,7 +131,6 @@ function normalizeInventorySlab(row: InventorySlabRow): InventoryListSlab | null
   const lot = relLot(row.marble_lots);
   return {
     categoryName: relName(lot?.marble_categories),
-    costPrice: toNum(row.cost_price),
     createdAt: toStr(row.created_at),
     dealerPrice: toNum(row.dealer_price),
     id,

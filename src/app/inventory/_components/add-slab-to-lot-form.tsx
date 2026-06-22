@@ -28,7 +28,6 @@ type LotMeta = {
   categoryId: string | null;
   thicknessId: string | null;
   warehouseId: string | null;
-  costPrice: number | null;
   sellingPrice: number | null;
   dealerPrice: number | null;
   suggestedSlabCode: string;
@@ -111,7 +110,6 @@ export function AddSlabToLotForm({ lot }: { lot: LotMeta }) {
     formData.set("thicknessId", lot.thicknessId ?? "");
     formData.set("warehouseId", lot.warehouseId ?? "");
     formData.set("marbleName", lot.marbleName ?? "");
-    formData.set("costPrice", lot.costPrice != null ? String(lot.costPrice) : "");
     formData.set("sellingPrice", lot.sellingPrice != null ? String(lot.sellingPrice) : "");
     formData.set("dealerPrice", lot.dealerPrice != null ? String(lot.dealerPrice) : "");
 

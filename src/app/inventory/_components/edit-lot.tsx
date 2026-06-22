@@ -73,7 +73,6 @@ export function EditLot({ lot }: { lot: LotForEdit }) {
     warehouseId: lot.warehouseId,
     purchaseDate: lot.purchaseDate,
     invoiceNumber: lot.invoiceNumber,
-    costPrice: lot.costPrice,
     sellingPrice: lot.sellingPrice,
     dealerPrice: lot.dealerPrice,
     notes: lot.notes,
@@ -312,15 +311,7 @@ export function EditLot({ lot }: { lot: LotForEdit }) {
           <h3 className="mb-4 text-base font-bold text-gray-900 md:text-lg">
             Pricing (per sqft <span className="font-light text-gray-400">(estimate)</span>)
           </h3>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <PriceInput
-              id="costPrice"
-              label="Cost Price"
-              name="costPrice"
-              value={form.costPrice}
-              onChange={handleChange}
-              disabled={isPending}
-            />
+          <div className="grid gap-4 sm:grid-cols-2">
             <PriceInput
               id="sellingPrice"
               label="Sell Price"

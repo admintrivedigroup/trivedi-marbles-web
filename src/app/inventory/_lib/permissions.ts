@@ -1,7 +1,6 @@
 export type Role = "superadmin" | "admin" | "staff";
 
 export type Permission =
-  | "view_cost_price"
   | "add_stock"
   | "edit_stock"
   | "delete_stock"
@@ -12,7 +11,6 @@ export type Permission =
   | "manage_users";
 
 export const ALL_PERMISSIONS: Permission[] = [
-  "view_cost_price",
   "add_stock",
   "edit_stock",
   "delete_stock",
@@ -26,7 +24,6 @@ export const ALL_PERMISSIONS: Permission[] = [
 export type ResolvedPermissions = Record<Permission, boolean>;
 
 export const PERMISSION_LABELS: Record<Permission, string> = {
-  view_cost_price: "View Cost Price",
   add_stock: "Add Stock",
   edit_stock: "Edit Stock",
   delete_stock: "Delete Stock",
@@ -39,7 +36,6 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
 
 const ROLE_DEFAULTS: Record<Role, ResolvedPermissions> = {
   superadmin: {
-    view_cost_price: true,
     add_stock: true,
     edit_stock: true,
     delete_stock: true,
@@ -50,7 +46,6 @@ const ROLE_DEFAULTS: Record<Role, ResolvedPermissions> = {
     manage_users: true,
   },
   admin: {
-    view_cost_price: true,
     add_stock: true,
     edit_stock: true,
     delete_stock: false,
@@ -61,7 +56,6 @@ const ROLE_DEFAULTS: Record<Role, ResolvedPermissions> = {
     manage_users: false,
   },
   staff: {
-    view_cost_price: false,
     add_stock: false,
     edit_stock: false,
     delete_stock: false,

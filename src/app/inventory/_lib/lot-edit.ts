@@ -12,7 +12,6 @@ export type LotForEdit = {
   warehouseId: string;
   purchaseDate: string;
   invoiceNumber: string;
-  costPrice: string;
   sellingPrice: string;
   dealerPrice: string;
   notes: string;
@@ -30,7 +29,7 @@ export async function getLotForEdit(lotId: string): Promise<LotForEditResult> {
     const { data, error } = await supabase
       .from("marble_lots")
       .select(
-        "id, lot_number, marble_name, category_id, status_id, thickness_id, warehouse_id, purchase_date, invoice_number, cost_price, selling_price, dealer_price, notes, show_on_website",
+        "id, lot_number, marble_name, category_id, status_id, thickness_id, warehouse_id, purchase_date, invoice_number, selling_price, dealer_price, notes, show_on_website",
       )
       .eq("id", lotId)
       .single();
@@ -67,7 +66,6 @@ export async function getLotForEdit(lotId: string): Promise<LotForEditResult> {
         warehouseId: str(row.warehouse_id),
         purchaseDate: str(row.purchase_date),
         invoiceNumber: str(row.invoice_number),
-        costPrice: numStr(row.cost_price),
         sellingPrice: numStr(row.selling_price),
         dealerPrice: numStr(row.dealer_price),
         notes: str(row.notes),

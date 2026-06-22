@@ -31,7 +31,7 @@ export async function cloneLot(
   const { data: sourceLot, error: lotFetchError } = await supabase
     .from("marble_lots")
     .select(
-      "marble_name, category_id, thickness_id, warehouse_id, status_id, cost_price, selling_price, dealer_price, notes, show_on_website",
+      "marble_name, category_id, thickness_id, warehouse_id, status_id, selling_price, dealer_price, notes, show_on_website",
     )
     .eq("id", sourceLotId)
     .single();
@@ -44,7 +44,7 @@ export async function cloneLot(
   const { data: sourceSlabs, error: slabsFetchError } = await supabase
     .from("slabs")
     .select(
-      "slab_code, length, width, sqft, rack_number, warehouse_id, cost_price, selling_price, dealer_price, notes",
+      "slab_code, length, width, sqft, rack_number, warehouse_id, selling_price, dealer_price, notes",
     )
     .eq("lot_id", sourceLotId)
     .is("deleted_at", null);
@@ -70,7 +70,6 @@ export async function cloneLot(
       thickness_id: sourceLot.thickness_id,
       warehouse_id: sourceLot.warehouse_id,
       status_id: sourceLot.status_id,
-      cost_price: sourceLot.cost_price,
       selling_price: sourceLot.selling_price,
       dealer_price: sourceLot.dealer_price,
       notes: sourceLot.notes,
@@ -104,7 +103,6 @@ export async function cloneLot(
       rack_number: slab.rack_number,
       warehouse_id: slab.warehouse_id,
       status_id: availStatus?.id ?? null,
-      cost_price: slab.cost_price,
       selling_price: slab.selling_price,
       dealer_price: slab.dealer_price,
       notes: slab.notes,

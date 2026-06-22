@@ -149,8 +149,6 @@ function getSummary(entry: AuditLogEntry): string | null {
         parts.push(`Lot#: ${str(b.lotNumber)} → ${str(a.lotNumber)}`);
       if (b.sellingPrice !== a.sellingPrice)
         parts.push(`Sell: ₹${str(b.sellingPrice)} → ₹${str(a.sellingPrice)}`);
-      if (b.costPrice !== a.costPrice)
-        parts.push(`Cost: ₹${str(b.costPrice)} → ₹${str(a.costPrice)}`);
       if (b.supplierName !== a.supplierName)
         parts.push(`Supplier: ${str(b.supplierName)} → ${str(a.supplierName)}`);
       return parts.length > 0 ? parts.join(" · ") : "No field changes";

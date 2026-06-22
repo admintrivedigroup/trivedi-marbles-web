@@ -155,8 +155,8 @@ function StatBox({
   colorClass?: string;
 }) {
   return (
-    <div className="rounded-xl bg-gray-50 px-3 py-2.5">
-      <p className="text-xs text-gray-500">{label}</p>
+    <div className="rounded-xl bg-gray-50 px-3 py-2">
+      <p className="text-[11px] leading-tight text-gray-500">{label}</p>
       <p className={`mt-0.5 text-lg font-bold ${colorClass ?? "text-gray-900"}`}>
         {value}
       </p>
@@ -179,10 +179,10 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
   const [activeModal, setActiveModal] = useState<ActiveModal>(null);
   const [pendingSlabDelete, setPendingSlabDelete] = useState<PendingSlabDelete | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [priceBasis, setPriceBasis] = useState<"cost" | "selling" | "dealer">("selling");
+  const [priceBasis, setPriceBasis] = useState<"selling" | "dealer">("selling");
   const [showOnWebsite, setShowOnWebsite] = useState(lot.showOnWebsite);
   const [cloneLotNumber, setCloneLotNumber] = useState("");
-  const [priceFormValues, setPriceFormValues] = useState({ cost: "", sell: "", dealer: "" });
+  const [priceFormValues, setPriceFormValues] = useState({ sell: "", dealer: "" });
   const [isTogglingWebsite, setIsTogglingWebsite] = useState(false);
 
   // --- Selection state ---
@@ -205,12 +205,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
   const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
 
   const totalSqft = slabs.reduce((sum, s) => sum + (s.sqft ?? 0), 0);
-  const selectedLotPrice =
-    priceBasis === "cost"
-      ? lot.costPrice
-      : priceBasis === "dealer"
-        ? lot.dealerPrice
-        : lot.sellingPrice;
+  const selectedLotPrice = priceBasis === "dealer" ? lot.dealerPrice : lot.sellingPrice;
   const totalValue =
     selectedLotPrice !== null && totalSqft > 0
       ? selectedLotPrice * totalSqft
@@ -413,21 +408,19 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
   function confirmSelectionPriceUpdate() {
     setActiveModal(null);
     const ids = Array.from(selectedIds);
-    const cost = priceFormValues.cost ? Number(priceFormValues.cost) : null;
     const sell = priceFormValues.sell ? Number(priceFormValues.sell) : null;
     const dealer = priceFormValues.dealer ? Number(priceFormValues.dealer) : null;
-    if (cost === null && sell === null && dealer === null) {
+    if (sell === null && dealer === null) {
       setActionError("Enter at least one price to update.");
       return;
     }
     startTransition(async () => {
       const result = await batchUpdateSlabPrice(ids, lot.id, {
-        costPrice: cost,
         sellingPrice: sell,
         dealerPrice: dealer,
       });
       if (result.error) { setActionError(result.error); }
-      else { setSelectedIds(new Set()); setPriceFormValues({ cost: "", sell: "", dealer: "" }); router.refresh(); }
+      else { setSelectedIds(new Set()); setPriceFormValues({ sell: "", dealer: "" }); router.refresh(); }
     });
   }
 
@@ -501,7 +494,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
       ) : null}
 
       {/* Main layout: gallery left, summary right */}
-      <div className="flex flex-col gap-6 lg:grid lg:grid-cols-3">
+      <div className="flex flex-col gap-6 md:grid md:grid-cols-[minmax(0,1fr)_272px] lg:grid-cols-3">
         {/* ── Left: Slab gallery ── */}
         <div className="lg:col-span-2">
           {/* Status filter tabs + Select toggle */}
@@ -561,7 +554,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-2 xl:grid-cols-3">
               {visibleSlabs.map((slab) => {
                 const isReserved = slab.statusName === "Reserved";
                 const isSold = slab.statusName === "Sold";
@@ -717,13 +710,13 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
         </div>
 
         {/* ── Right: Lot summary ── */}
-        <div className="space-y-4 lg:col-span-1">
+        <div className="space-y-3 lg:col-span-1 lg:space-y-4">
           {/* Lot info */}
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-500">
+          <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
               Lot Summary
             </h2>
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-2 gap-2">
               <StatBox label="Total Slabs" value={counts.All} />
               <StatBox label="Total Sqft (estimate)" value={fmtNum(totalSqft)} />
               <StatBox
@@ -764,7 +757,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
           </div>
 
           {/* Pricing */}
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+          <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
                 Pricing
@@ -772,12 +765,11 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
               <select
                 value={priceBasis}
                 onChange={(e) =>
-                  setPriceBasis(e.target.value as "cost" | "selling" | "dealer")
+                  setPriceBasis(e.target.value as "selling" | "dealer")
                 }
                 className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs text-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-800"
               >
                 <option value="selling">Sell Price</option>
-                <option value="cost">Cost Price</option>
                 <option value="dealer">Dealer Price</option>
               </select>
             </div>
@@ -795,15 +787,14 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
               </div>
             ) : null}
 
-            <div className="mt-3 grid grid-cols-3 gap-2 border-t border-gray-100 pt-3">
+            <div className="mt-3 grid grid-cols-2 gap-1.5 border-t border-gray-100 pt-3">
               {[
-                { label: "Cost", value: lot.costPrice },
                 { label: "Sell", value: lot.sellingPrice },
                 { label: "Dealer", value: lot.dealerPrice },
               ].map(({ label, value }) => (
                 <div key={label} className="text-center">
-                  <p className="text-xs text-gray-400">{label}</p>
-                  <p className="mt-0.5 text-sm font-semibold text-gray-800">
+                  <p className="text-[11px] text-gray-400">{label}</p>
+                  <p className="mt-0.5 truncate text-xs font-semibold text-gray-800">
                     {fmtCurrency(value)}
                   </p>
                 </div>
@@ -813,7 +804,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
 
           {/* Purchase info */}
           {(lot.invoiceNumber || purchaseDate) ? (
-            <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+            <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
               <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
                 Purchase Info
               </h2>
@@ -838,7 +829,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
 
           {/* Notes */}
           {lot.notes ? (
-            <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+            <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
               <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
                 Notes
               </h2>
@@ -849,7 +840,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
           ) : null}
 
           {/* Website Visibility */}
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+          <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
             <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
               Website
             </h2>
@@ -1257,7 +1248,6 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
             <div className="space-y-3 mb-5">
               {(
                 [
-                  { id: "price-cost", label: "Cost Price", key: "cost" },
                   { id: "price-sell", label: "Sell Price", key: "sell" },
                   { id: "price-dealer", label: "Dealer Price", key: "dealer" },
                 ] as const

@@ -13,15 +13,14 @@ export async function batchUpdateSlabPrice(
   slabIds: string[],
   lotId: string,
   prices: {
-    costPrice: number | null;
     sellingPrice: number | null;
     dealerPrice: number | null;
   },
 ): Promise<BatchUpdateSlabPriceResult> {
   if (slabIds.length === 0) return { error: "No slabs selected." };
 
-  const { costPrice, sellingPrice, dealerPrice } = prices;
-  const hasAnyPrice = costPrice !== null || sellingPrice !== null || dealerPrice !== null;
+  const { sellingPrice, dealerPrice } = prices;
+  const hasAnyPrice = sellingPrice !== null || dealerPrice !== null;
   if (!hasAnyPrice) return { error: "Enter at least one price to update." };
 
   const supabase = await createClient();
@@ -35,7 +34,6 @@ export async function batchUpdateSlabPrice(
   }
 
   const payload: Record<string, number | null> = {};
-  if (costPrice !== null) payload.cost_price = costPrice;
   if (sellingPrice !== null) payload.selling_price = sellingPrice;
   if (dealerPrice !== null) payload.dealer_price = dealerPrice;
 
@@ -56,7 +54,7 @@ export async function batchUpdateSlabPrice(
     targetType: "lot",
     targetId: lotId,
     targetLabel: `${slabIds.length} slab${slabIds.length === 1 ? "" : "s"}`,
-    diff: { slabCount: slabIds.length, costPrice, sellingPrice, dealerPrice },
+    diff: { slabCount: slabIds.length, sellingPrice, dealerPrice },
   }).catch(() => {});
 
   revalidatePath(`/inventory/lot/${lotId}`);

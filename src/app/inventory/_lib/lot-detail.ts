@@ -14,7 +14,6 @@ export type LotInfo = {
   warehouseName: string | null;
   purchaseDate: string | null;
   invoiceNumber: string | null;
-  costPrice: number | null;
   sellingPrice: number | null;
   dealerPrice: number | null;
   notes: string | null;
@@ -38,7 +37,7 @@ export async function getLotDetail(lotId: string): Promise<LotDetailResult> {
         .select(
           `
           id, lot_number, marble_name, purchase_date,
-          invoice_number, cost_price, selling_price, dealer_price, notes, created_at, show_on_website,
+          invoice_number, selling_price, dealer_price, notes, created_at, show_on_website,
           marble_categories(name),
           thickness_options(name),
           warehouses(name)
@@ -51,7 +50,7 @@ export async function getLotDetail(lotId: string): Promise<LotDetailResult> {
         .select(
           `
           id, slab_code, length, width, sqft, rack_number,
-          cost_price, selling_price, dealer_price, notes, created_at, lot_id,
+          selling_price, dealer_price, notes, created_at, lot_id,
           reserved_for, reserved_until,
           warehouses(name), slab_statuses(name),
           slab_images(image_url, sort_order)
@@ -85,7 +84,6 @@ export async function getLotDetail(lotId: string): Promise<LotDetailResult> {
       warehouseName: relName(lotRow.warehouses),
       purchaseDate: toStr(lotRow.purchase_date),
       invoiceNumber: toStr(lotRow.invoice_number),
-      costPrice: toNum(lotRow.cost_price),
       sellingPrice: toNum(lotRow.selling_price),
       dealerPrice: toNum(lotRow.dealer_price),
       notes: toStr(lotRow.notes),
@@ -123,7 +121,6 @@ export async function getLotDetail(lotId: string): Promise<LotDetailResult> {
           width: toNum(row.width),
           sqft: toNum(row.sqft),
           rackNumber: toStr(row.rack_number),
-          costPrice: toNum(row.cost_price),
           sellingPrice: toNum(row.selling_price),
           dealerPrice: toNum(row.dealer_price),
           notes: toStr(row.notes),

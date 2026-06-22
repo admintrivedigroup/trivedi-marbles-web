@@ -64,27 +64,18 @@ function formatStockValue(value: number) {
   return value.toLocaleString("en-IN");
 }
 
-type PriceBasis = "selling" | "cost" | "dealer";
+type PriceBasis = "selling" | "dealer";
 
 function StockValueCard({
   stockValueBySelling,
-  stockValueByCost,
   stockValueByDealer,
-  canViewCostPrice,
 }: {
   stockValueBySelling: number;
-  stockValueByCost: number;
   stockValueByDealer: number;
-  canViewCostPrice: boolean;
 }) {
   const [priceBasis, setPriceBasis] = useState<PriceBasis>("selling");
 
-  const stockValue =
-    priceBasis === "cost"
-      ? stockValueByCost
-      : priceBasis === "dealer"
-        ? stockValueByDealer
-        : stockValueBySelling;
+  const stockValue = priceBasis === "dealer" ? stockValueByDealer : stockValueBySelling;
 
   return (
     <article className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:rounded-2xl md:p-6">
@@ -99,19 +90,16 @@ function StockValueCard({
           </p>
         </div>
       </div>
-      {canViewCostPrice && (
-        <div className="mt-3 border-t border-gray-100 pt-3">
-          <select
-            value={priceBasis}
-            onChange={(e) => setPriceBasis(e.target.value as PriceBasis)}
-            className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-600 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800"
-          >
-            <option value="selling">by Selling Price</option>
-            <option value="cost">by Cost Price</option>
-            <option value="dealer">by Dealer Price</option>
-          </select>
-        </div>
-      )}
+      <div className="mt-3 border-t border-gray-100 pt-3">
+        <select
+          value={priceBasis}
+          onChange={(e) => setPriceBasis(e.target.value as PriceBasis)}
+          className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-600 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800"
+        >
+          <option value="selling">by Selling Price</option>
+          <option value="dealer">by Dealer Price</option>
+        </select>
+      </div>
     </article>
   );
 }
@@ -125,10 +113,8 @@ const warehouseTones = [
 
 export function InventoryDashboard({
   stats,
-  canViewCostPrice,
 }: {
   stats: DashboardStats;
-  canViewCostPrice: boolean;
 }) {
   const locationData = stats.warehouseCounts.map(({ name, count }) => ({
     name,
@@ -174,8 +160,6 @@ export function InventoryDashboard({
         />
         <StockValueCard
           stockValueBySelling={stats.stockValueBySelling}
-          canViewCostPrice={canViewCostPrice}
-          stockValueByCost={stats.stockValueByCost}
           stockValueByDealer={stats.stockValueByDealer}
         />
       </section>

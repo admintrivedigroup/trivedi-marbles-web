@@ -26,13 +26,21 @@ export function InventoryLoginForm({ next }: InventoryLoginFormProps) {
   return (
     <div className="rounded-[1.75rem] bg-white p-6 shadow-[0_24px_72px_rgba(15,23,42,0.14)] ring-1 ring-stone-200/80 md:rounded-[2rem] md:p-8">
       <div className="mb-6 text-center md:mb-8">
-        <div className="mb-4 inline-flex items-center justify-center">
+        <div className="mb-4 inline-flex items-center justify-center gap-3">
           <Image
             src="/images/vijay-trivedi-logo.webp"
-            alt="Trivedi Marbles logo"
+            alt="Vijay Trivedi Group logo"
             width={96}
             height={96}
-            className="h-16 w-16 object-contain md:h-20 md:w-20"
+            className="h-16 w-16 shrink-0 object-contain md:h-20 md:w-20"
+          />
+          <span className="h-12 w-px shrink-0 bg-stone-200 md:h-14" aria-hidden="true" />
+          <Image
+            src="/images/TRIVEDI MARBLES PVT.LTD.webp"
+            alt="Trivedi Marbles Pvt. Ltd. logo"
+            width={140}
+            height={64}
+            className="h-16 w-auto shrink-0 object-contain md:h-20"
           />
         </div>
         <h1 className="text-2xl font-bold text-stone-900 md:text-3xl">

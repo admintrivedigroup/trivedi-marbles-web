@@ -24,7 +24,6 @@ export async function addSlabToLot(
   const thicknessId = String(formData.get("thicknessId") ?? "").trim();
   const warehouseId = String(formData.get("warehouseId") ?? "").trim();
   const marbleName = String(formData.get("marbleName") ?? "").trim();
-  const costPriceInput = String(formData.get("costPrice") ?? "").trim();
   const sellingPriceInput = String(formData.get("sellingPrice") ?? "").trim();
   const dealerPriceInput = String(formData.get("dealerPrice") ?? "").trim();
 
@@ -65,7 +64,6 @@ export async function addSlabToLot(
       status_id: statusId || null,
       thickness_id: thicknessId || null,
       warehouse_id: warehouseId || null,
-      cost_price: toOptionalPrice(costPriceInput),
       selling_price: toOptionalPrice(sellingPriceInput),
       dealer_price: toOptionalPrice(dealerPriceInput),
     })

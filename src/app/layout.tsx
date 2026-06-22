@@ -7,6 +7,7 @@ import {
 import type { ReactNode } from "react";
 
 import "./globals.css";
+import { NavigationProgress } from "@/components/navigation-progress";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -69,6 +70,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
       className={`${inter.variable} ${geistMono.variable} ${cormorantGaramond.variable} bg-background text-foreground antialiased`}
     >
       <body className="min-h-screen font-sans">
+        <NavigationProgress />
         {children}
       </body>
     </html>

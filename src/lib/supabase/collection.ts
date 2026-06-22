@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { withCloudinaryTransforms } from "@/lib/cloudinary/upload";
 
 export type CollectionLot = {
@@ -49,7 +49,7 @@ function relStr(rel: unknown): string {
 
 export async function getWebsiteLots(): Promise<CollectionLot[]> {
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const { data, error } = await supabase
       .from("marble_lots")
       .select(
@@ -87,7 +87,7 @@ export async function getWebsiteLots(): Promise<CollectionLot[]> {
 
 export async function getWebsiteLotById(id: string): Promise<CollectionLot | null> {
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const { data, error } = await supabase
       .from("marble_lots")
       .select(

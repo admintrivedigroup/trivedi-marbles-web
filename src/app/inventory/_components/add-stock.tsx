@@ -42,7 +42,6 @@ import {
 
 type LotFormValues = {
   categoryId: string;
-  costPrice: string;
   dealerPrice: string;
   invoiceNumber: string;
   lotNumber: string;
@@ -92,7 +91,6 @@ function createInitialLotForm({
 }): LotFormValues {
   return {
     categoryId: "",
-    costPrice: "",
     dealerPrice: "",
     invoiceNumber: "",
     lotNumber: "",
@@ -660,15 +658,7 @@ export function AddStock() {
           <h3 className="mb-4 text-base font-bold text-gray-900 md:text-lg">
             Pricing (per sqft <span className="font-light text-gray-400">(estimate)</span>)
           </h3>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <PriceInput
-              id="costPrice"
-              label="Cost Price"
-              name="costPrice"
-              value={lotForm.costPrice}
-              onChange={handleLotFieldChange}
-              disabled={isPending}
-            />
+          <div className="grid gap-4 sm:grid-cols-2">
             <PriceInput
               id="sellingPrice"
               label="Sell Price"

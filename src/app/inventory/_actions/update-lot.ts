@@ -34,7 +34,6 @@ export async function updateLot(
   const warehouseId = String(formData.get("warehouseId") ?? "").trim();
   const purchaseDate = String(formData.get("purchaseDate") ?? "").trim();
   const invoiceNumber = String(formData.get("invoiceNumber") ?? "").trim();
-  const costPriceInput = String(formData.get("costPrice") ?? "").trim();
   const sellingPriceInput = String(formData.get("sellingPrice") ?? "").trim();
   const dealerPriceInput = String(formData.get("dealerPrice") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
@@ -46,9 +45,6 @@ export async function updateLot(
   if (!statusId) return { error: "Status is required." };
   if (!thicknessId) return { error: "Thickness is required." };
   if (!warehouseId) return { error: "Warehouse is required." };
-
-  const costPriceResult = parseOptionalNonNegativeNumber(costPriceInput, "Cost price");
-  if (costPriceResult.error) return { error: costPriceResult.error };
 
   const sellingPriceResult = parseOptionalNonNegativeNumber(sellingPriceInput, "Sell price");
   if (sellingPriceResult.error) return { error: sellingPriceResult.error };
@@ -68,7 +64,7 @@ export async function updateLot(
 
   const { data: before } = await supabase
     .from("marble_lots")
-    .select("lot_number, marble_name, cost_price, selling_price, dealer_price")
+    .select("lot_number, marble_name, selling_price, dealer_price")
     .eq("id", lotId)
     .single();
 
@@ -83,7 +79,6 @@ export async function updateLot(
       warehouse_id: normalizeForeignKey(warehouseId),
       purchase_date: purchaseDate || null,
       invoice_number: invoiceNumber || null,
-      cost_price: costPriceResult.value,
       selling_price: sellingPriceResult.value,
       dealer_price: dealerPriceResult.value,
       notes: notes || null,
@@ -106,7 +101,6 @@ export async function updateLot(
   const { error: slabsError } = await supabase
     .from("slabs")
     .update({
-      cost_price: costPriceResult.value,
       selling_price: sellingPriceResult.value,
       dealer_price: dealerPriceResult.value,
     })
@@ -127,14 +121,12 @@ export async function updateLot(
       before: {
         lotNumber: before?.lot_number ?? null,
         marbleName: before?.marble_name ?? null,
-        costPrice: before?.cost_price ?? null,
         sellingPrice: before?.selling_price ?? null,
         dealerPrice: before?.dealer_price ?? null,
       },
       after: {
         lotNumber,
         marbleName,
-        costPrice: costPriceResult.value,
         sellingPrice: sellingPriceResult.value,
         dealerPrice: dealerPriceResult.value,
       },

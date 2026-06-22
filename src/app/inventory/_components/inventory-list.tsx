@@ -1,9 +1,10 @@
 "use client";
 
-import { Fragment, startTransition, useRef, useState, useTransition } from "react";
+import { Fragment, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ArrowUpDown, ArrowUpRight, Check, ChevronLeft, ChevronRight, DollarSign, Download, Edit, Filter, Package, Search, Trash2, X } from "lucide-react";
+import { ActivitySpinner } from "@/components/ui/activity-spinner";
 
 import { withCloudinaryThumbnail } from "@/lib/cloudinary/upload";
 import { useLookupOptions } from "@/app/inventory/_components/lookup-options-context";
@@ -16,7 +17,6 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 type InventoryListProps = {
   error: string | null;
   slabs: InventoryListSlab[];
-  canViewCostPrice: boolean;
   canAddStock: boolean;
   inTransitSlabIds?: Set<string>;
   sortBy?: SortBy;
@@ -60,12 +60,12 @@ function SlabThumbnail({ imageUrl, className }: { imageUrl: string | null; class
       <img
         src={withCloudinaryThumbnail(imageUrl)}
         alt="Slab"
-        className={`rounded-lg object-cover shadow-sm ${className}`}
+        className={`block shrink-0 rounded-lg object-cover shadow-sm ${className}`}
       />
     );
   }
   return (
-    <div className={`flex items-center justify-center rounded-lg bg-gray-100 shadow-sm ${className}`}>
+    <div className={`flex shrink-0 items-center justify-center rounded-lg bg-gray-100 shadow-sm ${className}`}>
       <Package className="h-6 w-6 text-gray-400" />
     </div>
   );
@@ -254,12 +254,13 @@ function PaginationControls({
   );
 }
 
-export function InventoryList({ error, slabs, canViewCostPrice, canAddStock, inTransitSlabIds = new Set(), sortBy = "newest", totalLots, totalPages, totalSlabs }: InventoryListProps) {
+export function InventoryList({ error, slabs, canAddStock, inTransitSlabIds = new Set(), sortBy = "newest", totalLots, totalPages, totalSlabs }: InventoryListProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { options } = useLookupOptions();
   const [isPending, startBatchTransition] = useTransition();
+  const [isNavPending, startNavTransition] = useTransition();
 
   const [searchTerm, setSearchTerm] = useState(() => searchParams.get("q") ?? "");
   const [expandedLots, setExpandedLots] = useState<Set<string>>(new Set());
@@ -285,7 +286,7 @@ export function InventoryList({ error, slabs, canViewCostPrice, canAddStock, inT
         params.delete(key);
       }
     }
-    startTransition(() => {
+    startNavTransition(() => {
       router.push(`${pathname}?${params.toString()}`);
     });
   }
@@ -450,7 +451,7 @@ export function InventoryList({ error, slabs, canViewCostPrice, canAddStock, inT
         </div>
       ) : null}
 
-      <div className="mb-4 rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:mb-6 md:rounded-2xl md:p-6">
+      <div className={`mb-4 rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:mb-6 md:rounded-2xl md:p-6 ${isNavPending ? "pointer-events-none opacity-60" : ""}`}>
         <div className="flex flex-col gap-3 md:grid md:grid-cols-5 md:gap-4">
           <div className="relative md:col-span-2">
             <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
@@ -516,6 +517,12 @@ export function InventoryList({ error, slabs, canViewCostPrice, canAddStock, inT
         </div>
       </div>
 
+      <div className={`relative transition-opacity duration-150 ${isNavPending ? "pointer-events-none opacity-50" : ""}`}>
+        {isNavPending && (
+          <div className="absolute inset-0 z-10 flex items-start justify-center pt-16">
+            <ActivitySpinner size={44} />
+          </div>
+        )}
       {paginatedLots.length === 0 ? (
         <div className="rounded-2xl border border-gray-100 bg-white px-6 py-12 text-center text-gray-500 shadow-sm">
           {emptyMessage}
@@ -529,7 +536,7 @@ export function InventoryList({ error, slabs, canViewCostPrice, canAddStock, inT
                 <thead className="border-b border-gray-200 bg-gray-50">
                   <tr>
                     {isSelectMode && <th className="w-10 px-4 py-4" />}
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700" style={{ minWidth: "120px" }}>
                       Photo
                     </th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">
@@ -556,11 +563,9 @@ export function InventoryList({ error, slabs, canViewCostPrice, canAddStock, inT
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">
                       Status
                     </th>
-                    {canViewCostPrice && (
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">
-                        Price
-                      </th>
-                    )}
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">
+                      Price
+                    </th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">
                       Actions
                     </th>
@@ -624,14 +629,12 @@ export function InventoryList({ error, slabs, canViewCostPrice, canAddStock, inT
                               <span className="text-sm text-gray-500">
                                 {formatNumber(totalSqft)} sqft <span className="font-light text-gray-400">(estimate)</span>
                               </span>
-                              {canViewCostPrice && (
-                                <>
-                                  <span className="text-sm text-gray-400">·</span>
-                                  <span className="text-sm font-semibold text-gray-700">
-                                    {priceRange}
-                                  </span>
-                                </>
-                              )}
+                              <>
+                                <span className="text-sm text-gray-400">·</span>
+                                <span className="text-sm font-semibold text-gray-700">
+                                  {priceRange}
+                                </span>
+                              </>
                               <div className="ml-auto flex flex-wrap items-center gap-2">
                                 {statusSummary.map(([status, count]) => (
                                   <span
@@ -672,12 +675,12 @@ export function InventoryList({ error, slabs, canViewCostPrice, canAddStock, inT
                             return (
                               <tr
                                 key={slab.id}
-                                onClick={() => router.push(`/inventory/slab/${slab.id}`)}
+                                onClick={() => startNavTransition(() => router.push(`/inventory/slab/${slab.id}`))}
                                 className={`cursor-pointer transition-colors border-l-4 border-l-transparent hover:border-l-gray-200 ${isInTransit ? "bg-blue-50/40 hover:bg-blue-50" : "bg-white hover:bg-gray-50"}`}
                               >
                                 {isSelectMode && <td />}
-                                <td className="pl-14 pr-6 py-4">
-                                  <SlabThumbnail imageUrl={slab.thumbnailUrl} className="h-14 w-14" />
+                                <td className="py-3 pl-10 pr-4" style={{ minWidth: "120px" }}>
+                                  <SlabThumbnail imageUrl={slab.thumbnailUrl} className="h-14 w-20 rounded-lg" />
                                 </td>
                                 <td className="px-6 py-4">
                                   <p className="font-medium text-gray-900">
@@ -718,11 +721,9 @@ export function InventoryList({ error, slabs, canViewCostPrice, canAddStock, inT
                                     </span>
                                   )}
                                 </td>
-                                {canViewCostPrice && (
-                                  <td className="px-6 py-4 font-semibold text-gray-900">
-                                    ₹{formatNumber(slab.sellingPrice)}
-                                  </td>
-                                )}
+                                <td className="px-6 py-4 font-semibold text-gray-900">
+                                  ₹{formatNumber(slab.sellingPrice)}
+                                </td>
                                 <td className="px-6 py-4">
                                   <div className="flex items-center gap-1">
                                     <SlabQuickActions
@@ -852,11 +853,11 @@ export function InventoryList({ error, slabs, canViewCostPrice, canAddStock, inT
                         return (
                           <div
                             key={slab.id}
-                            onClick={() => router.push(`/inventory/slab/${slab.id}`)}
+                            onClick={() => startNavTransition(() => router.push(`/inventory/slab/${slab.id}`))}
                             className={`cursor-pointer px-4 py-3 pl-11 ${isInTransit ? "bg-blue-50/40 active:bg-blue-100" : "bg-gray-50/60 active:bg-gray-100"}`}
                           >
                             <div className="mb-2 flex gap-3">
-                              <SlabThumbnail imageUrl={slab.thumbnailUrl} className="h-16 w-16 shrink-0" />
+                              <SlabThumbnail imageUrl={slab.thumbnailUrl} className="h-16 w-24 shrink-0" />
                               <div className="min-w-0 flex-1">
                                 <p className="font-medium text-gray-900">
                                   {getDisplayText(slab.marbleName)}
@@ -916,14 +917,12 @@ export function InventoryList({ error, slabs, canViewCostPrice, canAddStock, inT
                             </div>
 
                             <div className="flex items-center justify-between border-t border-gray-200 pt-2">
-                              {canViewCostPrice && (
-                                <div>
-                                  <p className="text-xs text-gray-500">Price</p>
-                                  <p className="font-semibold text-gray-900">
-                                    ₹{formatNumber(slab.sellingPrice)}/sqft <span className="font-light text-gray-400">(estimate)</span>
-                                  </p>
-                                </div>
-                              )}
+                              <div>
+                                <p className="text-xs text-gray-500">Price</p>
+                                <p className="font-semibold text-gray-900">
+                                  ₹{formatNumber(slab.sellingPrice)}/sqft <span className="font-light text-gray-400">(estimate)</span>
+                                </p>
+                              </div>
                               <div className="flex gap-1">
                                 {isInTransit ? (
                                   <span
@@ -962,6 +961,8 @@ export function InventoryList({ error, slabs, canViewCostPrice, canAddStock, inT
           />
         </>
       )}
+
+      </div>
 
       {/* Floating selection action bar */}
       {isSelectMode && selectedCount > 0 && (

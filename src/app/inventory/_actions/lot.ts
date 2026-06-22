@@ -32,7 +32,6 @@ export async function saveLot(formData: FormData): Promise<SaveLotResult> {
   const warehouseId = String(formData.get("warehouseId") ?? "").trim();
   const purchaseDate = String(formData.get("purchaseDate") ?? "").trim();
   const invoiceNumber = String(formData.get("invoiceNumber") ?? "").trim();
-  const costPriceInput = String(formData.get("costPrice") ?? "").trim();
   const sellingPriceInput = String(formData.get("sellingPrice") ?? "").trim();
   const dealerPriceInput = String(formData.get("dealerPrice") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
@@ -44,9 +43,6 @@ export async function saveLot(formData: FormData): Promise<SaveLotResult> {
   if (!statusId) return { lotId: null, message: "Status is required.", slabCount: 0, slabIds: [], status: "error" };
   if (!thicknessId) return { lotId: null, message: "Thickness is required.", slabCount: 0, slabIds: [], status: "error" };
   if (!warehouseId) return { lotId: null, message: "Warehouse is required.", slabCount: 0, slabIds: [], status: "error" };
-
-  const costPriceResult = parseOptionalNonNegativeNumber(costPriceInput, "Cost price");
-  if (costPriceResult.error) return { lotId: null, message: costPriceResult.error, slabCount: 0, slabIds: [], status: "error" };
 
   const sellingPriceResult = parseOptionalNonNegativeNumber(sellingPriceInput, "Sell price");
   if (sellingPriceResult.error) return { lotId: null, message: sellingPriceResult.error, slabCount: 0, slabIds: [], status: "error" };
@@ -116,7 +112,6 @@ export async function saveLot(formData: FormData): Promise<SaveLotResult> {
       warehouse_id: normalizeForeignKey(warehouseId),
       purchase_date: purchaseDate || null,
       invoice_number: invoiceNumber || null,
-      cost_price: costPriceResult.value,
       selling_price: sellingPriceResult.value,
       dealer_price: dealerPriceResult.value,
       notes: notes || null,
@@ -147,7 +142,6 @@ export async function saveLot(formData: FormData): Promise<SaveLotResult> {
     slab_code: slab.slabCode,
     status_id: normalizeForeignKey(statusId),
     warehouse_id: normalizeForeignKey(warehouseId),
-    cost_price: costPriceResult.value,
     selling_price: sellingPriceResult.value,
     dealer_price: dealerPriceResult.value,
     length: slab.length,

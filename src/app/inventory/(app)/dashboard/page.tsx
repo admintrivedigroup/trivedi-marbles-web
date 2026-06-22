@@ -9,7 +9,6 @@ export default async function InventoryDashboardPage() {
   return (
     <InventoryDashboard
       stats={stats}
-      canViewCostPrice={profile?.permissions.view_cost_price ?? false}
     />
   );
 }

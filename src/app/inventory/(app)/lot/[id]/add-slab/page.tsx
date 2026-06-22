@@ -15,7 +15,7 @@ export default async function AddSlabToLotPage({ params }: Props) {
     supabase
       .from("marble_lots")
       .select(
-        "id, lot_number, marble_name, category_id, thickness_id, warehouse_id, cost_price, selling_price, dealer_price",
+        "id, lot_number, marble_name, category_id, thickness_id, warehouse_id, selling_price, dealer_price",
       )
       .eq("id", id)
       .single(),
@@ -57,7 +57,6 @@ export default async function AddSlabToLotPage({ params }: Props) {
         categoryId: toStr(lot.category_id) ?? String(lot.category_id ?? ""),
         thicknessId: toStr(lot.thickness_id) ?? String(lot.thickness_id ?? ""),
         warehouseId: toStr(lot.warehouse_id) ?? String(lot.warehouse_id ?? ""),
-        costPrice: toNum(lot.cost_price),
         sellingPrice: toNum(lot.selling_price),
         dealerPrice: toNum(lot.dealer_price),
         suggestedSlabCode,

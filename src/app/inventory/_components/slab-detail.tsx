@@ -47,7 +47,6 @@ type SlabDetailProps = {
   movements: SlabMovement[];
   reservationHistory: ReservationHistoryEntry[];
   slab: InventoryListSlab;
-  canViewCostPrice: boolean;
   isInTransit?: boolean;
 };
 
@@ -207,7 +206,7 @@ function ReservationHistory({ entries }: { entries: ReservationHistoryEntry[] })
   );
 }
 
-export function SlabDetail({ images, movements, reservationHistory, slab, canViewCostPrice, isInTransit = false }: SlabDetailProps) {
+export function SlabDetail({ images, movements, reservationHistory, slab, isInTransit = false }: SlabDetailProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [pendingAction, setPendingAction] = useState<SlabStatusName | null>(
@@ -215,7 +214,7 @@ export function SlabDetail({ images, movements, reservationHistory, slab, canVie
   );
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const [priceBasis, setPriceBasis] = useState<"cost" | "selling" | "dealer">("selling");
+  const [priceBasis, setPriceBasis] = useState<"selling" | "dealer">("selling");
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showReserveDialog, setShowReserveDialog] = useState(false);
@@ -233,12 +232,7 @@ export function SlabDetail({ images, movements, reservationHistory, slab, canVie
   }, [isFullscreen, images.length]);
 
   const sqft = slab.sqft ?? 0;
-  const selectedPrice =
-    priceBasis === "cost"
-      ? slab.costPrice
-      : priceBasis === "dealer"
-        ? slab.dealerPrice
-        : slab.sellingPrice;
+  const selectedPrice = priceBasis === "dealer" ? slab.dealerPrice : slab.sellingPrice;
   const totalValue = selectedPrice !== null && sqft > 0 ? selectedPrice * sqft : null;
 
   const sizeLabel =
@@ -430,16 +424,7 @@ export function SlabDetail({ images, movements, reservationHistory, slab, canVie
             {/* Pricing */}
             <div className="border-t border-gray-100 px-6 py-5">
               <h2 className="mb-4 font-semibold text-gray-900">Pricing</h2>
-              <div className={`grid gap-4 ${canViewCostPrice ? "grid-cols-1 sm:grid-cols-3" : "grid-cols-1"}`}>
-                {canViewCostPrice && (
-                  <div>
-                    <p className="text-xs text-gray-500">Cost Price</p>
-                    <p className="mt-1 text-xl font-bold text-gray-900">
-                      {fmtCurrency(slab.costPrice)}
-                    </p>
-                    <p className="text-xs text-gray-400">per sqft <span className="font-light text-gray-300">(estimate)</span></p>
-                  </div>
-                )}
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                 <div>
                   <p className="text-xs text-gray-500">Sell Price</p>
                   <p className="mt-1 text-xl font-bold text-green-600">
@@ -447,15 +432,13 @@ export function SlabDetail({ images, movements, reservationHistory, slab, canVie
                   </p>
                   <p className="text-xs text-gray-400">per sqft <span className="font-light text-gray-300">(estimate)</span></p>
                 </div>
-                {canViewCostPrice && (
-                  <div>
-                    <p className="text-xs text-gray-500">Dealer Price</p>
-                    <p className="mt-1 text-xl font-bold text-blue-600">
-                      {fmtCurrency(slab.dealerPrice)}
-                    </p>
-                    <p className="text-xs text-gray-400">per sqft <span className="font-light text-gray-300">(estimate)</span></p>
-                  </div>
-                )}
+                <div>
+                  <p className="text-xs text-gray-500">Dealer Price</p>
+                  <p className="mt-1 text-xl font-bold text-blue-600">
+                    {fmtCurrency(slab.dealerPrice)}
+                  </p>
+                  <p className="text-xs text-gray-400">per sqft <span className="font-light text-gray-300">(estimate)</span></p>
+                </div>
               </div>
 
               <div className="mt-4 border-t border-gray-100 pt-4">
@@ -466,19 +449,16 @@ export function SlabDetail({ images, movements, reservationHistory, slab, canVie
                       {totalValue !== null ? fmtCurrency(totalValue) : "-"}
                     </span>
                   </p>
-                  {canViewCostPrice && (
-                    <select
-                      value={priceBasis}
-                      onChange={(e) =>
-                        setPriceBasis(e.target.value as "cost" | "selling" | "dealer")
-                      }
-                      className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-600 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800"
-                    >
-                      <option value="cost">by Cost Price</option>
-                      <option value="selling">by Selling Price</option>
-                      <option value="dealer">by Dealer Price</option>
-                    </select>
-                  )}
+                  <select
+                    value={priceBasis}
+                    onChange={(e) =>
+                      setPriceBasis(e.target.value as "selling" | "dealer")
+                    }
+                    className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-600 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800"
+                  >
+                    <option value="selling">by Selling Price</option>
+                    <option value="dealer">by Dealer Price</option>
+                  </select>
                 </div>
               </div>
             </div>

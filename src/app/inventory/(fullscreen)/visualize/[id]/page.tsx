@@ -71,11 +71,19 @@ export default async function VisualizeSlabPage({ params }: Props) {
           <div className="relative h-9 w-9 shrink-0">
             <Image
               src="/images/vijay-trivedi-logo.webp"
-              alt="Trivedi"
+              alt="Vijay Trivedi Group"
               fill
               className="object-contain"
             />
           </div>
+          <span className="h-7 w-px shrink-0 bg-white/20" aria-hidden="true" />
+          <Image
+            src="/images/TRIVEDI MARBLES PVT.LTD.webp"
+            alt="Trivedi Marbles Pvt. Ltd."
+            width={90}
+            height={36}
+            className="h-9 w-auto shrink-0 object-contain"
+          />
           <div className="flex flex-col leading-tight">
             <span className="text-[10px] font-medium uppercase tracking-widest text-stone-500">
               Trivedi Technologies

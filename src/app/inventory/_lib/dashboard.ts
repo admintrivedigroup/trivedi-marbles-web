@@ -11,7 +11,6 @@ export type DashboardStats = {
   expiredReservationCount: number;
   expiringSoonCount: number;
   stockValueBySelling: number;
-  stockValueByCost: number;
   stockValueByDealer: number;
   typeData: { name: string; count: number }[];
   recentActivity: { id: string; text: string; time: string }[];
@@ -59,10 +58,6 @@ export async function getDashboardStats(
   const activeSlabs = slabs.filter((s) => s.statusName !== SLAB_STATUS.SOLD);
   const stockValueBySelling = activeSlabs.reduce(
     (sum, s) => sum + (s.sellingPrice ?? 0) * (s.sqft ?? 0),
-    0,
-  );
-  const stockValueByCost = activeSlabs.reduce(
-    (sum, s) => sum + (s.costPrice ?? 0) * (s.sqft ?? 0),
     0,
   );
   const stockValueByDealer = activeSlabs.reduce(
@@ -162,7 +157,6 @@ export async function getDashboardStats(
     expiredReservationCount,
     expiringSoonCount,
     stockValueBySelling,
-    stockValueByCost,
     stockValueByDealer,
     typeData,
     recentActivity,

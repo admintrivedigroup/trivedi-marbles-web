@@ -115,10 +115,20 @@ export default function Navbar() {
           <div className="flex h-9 w-[3.2rem] shrink-0 items-center justify-center sm:h-10 sm:w-[3.6rem] lg:h-12 lg:w-[4.2rem] xl:h-14 xl:w-[5rem]">
             <Image
               src="/images/vijay-trivedi-logo.webp"
-              alt="Trivedi Marbles logo"
+              alt="Vijay Trivedi Group logo"
               width={72}
               height={72}
               className="h-9 w-9 object-contain sm:h-10 sm:w-10 lg:h-12 lg:w-12 xl:h-14 xl:w-14"
+            />
+          </div>
+          <span className="h-7 w-px shrink-0 bg-current opacity-30 sm:h-8 lg:h-9 xl:h-10" aria-hidden="true" />
+          <div className="flex shrink-0 items-center justify-center">
+            <Image
+              src="/images/TRIVEDI MARBLES PVT.LTD.webp"
+              alt="Trivedi Marbles Pvt. Ltd. logo"
+              width={120}
+              height={56}
+              className="h-9 w-auto object-contain sm:h-10 lg:h-12 xl:h-14"
             />
           </div>
           <span className="min-w-0 truncate text-[clamp(0.62rem,1.15vw,0.9rem)] leading-none tracking-[0.08em] sm:text-[clamp(0.68rem,1vw,0.95rem)] lg:text-[clamp(0.72rem,0.82vw,1rem)] xl:text-[clamp(0.78rem,0.75vw,1.1rem)]">
@@ -129,7 +139,7 @@ export default function Navbar() {
         <div
           className={cn(
             "hidden shrink-0 items-center gap-5 transition-all duration-300 xl:flex 2xl:gap-8",
-            isAboutVideoActive && "pointer-events-none translate-y-[-8px] opacity-0",
+            isAboutVideoActive && "pointer-events-none -translate-y-2 opacity-0",
           )}
         >
           {navItems.map((item) => {
@@ -141,7 +151,7 @@ export default function Navbar() {
                 className={cn(
                   "relative text-[0.68rem] font-medium uppercase tracking-[0.14em] transition-colors hover:text-secondary 2xl:text-sm",
                   "after:absolute after:-bottom-1 after:left-0 after:h-px after:w-full after:origin-right after:scale-x-0 after:bg-secondary after:transition-transform after:duration-300 hover:after:origin-left hover:after:scale-x-100",
-                  isActive && "text-secondary after:!origin-left after:scale-x-100",
+                  isActive && "text-secondary after:origin-left! after:scale-x-100",
                 )}
               >
                 {item.label}
@@ -170,7 +180,7 @@ export default function Navbar() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: "100%" }}
             transition={{ type: "tween", duration: 0.3 }}
-            className="fixed inset-0 z-[60] flex flex-col bg-primary p-6 text-primary-foreground"
+            className="fixed inset-0 z-60 flex flex-col bg-primary p-6 text-primary-foreground"
           >
             <div className="mb-12 flex items-center justify-between">
               <Link
@@ -179,10 +189,18 @@ export default function Navbar() {
               >
                 <Image
                   src="/images/vijay-trivedi-logo.webp"
-                  alt="Trivedi Marbles logo"
+                  alt="Vijay Trivedi Group logo"
                   width={48}
                   height={48}
                   className="h-10 w-10 object-contain"
+                />
+                <span className="h-8 w-px shrink-0 bg-current opacity-30" aria-hidden="true" />
+                <Image
+                  src="/images/TRIVEDI MARBLES PVT.LTD.webp"
+                  alt="Trivedi Marbles Pvt. Ltd. logo"
+                  width={100}
+                  height={40}
+                  className="h-10 w-auto object-contain"
                 />
                 <span className="font-serif text-sm font-bold uppercase tracking-[0.08em] leading-snug">
                   Trivedi Marbles Pvt. Ltd.
