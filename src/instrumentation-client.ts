@@ -56,7 +56,10 @@ function getOverlay(): HTMLElement {
   return overlay;
 }
 
-export function onRouterTransitionStart() {
+export function onRouterTransitionStart(url: string) {
+  const currentUrl = window.location.pathname + window.location.search;
+  if (url === currentUrl) return;
+
   const bar = getBar();
   const overlay = getOverlay();
 
