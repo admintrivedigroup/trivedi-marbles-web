@@ -4,21 +4,27 @@ import { useRef, useState } from "react";
 import {
   Camera,
   Download,
+  FlipHorizontal,
   Loader2,
   RefreshCw,
   Scan,
 } from "lucide-react";
 
-import { detectSurface, renderVisualization } from "@/app/inventory/_actions/visualize";
+import {
+  classifySurface,
+  detectSurface,
+  renderVisualization,
+  type SurfaceType,
+} from "@/app/inventory/_actions/visualize";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Phase =
-  | "upload"      // waiting for room photo
-  | "tap"         // photo loaded, waiting for surface tap
-  | "segmenting"  // SAM-2 running
-  | "rendering"   // GPT Image 1 running
-  | "result"      // showing rendered result
+  | "upload"
+  | "tap"
+  | "segmenting"
+  | "rendering"
+  | "result"
   | "error";
 
 type SlabOption = {
@@ -36,7 +42,6 @@ type Props = {
 
 // ─── Client-side helpers ──────────────────────────────────────────────────────
 
-// Compress room photo before sending: max 1500px, JPEG 85%
 async function compressPhoto(file: File): Promise<File> {
   return new Promise((resolve) => {
     const img = new Image();
@@ -62,6 +67,66 @@ async function compressPhoto(file: File): Promise<File> {
   });
 }
 
+// Composite AI result with original photo: AI pixels only in the mask area.
+async function compositeResult(
+  originalFile: File,
+  aiResultDataUrl: string,
+  alphaMaskDataUrl: string,
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const SIZE = 1024;
+    const origUrl = URL.createObjectURL(originalFile);
+
+    const origImg = new Image();
+    const aiImg = new Image();
+    const maskImg = new Image();
+
+    let loaded = 0;
+    const onLoad = () => {
+      loaded++;
+      if (loaded < 3) return;
+
+      URL.revokeObjectURL(origUrl);
+
+      const canvas = document.createElement("canvas");
+      canvas.width = SIZE;
+      canvas.height = SIZE;
+      const ctx = canvas.getContext("2d")!;
+
+      ctx.drawImage(origImg, 0, 0, SIZE, SIZE);
+      const origData = ctx.getImageData(0, 0, SIZE, SIZE);
+
+      ctx.clearRect(0, 0, SIZE, SIZE);
+      ctx.drawImage(aiImg, 0, 0, SIZE, SIZE);
+      const aiData = ctx.getImageData(0, 0, SIZE, SIZE);
+
+      ctx.clearRect(0, 0, SIZE, SIZE);
+      ctx.drawImage(maskImg, 0, 0, SIZE, SIZE);
+      const maskData = ctx.getImageData(0, 0, SIZE, SIZE);
+
+      const out = ctx.createImageData(SIZE, SIZE);
+      for (let i = 0; i < out.data.length; i += 4) {
+        // alpha=0 in mask = editable region → use AI; alpha=255 = preserve → use original
+        const useAi = maskData.data[i + 3] < 128;
+        out.data[i]     = useAi ? aiData.data[i]     : origData.data[i];
+        out.data[i + 1] = useAi ? aiData.data[i + 1] : origData.data[i + 1];
+        out.data[i + 2] = useAi ? aiData.data[i + 2] : origData.data[i + 2];
+        out.data[i + 3] = 255;
+      }
+      ctx.putImageData(out, 0, 0);
+      resolve(canvas.toDataURL("image/jpeg", 0.92));
+    };
+
+    const onError = (e: unknown) => { URL.revokeObjectURL(origUrl); reject(e); };
+    origImg.onload = aiImg.onload = maskImg.onload = onLoad;
+    origImg.onerror = aiImg.onerror = maskImg.onerror = onError;
+
+    origImg.src = origUrl;
+    aiImg.src = aiResultDataUrl;
+    maskImg.src = alphaMaskDataUrl;
+  });
+}
+
 // Convert SAM raw mask (white = surface) to OpenAI alpha mask (alpha=0 = editable).
 async function buildAlphaMask(rawMaskDataUrl: string, width: number, height: number): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -76,7 +141,6 @@ async function buildAlphaMask(rawMaskDataUrl: string, width: number, height: num
       const out = ctx.createImageData(width, height);
       for (let i = 0; i < data.length; i += 4) {
         const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
-        // SAM white (surface) → alpha=0 (editable); SAM black → alpha=255 (preserve)
         out.data[i] = out.data[i + 1] = out.data[i + 2] = 0;
         out.data[i + 3] = brightness > 128 ? 0 : 255;
       }
@@ -88,6 +152,44 @@ async function buildAlphaMask(rawMaskDataUrl: string, width: number, height: num
   });
 }
 
+// Creates a bookmatched slab by placing the original and its mirror side by side.
+async function createBookmatchedDataUrl(imageUrl: string): Promise<string | null> {
+  try {
+    const res = await fetch(imageUrl);
+    if (!res.ok) return null;
+    const blobUrl = URL.createObjectURL(await res.blob());
+    return await new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(blobUrl);
+        const W = img.naturalWidth;
+        const H = img.naturalHeight;
+        const canvas = document.createElement("canvas");
+        canvas.width = W * 2;
+        canvas.height = H;
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(img, 0, 0, W, H);
+        ctx.save();
+        ctx.translate(W * 2, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(img, 0, 0, W, H);
+        ctx.restore();
+        resolve(canvas.toDataURL("image/jpeg", 0.9));
+      };
+      img.onerror = () => { URL.revokeObjectURL(blobUrl); resolve(null); };
+      img.src = blobUrl;
+    });
+  } catch {
+    return null;
+  }
+}
+
+const SURFACE_LABELS: Record<SurfaceType, string> = {
+  floor: "Floor",
+  wall: "Wall",
+  countertop: "Countertop",
+};
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function VisualizerAI({ currentSlab, comparisons }: Props) {
@@ -97,22 +199,21 @@ export function VisualizerAI({ currentSlab, comparisons }: Props) {
   const [phase, setPhase] = useState<Phase>("upload");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // room photo kept in memory for re-renders when comparing slabs
   const [compressedPhoto, setCompressedPhoto] = useState<File | null>(null);
   const [roomPreviewUrl, setRoomPreviewUrl] = useState<string | null>(null);
   const [imgNatural, setImgNatural] = useState({ w: 0, h: 0 });
 
-  // tap indicator shown while in "tap" phase
   const [tapDisplay, setTapDisplay] = useState<{ pct: { x: number; y: number } } | null>(null);
 
-  // alpha mask kept for slab comparison re-renders (no need to re-run SAM)
   const [alphaMaskBase64, setAlphaMaskBase64] = useState<string | null>(null);
 
-  // which slab is currently being rendered / shown
   const [activeSlab, setActiveSlab] = useState<SlabOption>(currentSlab);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
 
   const [loadingMsg, setLoadingMsg] = useState("");
+
+  const [bookmatch, setBookmatch] = useState(false);
+  const [surfaceType, setSurfaceType] = useState<SurfaceType | null>(null);
 
   // ── handlers ────────────────────────────────────────────────────────────────
 
@@ -124,6 +225,7 @@ export function VisualizerAI({ currentSlab, comparisons }: Props) {
     setTapDisplay(null);
     setAlphaMaskBase64(null);
     setResultUrl(null);
+    setSurfaceType(null);
     setPhase("tap");
   }
 
@@ -141,16 +243,11 @@ export function VisualizerAI({ currentSlab, comparisons }: Props) {
   function handleImageClick(e: React.MouseEvent<HTMLImageElement>) {
     if (phase !== "tap") return;
     const rect = e.currentTarget.getBoundingClientRect();
-
-    // CSS-relative percentages for the dot overlay
     const pctX = (e.clientX - rect.left) / rect.width;
     const pctY = (e.clientY - rect.top) / rect.height;
     setTapDisplay({ pct: { x: pctX, y: pctY } });
-
-    // Actual pixel coords in the original image for SAM
     const pixelX = Math.round(pctX * imgNatural.w);
     const pixelY = Math.round(pctY * imgNatural.h);
-
     void runPipeline(pixelX, pixelY);
   }
 
@@ -158,7 +255,6 @@ export function VisualizerAI({ currentSlab, comparisons }: Props) {
     if (!compressedPhoto) return;
 
     try {
-      // Step 1: surface detection
       setPhase("segmenting");
       setLoadingMsg("Detecting surface…");
 
@@ -167,37 +263,69 @@ export function VisualizerAI({ currentSlab, comparisons }: Props) {
       detectFd.append("pointX", String(pixelX));
       detectFd.append("pointY", String(pixelY));
 
-      const { rawMaskBase64, error: detectError } = await detectSurface(detectFd);
-      if (detectError || !rawMaskBase64) {
-        setErrorMsg(detectError ?? "Surface detection returned no mask.");
+      const classifyFd = new FormData();
+      classifyFd.append("photo", compressedPhoto);
+      classifyFd.append("pointX", String(pixelX));
+      classifyFd.append("pointY", String(pixelY));
+      classifyFd.append("naturalWidth", String(imgNatural.w));
+      classifyFd.append("naturalHeight", String(imgNatural.h));
+
+      // Run segmentation and surface classification in parallel to avoid added latency
+      let detectedSurfaceType: SurfaceType | null = null;
+      const [detectResult] = await Promise.all([
+        detectSurface(detectFd),
+        classifySurface(classifyFd).then((r) => {
+          if (r.surfaceType) {
+            detectedSurfaceType = r.surfaceType;
+            setSurfaceType(r.surfaceType);
+          }
+        }),
+      ]);
+
+      if (detectResult.error || !detectResult.rawMaskBase64) {
+        setErrorMsg(detectResult.error ?? "Surface detection returned no mask.");
         setPhase("error");
         return;
       }
 
-      // Step 2: convert SAM mask → OpenAI alpha mask (client-side canvas)
-      const alphaMask = await buildAlphaMask(rawMaskBase64, imgNatural.w, imgNatural.h);
+      const alphaMask = await buildAlphaMask(detectResult.rawMaskBase64, imgNatural.w, imgNatural.h);
       setAlphaMaskBase64(alphaMask);
 
-      // Step 3: AI render
-      await runRender(alphaMask, activeSlab);
-
+      await runRender(alphaMask, activeSlab, detectedSurfaceType, bookmatch);
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Something went wrong.");
       setPhase("error");
     }
   }
 
-  async function runRender(alphaMask: string, slab: SlabOption) {
+  async function runRender(
+    alphaMask: string,
+    slab: SlabOption,
+    currentSurfaceType: SurfaceType | null,
+    currentBookmatch: boolean,
+  ) {
     if (!compressedPhoto || !slab.imageUrl) return;
 
     setPhase("rendering");
     setLoadingMsg("Generating visualization…");
 
+    // Build bookmatched slab reference client-side before sending to server
+    let slabImageBase64: string | null = null;
+    if (currentBookmatch) {
+      slabImageBase64 = await createBookmatchedDataUrl(slab.imageUrl);
+    }
+
     const renderFd = new FormData();
     renderFd.append("photo", compressedPhoto);
     renderFd.append("alphaMaskBase64", alphaMask);
-    renderFd.append("slabImageUrl", slab.imageUrl);
+    if (slabImageBase64) {
+      renderFd.append("slabImageBase64", slabImageBase64);
+    } else {
+      renderFd.append("slabImageUrl", slab.imageUrl);
+    }
     renderFd.append("marbleName", slab.marbleName ?? slab.slabCode);
+    if (currentSurfaceType) renderFd.append("surfaceType", currentSurfaceType);
+    renderFd.append("bookmatch", String(currentBookmatch));
 
     const { resultBase64, error: renderError } = await renderVisualization(renderFd);
 
@@ -207,15 +335,24 @@ export function VisualizerAI({ currentSlab, comparisons }: Props) {
       return;
     }
 
-    setResultUrl(resultBase64);
+    const composited = await compositeResult(compressedPhoto, resultBase64, alphaMask);
+    setResultUrl(composited);
     setActiveSlab(slab);
     setPhase("result");
   }
 
   async function handleCompareSlab(slab: SlabOption) {
     if (!alphaMaskBase64) return;
-    setActiveSlab(slab);
-    await runRender(alphaMaskBase64, slab);
+    await runRender(alphaMaskBase64, slab, surfaceType, bookmatch);
+  }
+
+  async function handleBookmatchToggle() {
+    const newBookmatch = !bookmatch;
+    setBookmatch(newBookmatch);
+    // Re-render immediately if a result already exists
+    if (phase === "result" && alphaMaskBase64) {
+      await runRender(alphaMaskBase64, activeSlab, surfaceType, newBookmatch);
+    }
   }
 
   function handleDownload() {
@@ -231,6 +368,7 @@ export function VisualizerAI({ currentSlab, comparisons }: Props) {
     setAlphaMaskBase64(null);
     setResultUrl(null);
     setErrorMsg(null);
+    setSurfaceType(null);
     setPhase("tap");
   }
 
@@ -242,6 +380,8 @@ export function VisualizerAI({ currentSlab, comparisons }: Props) {
     setResultUrl(null);
     setErrorMsg(null);
     setActiveSlab(currentSlab);
+    setSurfaceType(null);
+    setBookmatch(false);
     setPhase("upload");
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
@@ -249,6 +389,28 @@ export function VisualizerAI({ currentSlab, comparisons }: Props) {
   // ── render ───────────────────────────────────────────────────────────────────
 
   const isLoading = phase === "segmenting" || phase === "rendering";
+
+  const surfaceBadge = surfaceType ? (
+    <span className="inline-flex items-center rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-medium text-stone-700">
+      {SURFACE_LABELS[surfaceType]} detected
+    </span>
+  ) : null;
+
+  const bookmatchToggle = (
+    <button
+      type="button"
+      onClick={() => void handleBookmatchToggle()}
+      disabled={isLoading}
+      className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 ${
+        bookmatch
+          ? "border-indigo-300 bg-indigo-50 text-indigo-700"
+          : "border-gray-200 text-gray-600 hover:bg-gray-50"
+      }`}
+    >
+      <FlipHorizontal className="h-3.5 w-3.5" />
+      Bookmatch
+    </button>
+  );
 
   return (
     <div>
@@ -300,7 +462,7 @@ export function VisualizerAI({ currentSlab, comparisons }: Props) {
           <div className="flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3">
             <Scan className="h-4 w-4 shrink-0 text-indigo-500" />
             <span className="text-sm text-indigo-800">
-              <span className="font-semibold">Tap once</span> on the floor or wall surface you want to replace with marble.
+              <span className="font-semibold">Tap once</span> on the floor, wall, or countertop surface you want to replace with marble.
             </span>
           </div>
 
@@ -331,7 +493,8 @@ export function VisualizerAI({ currentSlab, comparisons }: Props) {
             )}
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex items-center justify-between">
+            {bookmatchToggle}
             <button
               type="button"
               onClick={resetAll}
@@ -346,18 +509,19 @@ export function VisualizerAI({ currentSlab, comparisons }: Props) {
       {/* Loading phases */}
       {isLoading && (
         <div className="flex flex-col gap-4">
-          {roomPreviewUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={roomPreviewUrl}
-              alt="Room"
-              className="w-full rounded-xl border border-gray-200 opacity-60 shadow-sm"
-              draggable={false}
-            />
-          )}
-          <div className="flex items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-5">
-            <Loader2 className="h-5 w-5 animate-spin text-indigo-500" />
-            <span className="text-sm font-medium text-gray-700">{loadingMsg}</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={resultUrl ?? roomPreviewUrl ?? ""}
+            alt="Room"
+            className="w-full rounded-xl border border-gray-200 opacity-60 shadow-sm"
+            draggable={false}
+          />
+          <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3">
+            <div className="flex items-center gap-3">
+              <Loader2 className="h-5 w-5 animate-spin text-indigo-500" />
+              <span className="text-sm font-medium text-gray-700">{loadingMsg}</span>
+            </div>
+            {surfaceBadge}
           </div>
         </div>
       )}
@@ -394,10 +558,14 @@ export function VisualizerAI({ currentSlab, comparisons }: Props) {
         <div className="flex flex-col gap-5">
           {/* Action bar */}
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3">
-            <span className="text-sm font-medium text-gray-700">
-              {activeSlab.marbleName ?? activeSlab.slabCode} applied
-            </span>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-700">
+                {activeSlab.marbleName ?? activeSlab.slabCode} applied
+              </span>
+              {surfaceBadge}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {bookmatchToggle}
               <button
                 type="button"
                 onClick={handleDownload}
@@ -466,9 +634,9 @@ export function VisualizerAI({ currentSlab, comparisons }: Props) {
                       )}
                     </div>
                     <div className="px-2 py-1.5 text-left">
-                      <p className="text-xs font-semibold text-gray-900 truncate w-28">{slab.slabCode}</p>
+                      <p className="truncate w-28 text-xs font-semibold text-gray-900">{slab.slabCode}</p>
                       {slab.marbleName && (
-                        <p className="truncate text-xs text-gray-400 w-28">{slab.marbleName}</p>
+                        <p className="truncate w-28 text-xs text-gray-400">{slab.marbleName}</p>
                       )}
                     </div>
                   </button>

@@ -8,6 +8,7 @@ import {
   Archive,
   ArrowLeftRight,
   BookOpen,
+  CalendarDays,
   ClipboardList,
   Eye,
   FileText,
@@ -133,6 +134,18 @@ const navigationItems: NavigationItem[] = [
     label: "Journal",
     matchers: ["/inventory/journal"],
     roles: ["admin", "superadmin"],
+  },
+  {
+    href: "/inventory/tasks",
+    icon: ClipboardList,
+    label: "Tasks",
+    matchers: ["/inventory/tasks"],
+  },
+  {
+    href: "/inventory/task-calendar",
+    icon: CalendarDays,
+    label: "Task Calendar",
+    matchers: ["/inventory/task-calendar"],
   },
 ];
 

@@ -1,9 +1,11 @@
 import "server-only";
 
 import { getInventorySlabs } from "@/app/inventory/_lib/inventory-list";
+import { getIncomingTransfers } from "@/app/inventory/_lib/transfers";
 import { SLAB_STATUS } from "@/app/inventory/_lib/slab-status";
 
 export type DashboardStats = {
+  totalLots: number;
   totalSlabs: number;
   totalSqft: number;
   warehouseCounts: { name: string; count: number }[];
@@ -15,6 +17,8 @@ export type DashboardStats = {
   typeData: { name: string; count: number }[];
   recentActivity: { id: string; text: string; time: string }[];
   alerts: { id: string; severity: "low" | "medium" | "high"; text: string }[];
+  incomingTransfersCount: number;
+  expiringTodaySlabs: { id: string; slabCode: string | null; marbleName: string | null; reservedFor: string | null; reservedUntil: string }[];
 };
 
 export async function getDashboardStats(
@@ -23,6 +27,7 @@ export async function getDashboardStats(
   const { slabs } = await getInventorySlabs({ warehouseId: "", statusId: "", sortBy: "newest", allowedWarehouseIds });
 
   const totalSlabs = slabs.length;
+  const totalLots = new Set(slabs.map((s) => s.lotId).filter(Boolean)).size;
   const totalSqft = slabs.reduce((sum, slab) => sum + (slab.sqft ?? 0), 0);
 
   const warehouseMap = new Map<string, number>();
@@ -54,6 +59,27 @@ export async function getDashboardStats(
     const d = new Date(s.reservedUntil);
     return d >= now && d <= threeDaysFromNow;
   }).length;
+
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+  const endOfToday = new Date(now);
+  endOfToday.setHours(23, 59, 59, 999);
+  const expiringTodaySlabs = reservedSlabs
+    .filter((s) => {
+      if (!s.reservedUntil) return false;
+      const d = new Date(s.reservedUntil);
+      return d >= startOfToday && d <= endOfToday;
+    })
+    .map((s) => ({
+      id: s.id,
+      slabCode: s.slabCode,
+      marbleName: s.marbleName,
+      reservedFor: s.reservedFor ?? null,
+      reservedUntil: s.reservedUntil!,
+    }));
+
+  const incomingTransfers = await getIncomingTransfers(allowedWarehouseIds);
+  const incomingTransfersCount = incomingTransfers.length;
 
   const activeSlabs = slabs.filter((s) => s.statusName !== SLAB_STATUS.SOLD);
   const stockValueBySelling = activeSlabs.reduce(
@@ -150,6 +176,7 @@ export async function getDashboardStats(
   }
 
   return {
+    totalLots,
     totalSlabs,
     totalSqft,
     warehouseCounts,
@@ -161,5 +188,7 @@ export async function getDashboardStats(
     typeData,
     recentActivity,
     alerts,
+    incomingTransfersCount,
+    expiringTodaySlabs,
   };
 }

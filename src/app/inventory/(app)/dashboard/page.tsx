@@ -9,6 +9,7 @@ export default async function InventoryDashboardPage() {
   return (
     <InventoryDashboard
       stats={stats}
+      profile={profile}
     />
   );
 }
