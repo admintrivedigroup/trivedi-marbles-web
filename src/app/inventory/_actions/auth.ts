@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
 
 import { createClient } from "@/lib/supabase/server";
 import type { LoginActionState, ForgotPasswordActionState } from "@/app/inventory/_actions/auth-state";
@@ -57,10 +56,8 @@ export async function forgotPassword(
     return { error: "Enter the email address used for inventory access.", success: false };
   }
 
-  const headerStore = await headers();
-  const host = headerStore.get("host") ?? "localhost:3000";
-  const protocol = headerStore.get("x-forwarded-proto") ?? "http";
-  const redirectTo = `${protocol}://${host}/inventory/reset-password`;
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/$/, "");
+  const redirectTo = `${siteUrl}/inventory/reset-password`;
 
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
