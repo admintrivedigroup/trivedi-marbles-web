@@ -5,37 +5,68 @@ import { VisualizerPicker } from "@/app/inventory/_components/visualizer-picker"
 import { withCloudinaryThumbnail } from "@/lib/cloudinary/upload";
 import { createClient } from "@/lib/supabase/server";
 
-type SlabRow = {
+export type PickerSlab = {
   id: string;
-  slab_code: string | null;
-  marble_lots: Array<{ marble_name: string | null }> | { marble_name: string | null } | null;
-  slab_images: Array<{ image_url: string | null; sort_order: number | null }>;
+  slabCode: string;
+  thumbnailUrl: string | null;
 };
 
-async function getPickerSlabs() {
+export type PickerLot = {
+  lotNumber: string;
+  marbleName: string | null;
+  thumbnailUrl: string | null;
+  slabs: PickerSlab[];
+};
+
+type SlabImageRow = { image_url: string | null; sort_order: number | null };
+type SlabRow = { id: string; slab_code: string | null; slab_images: SlabImageRow[] };
+type LotRow = {
+  id: string;
+  lot_number: string | null;
+  marble_name: string | null;
+  slabs: SlabRow[];
+};
+
+async function getPickerLots(): Promise<PickerLot[]> {
   const supabase = await createClient();
   const { data } = await supabase
-    .from("slabs")
-    .select("id, slab_code, marble_lots(marble_name), slab_images(image_url, sort_order)")
+    .from("marble_lots")
+    .select("id, lot_number, marble_name, slabs(id, slab_code, slab_images(image_url, sort_order))")
     .order("created_at", { ascending: false })
     .limit(200);
 
-  return (data ?? []).map((row: SlabRow) => {
-    const images = Array.isArray(row.slab_images) ? row.slab_images : [];
-    const sorted = images.slice().sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
-    const rawUrl = sorted[0]?.image_url ?? null;
-    const lot = Array.isArray(row.marble_lots) ? row.marble_lots[0] : row.marble_lots;
-    return {
-      id: String(row.id),
-      slabCode: row.slab_code ?? "",
-      marbleName: lot?.marble_name ?? null,
-      thumbnailUrl: rawUrl ? withCloudinaryThumbnail(rawUrl) : null,
-    };
-  });
+  const result: PickerLot[] = [];
+  for (const row of (data ?? []) as LotRow[]) {
+    const rawSlabs = Array.isArray(row.slabs) ? row.slabs : [];
+    if (rawSlabs.length === 0) continue;
+
+    const sortedSlabs = rawSlabs
+      .slice()
+      .sort((a, b) => (a.slab_code ?? "").localeCompare(b.slab_code ?? ""));
+
+    const pickerSlabs: PickerSlab[] = sortedSlabs.map((s) => {
+      const images = Array.isArray(s.slab_images) ? s.slab_images : [];
+      const sorted = images.slice().sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+      const rawUrl = sorted[0]?.image_url ?? null;
+      return {
+        id: String(s.id),
+        slabCode: s.slab_code ?? "",
+        thumbnailUrl: rawUrl ? withCloudinaryThumbnail(rawUrl) : null,
+      };
+    });
+
+    result.push({
+      lotNumber: row.lot_number ?? "",
+      marbleName: row.marble_name ?? null,
+      thumbnailUrl: pickerSlabs[0]?.thumbnailUrl ?? null,
+      slabs: pickerSlabs,
+    });
+  }
+  return result;
 }
 
 export default async function VisualizePage() {
-  const slabs = await getPickerSlabs();
+  const lots = await getPickerLots();
 
   return (
     <VisualizerSplash>
@@ -74,7 +105,7 @@ export default async function VisualizePage() {
 
         {/* Content */}
         <div className="flex-1 px-5 py-6 md:px-8 md:py-8">
-          <VisualizerPicker slabs={slabs} />
+          <VisualizerPicker lots={lots} />
         </div>
       </div>
     </VisualizerSplash>

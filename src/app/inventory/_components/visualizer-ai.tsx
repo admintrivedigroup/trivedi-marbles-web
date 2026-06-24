@@ -2,9 +2,11 @@
 
 import { useRef, useState } from "react";
 import {
+  AlertTriangle,
   Camera,
   Download,
   FlipHorizontal,
+  Layers2,
   Loader2,
   RefreshCw,
   Scan,
@@ -16,6 +18,8 @@ import {
   renderVisualization,
   type SurfaceType,
 } from "@/app/inventory/_actions/visualize";
+import { renderFloorLocally } from "@/lib/visualizer/renderFloorTexture";
+import type { Quad } from "@/lib/visualizer/perspective";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -24,6 +28,7 @@ type Phase =
   | "tap"
   | "segmenting"
   | "rendering"
+  | "floor_correction"
   | "result"
   | "error";
 
@@ -67,7 +72,14 @@ async function compressPhoto(file: File): Promise<File> {
   });
 }
 
-// Composite AI result with original photo: AI pixels only in the mask area.
+// Composite AI result with original photo using a blur-threshold mask.
+//
+// Why blur instead of erode/feather:
+//   SAM masks have small interior holes (isolated preserve-pixels inside the floor region).
+//   Erosion amplified those holes into blocky patches.
+//   Blurring the mask pulls interior holes toward the surrounding floor value (alpha≈0),
+//   filling them, while pushing isolated stray floor pixels near walls toward alpha≈255,
+//   preventing bleed onto furniture/walls — all in one pass.
 async function compositeResult(
   originalFile: File,
   aiResultDataUrl: string,
@@ -100,14 +112,21 @@ async function compositeResult(
       ctx.drawImage(aiImg, 0, 0, SIZE, SIZE);
       const aiData = ctx.getImageData(0, 0, SIZE, SIZE);
 
+      // Draw mask with a blur so:
+      //   • small preserve-islands inside the floor collapse → use AI (fills holes)
+      //   • AI floor pixels near walls/furniture boundaries stay collapsed → preserve original
       ctx.clearRect(0, 0, SIZE, SIZE);
+      ctx.filter = "blur(8px)";
       ctx.drawImage(maskImg, 0, 0, SIZE, SIZE);
-      const maskData = ctx.getImageData(0, 0, SIZE, SIZE);
+      ctx.filter = "none";
+      const blurred = ctx.getImageData(0, 0, SIZE, SIZE);
 
       const out = ctx.createImageData(SIZE, SIZE);
       for (let i = 0; i < out.data.length; i += 4) {
-        // alpha=0 in mask = editable region → use AI; alpha=255 = preserve → use original
-        const useAi = maskData.data[i + 3] < 128;
+        // blurred alpha ≈ 0   → solidly inside floor → use AI result
+        // blurred alpha ≈ 255 → non-floor or near edge → preserve original photo
+        // threshold at 100: conservative — never bleeds AI onto walls
+        const useAi = blurred.data[i + 3] < 100;
         out.data[i]     = useAi ? aiData.data[i]     : origData.data[i];
         out.data[i + 1] = useAi ? aiData.data[i + 1] : origData.data[i + 1];
         out.data[i + 2] = useAi ? aiData.data[i + 2] : origData.data[i + 2];
@@ -215,6 +234,16 @@ export function VisualizerAI({ currentSlab, comparisons }: Props) {
   const [bookmatch, setBookmatch] = useState(false);
   const [surfaceType, setSurfaceType] = useState<SurfaceType | null>(null);
 
+  // ── Floor correction state ───────────────────────────────────────────────────
+  // rawMaskDataUrl: original Replicate output used as a red debug overlay in floor_correction phase
+  const [rawMaskDataUrl, setRawMaskDataUrl] = useState<string | null>(null);
+  // Corners the staff has tapped to manually define the floor quad
+  type FloorCorner = { pct: { x: number; y: number }; natural: { x: number; y: number } };
+  const [manualFloorCorners, setManualFloorCorners] = useState<FloorCorner[]>([]);
+  // The quad that was actually used for the last successful floor render (auto or manual).
+  // Cached so slab comparisons and bookmatch toggles reuse it without re-running SAM.
+  const [lastFloorQuad, setLastFloorQuad] = useState<Quad | null>(null);
+
   // ── handlers ────────────────────────────────────────────────────────────────
 
   async function handleFile(file: File) {
@@ -256,7 +285,7 @@ export function VisualizerAI({ currentSlab, comparisons }: Props) {
 
     try {
       setPhase("segmenting");
-      setLoadingMsg("Detecting surface…");
+      setLoadingMsg("Detecting surface… (first run may take 1–2 min to warm up)");
 
       const detectFd = new FormData();
       detectFd.append("photo", compressedPhoto);
@@ -288,6 +317,9 @@ export function VisualizerAI({ currentSlab, comparisons }: Props) {
         return;
       }
 
+      // Store raw Replicate mask for the floor-correction debug overlay
+      setRawMaskDataUrl(detectResult.rawMaskBase64);
+
       const alphaMask = await buildAlphaMask(detectResult.rawMaskBase64, imgNatural.w, imgNatural.h);
       setAlphaMaskBase64(alphaMask);
 
@@ -303,10 +335,47 @@ export function VisualizerAI({ currentSlab, comparisons }: Props) {
     slab: SlabOption,
     currentSurfaceType: SurfaceType | null,
     currentBookmatch: boolean,
+    /** Explicit floor quad (from manual 4-point or cached from last render). */
+    overrideQuad?: Quad,
   ) {
     if (!compressedPhoto || !slab.imageUrl) return;
 
     setPhase("rendering");
+
+    // ── Floor: deterministic Canvas projection — no GPT Image 1 ──────────────
+    if (currentSurfaceType === "floor") {
+      setLoadingMsg("Projecting slab onto floor…");
+      try {
+        const output = await renderFloorLocally({
+          roomPhotoFile: compressedPhoto,
+          alphaMaskDataUrl: alphaMask,
+          slabImageUrl: slab.imageUrl,
+          bookmatch: currentBookmatch,
+          imgWidth: imgNatural.w,
+          imgHeight: imgNatural.h,
+          // Use explicit override first, then fall back to the last cached quad
+          // (enables slab-swap without re-running SAM or manual-corner entry)
+          manualQuad: overrideQuad ?? lastFloorQuad ?? undefined,
+        });
+        setResultUrl(output.dataUrl);
+        setLastFloorQuad(output.floorQuad); // cache for future slab swaps
+        setActiveSlab(slab);
+        setPhase("result");
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Floor rendering failed.";
+        if (msg.startsWith("NEEDS_MANUAL_FLOOR:")) {
+          // Auto-detection produced an unreliable mask — ask staff to tap 4 corners
+          setManualFloorCorners([]);
+          setPhase("floor_correction");
+          return;
+        }
+        setErrorMsg(msg);
+        setPhase("error");
+      }
+      return;
+    }
+
+    // ── Wall / countertop / unknown: GPT Image 1 inpainting ──────────────────
     setLoadingMsg("Generating visualization…");
 
     // Build bookmatched slab reference client-side before sending to server
@@ -363,12 +432,47 @@ export function VisualizerAI({ currentSlab, comparisons }: Props) {
     link.click();
   }
 
+  // ── Floor correction: collect 4 corners from staff clicks ──────────────────
+
+  const CORNER_LABELS = ["Back-left", "Back-right", "Front-right", "Front-left"] as const;
+
+  function handleFloorCornerClick(e: React.MouseEvent<HTMLImageElement>) {
+    // Ignore clicks once 4 corners are selected (render already in progress)
+    if (manualFloorCorners.length >= 4) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pctX = (e.clientX - rect.left) / rect.width;
+    const pctY = (e.clientY - rect.top) / rect.height;
+    const corner = {
+      pct: { x: pctX, y: pctY },
+      natural: {
+        x: Math.round(pctX * imgNatural.w),
+        y: Math.round(pctY * imgNatural.h),
+      },
+    };
+
+    const next = [...manualFloorCorners, corner];
+    setManualFloorCorners(next);
+
+    if (next.length === 4 && alphaMaskBase64) {
+      const quad: Quad = [
+        next[0].natural,
+        next[1].natural,
+        next[2].natural,
+        next[3].natural,
+      ] as Quad;
+      void runRender(alphaMaskBase64, activeSlab, "floor", bookmatch, quad);
+    }
+  }
+
   function resetToTap() {
     setTapDisplay(null);
     setAlphaMaskBase64(null);
     setResultUrl(null);
     setErrorMsg(null);
     setSurfaceType(null);
+    setManualFloorCorners([]);
+    setLastFloorQuad(null);
     setPhase("tap");
   }
 
@@ -382,6 +486,9 @@ export function VisualizerAI({ currentSlab, comparisons }: Props) {
     setActiveSlab(currentSlab);
     setSurfaceType(null);
     setBookmatch(false);
+    setRawMaskDataUrl(null);
+    setManualFloorCorners([]);
+    setLastFloorQuad(null);
     setPhase("upload");
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
@@ -526,6 +633,111 @@ export function VisualizerAI({ currentSlab, comparisons }: Props) {
         </div>
       )}
 
+      {/* Floor correction phase — staff taps 4 corners to define the floor plane */}
+      {phase === "floor_correction" && roomPreviewUrl && (
+        <div className="flex flex-col gap-4">
+          {/* Instruction banner */}
+          <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+            <div className="text-sm text-amber-800">
+              <span className="font-semibold">Floor detection needs correction.</span>{" "}
+              {manualFloorCorners.length < 4 ? (
+                <>
+                  Tap corner{" "}
+                  <span className="font-medium">
+                    {manualFloorCorners.length + 1} of 4 —{" "}
+                    {CORNER_LABELS[manualFloorCorners.length]}
+                  </span>
+                </>
+              ) : (
+                "All 4 corners selected — rendering…"
+              )}
+            </div>
+          </div>
+
+          {/* Corner progress pills */}
+          <div className="grid grid-cols-4 gap-1.5">
+            {CORNER_LABELS.map((label, i) => (
+              <div
+                key={i}
+                className={`rounded-lg px-2 py-1.5 text-center text-xs font-medium border transition-all ${
+                  i < manualFloorCorners.length
+                    ? "border-blue-300 bg-blue-500 text-white"
+                    : i === manualFloorCorners.length
+                    ? "border-amber-300 bg-amber-100 text-amber-700 ring-1 ring-amber-300"
+                    : "border-gray-200 bg-gray-50 text-gray-400"
+                }`}
+              >
+                {i + 1}. {label}
+              </div>
+            ))}
+          </div>
+
+          {/* Room photo with SAM debug overlay + corner markers */}
+          <div className="relative w-full">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={roomPreviewUrl}
+              alt="Room"
+              className="w-full cursor-crosshair rounded-xl border border-amber-300 shadow-sm"
+              onClick={handleFloorCornerClick}
+              draggable={false}
+            />
+
+            {/* Red tint overlay: white areas in rawMask = what SAM detected */}
+            {rawMaskDataUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={rawMaskDataUrl}
+                alt=""
+                className="pointer-events-none absolute inset-0 h-full w-full rounded-xl"
+                style={{
+                  mixBlendMode: "screen",
+                  filter: "sepia(1) saturate(5) hue-rotate(330deg) brightness(0.8)",
+                  opacity: 0.45,
+                }}
+                draggable={false}
+              />
+            )}
+
+            {/* Numbered corner markers */}
+            {manualFloorCorners.map((c, i) => (
+              <div
+                key={i}
+                className="pointer-events-none absolute flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white bg-blue-600 text-xs font-bold text-white shadow-lg"
+                style={{ left: `${c.pct.x * 100}%`, top: `${c.pct.y * 100}%` }}
+              >
+                {i + 1}
+              </div>
+            ))}
+
+            {/* Legend */}
+            <div className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-lg bg-black/60 px-2 py-1">
+              <div className="h-3 w-3 rounded-sm bg-red-400 opacity-80" />
+              <span className="text-xs text-white">SAM detected area (red = what was included)</span>
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setManualFloorCorners([])}
+              className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              Reset corners
+            </button>
+            <button
+              type="button"
+              onClick={resetToTap}
+              className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
+            >
+              Retap surface
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Error phase */}
       {phase === "error" && (
         <div className="flex flex-col gap-4">
@@ -558,11 +770,17 @@ export function VisualizerAI({ currentSlab, comparisons }: Props) {
         <div className="flex flex-col gap-5">
           {/* Action bar */}
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm font-medium text-gray-700">
                 {activeSlab.marbleName ?? activeSlab.slabCode} applied
               </span>
               {surfaceBadge}
+              {surfaceType === "floor" && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 border border-emerald-200">
+                  <Layers2 className="h-3 w-3" />
+                  Exact slab texture
+                </span>
+              )}
             </div>
             <div className="flex flex-wrap gap-2">
               {bookmatchToggle}
@@ -592,13 +810,47 @@ export function VisualizerAI({ currentSlab, comparisons }: Props) {
             </div>
           </div>
 
-          {/* Result image */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={resultUrl}
-            alt="AI visualization"
-            className="w-full rounded-xl border border-gray-200 shadow-sm"
-          />
+          {/* Before / Slab / After images */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Before</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={roomPreviewUrl ?? ""}
+                alt="Before"
+                className="w-full rounded-xl border border-gray-200 shadow-sm object-cover"
+                draggable={false}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                {activeSlab.marbleName ?? activeSlab.slabCode}
+              </span>
+              {activeSlab.thumbnailUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={activeSlab.thumbnailUrl}
+                  alt={activeSlab.slabCode}
+                  className="w-full rounded-xl border border-gray-200 shadow-sm object-cover"
+                  draggable={false}
+                />
+              ) : (
+                <div className="flex w-full flex-1 items-center justify-center rounded-xl border border-gray-200 bg-gray-50 py-10 text-xs text-gray-300">
+                  No image
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">After</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={resultUrl}
+                alt="After"
+                className="w-full rounded-xl border border-gray-200 shadow-sm object-cover"
+                draggable={false}
+              />
+            </div>
+          </div>
 
           {/* Compare with other slabs */}
           {comparisons.length > 0 && (

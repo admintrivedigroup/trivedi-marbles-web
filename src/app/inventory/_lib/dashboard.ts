@@ -3,6 +3,9 @@ import "server-only";
 import { getInventorySlabs } from "@/app/inventory/_lib/inventory-list";
 import { getIncomingTransfers } from "@/app/inventory/_lib/transfers";
 import { SLAB_STATUS } from "@/app/inventory/_lib/slab-status";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import type { Role } from "@/app/inventory/_lib/permissions";
 
 export type DashboardStats = {
   totalLots: number;
@@ -19,10 +22,27 @@ export type DashboardStats = {
   alerts: { id: string; severity: "low" | "medium" | "high"; text: string }[];
   incomingTransfersCount: number;
   expiringTodaySlabs: { id: string; slabCode: string | null; marbleName: string | null; reservedFor: string | null; reservedUntil: string }[];
+  taskSummary: { total: number; inProgress: number; pendingApproval: number; overdue: number };
+
+  // Admin + Superadmin
+  totalLeads?: number;
+  convertedLeads?: number;
+  newLeadsThisWeek?: number;
+  pendingTransfersCount?: number;
+  staffActivityToday?: { email: string; actionCount: number }[];
+
+  // Superadmin only
+  soldLotsCount?: number;
+  soldSqft?: number;
+  dataQualityIssues?: number;
+  inventoryAgeBuckets?: { label: string; count: number }[];
+  recentAuditActivity?: { id: string; userEmail: string | null; action: string; targetLabel: string | null; time: string }[];
 };
 
 export async function getDashboardStats(
   allowedWarehouseIds: string[] | null = null,
+  role: Role = "staff",
+  currentUserId?: string,
 ): Promise<DashboardStats> {
   const { slabs } = await getInventorySlabs({ warehouseId: "", statusId: "", sortBy: "newest", allowedWarehouseIds });
 
@@ -30,17 +50,17 @@ export async function getDashboardStats(
   const totalLots = new Set(slabs.map((s) => s.lotId).filter(Boolean)).size;
   const totalSqft = slabs.reduce((sum, slab) => sum + (slab.sqft ?? 0), 0);
 
-  const warehouseMap = new Map<string, number>();
+  const warehouseLotMap = new Map<string, Set<string>>();
   for (const slab of slabs) {
-    if (slab.warehouseName) {
-      warehouseMap.set(
-        slab.warehouseName,
-        (warehouseMap.get(slab.warehouseName) ?? 0) + 1,
-      );
+    if (slab.warehouseName && slab.lotId) {
+      if (!warehouseLotMap.has(slab.warehouseName)) {
+        warehouseLotMap.set(slab.warehouseName, new Set());
+      }
+      warehouseLotMap.get(slab.warehouseName)!.add(slab.lotId);
     }
   }
-  const warehouseCounts = Array.from(warehouseMap.entries())
-    .map(([name, count]) => ({ name, count }))
+  const warehouseCounts = Array.from(warehouseLotMap.entries())
+    .map(([name, lotSet]) => ({ name, count: lotSet.size }))
     .sort((a, b) => b.count - a.count);
 
   const now = new Date();
@@ -78,8 +98,18 @@ export async function getDashboardStats(
       reservedUntil: s.reservedUntil!,
     }));
 
-  const incomingTransfers = await getIncomingTransfers(allowedWarehouseIds);
+  const supabase = await createClient();
+
+  const taskQueryBuilder = role === "staff" && currentUserId
+    ? supabase.from("tasks").select("status, due_date").eq("assigned_to", currentUserId).neq("status", "completed").neq("status", "draft")
+    : supabase.from("tasks").select("status, due_date").neq("status", "completed").neq("status", "draft");
+
+  const [incomingTransfers, taskRes] = await Promise.all([
+    getIncomingTransfers(allowedWarehouseIds),
+    taskQueryBuilder,
+  ]);
   const incomingTransfersCount = incomingTransfers.length;
+  const taskRows = (taskRes.data ?? []) as { status: string; due_date: string | null }[];
 
   const activeSlabs = slabs.filter((s) => s.statusName !== SLAB_STATUS.SOLD);
   const stockValueBySelling = activeSlabs.reduce(
@@ -175,7 +205,7 @@ export async function getDashboardStats(
     });
   }
 
-  return {
+  const base: DashboardStats = {
     totalLots,
     totalSlabs,
     totalSqft,
@@ -190,5 +220,105 @@ export async function getDashboardStats(
     alerts,
     incomingTransfersCount,
     expiringTodaySlabs,
+    taskSummary: {
+      total: taskRows.length,
+      inProgress: taskRows.filter((t) => t.status === "in_progress").length,
+      pendingApproval: taskRows.filter((t) => t.status === "pending_approval").length,
+      overdue: taskRows.filter((t) => !!t.due_date && new Date(t.due_date) < now).length,
+    },
   };
+
+  if (role === "admin" || role === "superadmin") {
+    const adminClient = createAdminClient();
+
+    const [leadsRes, pendingTransfersRes, todayAuditRes] = await Promise.all([
+      supabase.from("client_leads").select("id, converted, created_at"),
+      supabase.from("transfer_requests").select("id").eq("status", "in_transit"),
+      adminClient
+        .from("audit_logs")
+        .select("user_email")
+        .gte("created_at", startOfToday.toISOString()),
+    ]);
+
+    const leads = (leadsRes.data ?? []) as { id: string; converted: boolean; created_at: string }[];
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    base.totalLeads = leads.length;
+    base.convertedLeads = leads.filter((l) => l.converted).length;
+    base.newLeadsThisWeek = leads.filter((l) => new Date(l.created_at) >= weekAgo).length;
+    base.pendingTransfersCount = pendingTransfersRes.data?.length ?? 0;
+
+    const activityMap = new Map<string, number>();
+    for (const row of (todayAuditRes.data ?? []) as { user_email: string | null }[]) {
+      const key = row.user_email ?? "Unknown";
+      activityMap.set(key, (activityMap.get(key) ?? 0) + 1);
+    }
+    base.staffActivityToday = Array.from(activityMap.entries())
+      .map(([email, actionCount]) => ({ email, actionCount }))
+      .sort((a, b) => b.actionCount - a.actionCount)
+      .slice(0, 5);
+  }
+
+  if (role === "superadmin") {
+    const adminClient = createAdminClient();
+
+    // Sold stats from existing slab data
+    const soldSlabs = slabs.filter((s) => s.statusName === SLAB_STATUS.SOLD);
+    base.soldLotsCount = new Set(soldSlabs.map((s) => s.lotId).filter(Boolean)).size;
+    base.soldSqft = Math.round(soldSlabs.reduce((sum, s) => sum + (s.sqft ?? 0), 0));
+
+    // Data quality: active slabs missing either price
+    base.dataQualityIssues = activeSlabs.filter(
+      (s) => s.sellingPrice === null || s.dealerPrice === null,
+    ).length;
+
+    // Inventory age buckets on active slabs
+    const ageBuckets = [0, 0, 0, 0]; // 0-30, 31-60, 61-90, 90+
+    for (const slab of activeSlabs) {
+      if (!slab.createdAt) continue;
+      const ageDays = Math.floor(
+        (now.getTime() - new Date(slab.createdAt).getTime()) / (24 * 60 * 60 * 1000),
+      );
+      if (ageDays <= 30) ageBuckets[0]++;
+      else if (ageDays <= 60) ageBuckets[1]++;
+      else if (ageDays <= 90) ageBuckets[2]++;
+      else ageBuckets[3]++;
+    }
+    base.inventoryAgeBuckets = [
+      { label: "0–30d", count: ageBuckets[0] },
+      { label: "31–60d", count: ageBuckets[1] },
+      { label: "61–90d", count: ageBuckets[2] },
+      { label: "90d+", count: ageBuckets[3] },
+    ];
+
+    // Recent audit activity with user attribution
+    const { data: auditData } = await adminClient
+      .from("audit_logs")
+      .select("id, user_email, action, target_label, created_at")
+      .order("created_at", { ascending: false })
+      .limit(6);
+
+    base.recentAuditActivity = (
+      (auditData ?? []) as {
+        id: string;
+        user_email: string | null;
+        action: string;
+        target_label: string | null;
+        created_at: string;
+      }[]
+    ).map((e) => ({
+      id: e.id,
+      userEmail: e.user_email,
+      action: e.action,
+      targetLabel: e.target_label,
+      time: new Date(e.created_at).toLocaleString("en-IN", {
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    }));
+  }
+
+  return base;
 }

@@ -19,6 +19,7 @@ import {
   Plus,
   ScanLine,
   Settings,
+  Target,
   UserSearch,
   Users,
   X,
@@ -146,6 +147,12 @@ const navigationItems: NavigationItem[] = [
     icon: CalendarDays,
     label: "Task Calendar",
     matchers: ["/inventory/task-calendar"],
+  },
+  {
+    href: "/inventory/kra",
+    icon: Target,
+    label: "KRA / KPI",
+    matchers: ["/inventory/kra"],
   },
 ];
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useMemo } from "react";
+import { useState, useTransition, useMemo, useEffect } from "react";
 import Link from "next/link";
 import {
   AlertCircle,
@@ -174,9 +174,9 @@ function DeleteConfirm({
 // ─── Task form modal (two-panel layout) ───────────────────────────────────────
 
 function TaskFormModal({
-  task, users, onClose,
+  task, users, onClose, onCreated,
 }: {
-  task: Task | null; users: AssignableUser[]; onClose: () => void;
+  task: Task | null; users: AssignableUser[]; onClose: () => void; onCreated?: (task: Task) => void;
 }) {
   const isEdit = task !== null;
   const [form, setForm] = useState<TaskFormData>(
@@ -221,7 +221,7 @@ function TaskFormModal({
     setChecklistItems((prev) => [
       ...prev,
       {
-        tempId: crypto.randomUUID(),
+        tempId: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
         title: checklistInput.trim(),
         assigned_to: checklistAssignee,
         assigned_name: user?.displayName ?? user?.email ?? "",
@@ -236,6 +236,10 @@ function TaskFormModal({
 
   function handleSubmit(asDraft = false) {
     if (!form.title.trim()) { setError("Title is required."); return; }
+    if (form.start_date && form.due_date && new Date(form.start_date) > new Date(form.due_date)) {
+      setError("Start date cannot be after the due date.");
+      return;
+    }
     setError(null);
     const finalForm: TaskFormData = {
       ...form,
@@ -245,7 +249,28 @@ function TaskFormModal({
       const result = isEdit
         ? await updateTask(task.id, finalForm)
         : await createTask(finalForm, checklistItems);
-      if (result.success) { onClose(); } else { setError(result.error); }
+      if (result.success) {
+        if (!isEdit) {
+          onCreated?.({
+            id: result.id,
+            title: finalForm.title.trim(),
+            description: finalForm.description?.trim() || null,
+            status: finalForm.status,
+            priority: finalForm.priority,
+            progress: finalForm.progress,
+            assigned_to: finalForm.assigned_to || null,
+            assigned_name: finalForm.assigned_name || null,
+            start_date: finalForm.start_date || null,
+            due_date: finalForm.due_date || null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            created_by: null,
+          });
+        }
+        onClose();
+      } else {
+        setError(result.error);
+      }
     });
   }
 
@@ -321,11 +346,27 @@ function TaskFormModal({
 
               <div>
                 <label className={labelCls}>Priority</label>
-                <select value={form.priority} onChange={(e) => set("priority", e.target.value as TaskPriority)} className={inputCls}>
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                </select>
+                <div className="flex gap-2">
+                  {(["low", "medium", "high"] as const).map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => set("priority", p)}
+                      className={cn(
+                        "flex-1 rounded-lg border-2 py-2 text-xs font-semibold capitalize transition-all",
+                        form.priority === p
+                          ? p === "low"
+                            ? "border-gray-400 bg-gray-100 text-gray-700"
+                            : p === "medium"
+                              ? "border-orange-400 bg-orange-50 text-orange-700"
+                              : "border-red-400 bg-red-50 text-red-700"
+                          : "border-transparent bg-gray-50 text-gray-400 hover:border-gray-200 hover:text-gray-600",
+                      )}
+                    >
+                      {p === "low" ? "Low" : p === "medium" ? "Medium" : "High"}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div>
@@ -374,109 +415,100 @@ function TaskFormModal({
             </div>
           </div>
 
-          {/* More options accordion */}
+          {/* Checklist — always visible on create */}
+          {!isEdit ? (
+            <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Checklist</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Break the work into smaller action items.</p>
+                </div>
+                {checklistItems.length > 0 && (
+                  <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-600">
+                    {checklistItems.length} item{checklistItems.length !== 1 ? "s" : ""}
+                  </span>
+                )}
+              </div>
+
+              {checklistItems.map((item) => (
+                <div key={item.tempId} className="flex items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
+                  <ClipboardCheck className="h-4 w-4 shrink-0 text-blue-400" />
+                  <span className="flex-1 text-sm text-gray-700 truncate">{item.title}</span>
+                  {item.assigned_name ? (
+                    <span className="text-xs text-gray-400 shrink-0">{item.assigned_name}</span>
+                  ) : null}
+                  <button type="button" onClick={() => removeChecklistItem(item.tempId)}
+                    className="shrink-0 text-gray-300 hover:text-red-500 transition-colors">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={checklistInput}
+                  onChange={(e) => setChecklistInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addChecklistItem(); } }}
+                  placeholder="Add a todo item…"
+                  className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
+                />
+                <select
+                  value={checklistAssignee}
+                  onChange={(e) => setChecklistAssignee(e.target.value)}
+                  className="rounded-lg border border-gray-200 bg-white px-2 py-2 text-xs focus:border-blue-400 focus:outline-none max-w-27.5"
+                >
+                  <option value="">Assignee</option>
+                  {users.map((u) => (
+                    <option key={u.userId} value={u.userId}>
+                      {u.displayName ?? u.email}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={addChecklistItem}
+                  className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition-colors"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Add
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {/* Advanced options accordion — start date + progress (edit only) */}
           <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
             <button
               type="button"
               onClick={() => setMoreOpen((o) => !o)}
               className="flex w-full items-center justify-between px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
             >
-              <span className="flex items-center gap-2">
-                More options
-                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
-                  {checklistItems.length} item{checklistItems.length !== 1 ? "s" : ""}
-                </span>
-              </span>
+              <span>Advanced options</span>
               {moreOpen ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
             </button>
 
             {moreOpen ? (
-              <div className="grid grid-cols-1 gap-4 border-t border-gray-100 p-4 md:grid-cols-2">
-
-                {/* Checklist */}
-                <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-4 space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Checklist</p>
-                      <p className="text-xs text-gray-400 mt-0.5">Break the work into smaller action items for better progress tracking.</p>
-                    </div>
-                    <span className="text-xs font-semibold text-gray-400">{checklistItems.length} items</span>
-                  </div>
-
-                  {/* Existing pending items */}
-                  {checklistItems.map((item) => (
-                    <div key={item.tempId} className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2">
-                      <ClipboardCheck className="h-4 w-4 shrink-0 text-blue-400" />
-                      <span className="flex-1 text-sm text-gray-700 truncate">{item.title}</span>
-                      {item.assigned_name ? (
-                        <span className="text-xs text-gray-400 shrink-0">{item.assigned_name}</span>
-                      ) : null}
-                      <button type="button" onClick={() => removeChecklistItem(item.tempId)}
-                        className="shrink-0 text-gray-300 hover:text-red-500">
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  ))}
-
-                  {/* Add item row */}
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={checklistInput}
-                      onChange={(e) => setChecklistInput(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addChecklistItem(); } }}
-                      placeholder="Enter task name"
-                      className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
-                    />
-                    <select
-                      value={checklistAssignee}
-                      onChange={(e) => setChecklistAssignee(e.target.value)}
-                      className="rounded-lg border border-gray-200 bg-white px-2 py-2 text-xs focus:border-blue-400 focus:outline-none max-w-27.5"
-                    >
-                      <option value="">Assignee</option>
-                      {users.map((u) => (
-                        <option key={u.userId} value={u.userId}>
-                          {u.displayName ?? u.email}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      onClick={addChecklistItem}
-                      className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition-colors"
-                    >
-                      <Plus className="h-3.5 w-3.5" /> Add
-                    </button>
-                  </div>
+              <div className="border-t border-gray-100 p-4 space-y-4">
+                <div>
+                  <label className={labelCls}>Start Date &amp; Time</label>
+                  <input
+                    type="datetime-local"
+                    value={form.start_date}
+                    onChange={(e) => set("start_date", e.target.value)}
+                    className={inputCls}
+                  />
                 </div>
-
-                {/* Scheduling details */}
-                <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-4 space-y-4">
+                {isEdit ? (
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Scheduling Details</p>
-                    <p className="text-xs text-gray-400 mt-0.5">Optional timing refinements.</p>
-                  </div>
-                  <div>
-                    <label className={labelCls}>Start Date &amp; Time</label>
+                    <label className={labelCls}>Progress — {form.progress}%</label>
                     <input
-                      type="datetime-local"
-                      value={form.start_date}
-                      onChange={(e) => set("start_date", e.target.value)}
-                      className={inputCls}
+                      type="range" min={0} max={100} step={5} value={form.progress}
+                      onChange={(e) => set("progress", Number(e.target.value))}
+                      className="w-full accent-blue-600"
                     />
+                    <ProgressBar value={form.progress} className="mt-2" />
                   </div>
-                  {isEdit ? (
-                    <div>
-                      <label className={labelCls}>Progress — {form.progress}%</label>
-                      <input
-                        type="range" min={0} max={100} step={5} value={form.progress}
-                        onChange={(e) => set("progress", Number(e.target.value))}
-                        className="w-full accent-blue-600"
-                      />
-                      <ProgressBar value={form.progress} className="mt-2" />
-                    </div>
-                  ) : null}
-                </div>
+                ) : null}
               </div>
             ) : null}
           </div>
@@ -726,6 +758,8 @@ export function TasksManager({ initialTasks, users, currentUserId, currentUserRo
   const [modalTask, setModalTask] = useState<Task | "new" | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Task | null>(null);
   const [isDeleting, startDelete] = useTransition();
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 12;
 
   function handleSort(key: SortKey) {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -772,6 +806,11 @@ export function TasksManager({ initialTasks, users, currentUserId, currentUserRo
       return sortDir === "asc" ? cmp : -cmp;
     });
   }, [tasks, activeTab, search, filterDue, filterAssigned, sortKey, sortDir]);
+
+  useEffect(() => { setPage(1); }, [activeTab, search, filterDue, filterAssigned, sortKey, sortDir]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div className="space-y-4">
@@ -860,7 +899,7 @@ export function TasksManager({ initialTasks, users, currentUserId, currentUserRo
         </div>
       ) : view === "grid" ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((task) => (
+          {paginated.map((task) => (
             <TaskCard key={task.id} task={task} users={users}
               onEdit={() => setModalTask(task)}
               onDelete={() => setDeleteTarget(task)}
@@ -884,8 +923,8 @@ export function TasksManager({ initialTasks, users, currentUserId, currentUserRo
               </tr>
             </thead>
             <tbody>
-              {filtered.map((task, idx) => (
-                <TaskRow key={task.id} task={task} index={idx} users={users} isAdmin={isAdmin}
+              {paginated.map((task, idx) => (
+                <TaskRow key={task.id} task={task} index={(page - 1) * PAGE_SIZE + idx} users={users} isAdmin={isAdmin}
                   onEdit={() => setModalTask(task)}
                   onDelete={() => setDeleteTarget(task)}
                 />
@@ -895,12 +934,66 @@ export function TasksManager({ initialTasks, users, currentUserId, currentUserRo
         </div>
       )}
 
+      {/* Pagination */}
+      {totalPages > 1 ? (
+        <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3">
+          <p className="text-sm text-gray-500">
+            Showing <span className="font-medium text-gray-700">{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)}</span> of <span className="font-medium text-gray-700">{filtered.length}</span> tasks
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Prev
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+              .reduce<(number | "…")[]>((acc, p, i, arr) => {
+                if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push("…");
+                acc.push(p);
+                return acc;
+              }, [])
+              .map((item, i) =>
+                item === "…" ? (
+                  <span key={`ellipsis-${i}`} className="px-1 text-gray-400 text-sm select-none">…</span>
+                ) : (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => setPage(item as number)}
+                    className={cn(
+                      "min-w-8 rounded-lg border px-2.5 py-1.5 text-sm font-medium transition-colors",
+                      page === item
+                        ? "border-blue-600 bg-blue-600 text-white"
+                        : "border-gray-200 text-gray-600 hover:bg-gray-50",
+                    )}
+                  >
+                    {item}
+                  </button>
+                ),
+              )}
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {/* Create / Edit modal */}
       {modalTask !== null ? (
         <TaskFormModal
           task={modalTask === "new" ? null : modalTask}
           users={users}
           onClose={() => setModalTask(null)}
+          onCreated={(newTask) => setTasks((prev) => [newTask, ...prev])}
         />
       ) : null}
 

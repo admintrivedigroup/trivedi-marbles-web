@@ -3,8 +3,8 @@
 // SAM-2 on Replicate — verify version at replicate.com/meta/sam-2/versions
 const SAM_VERSION =
   "cbd95fb76192174268b6b303aeeb7a736e8dab0cbc38177f09db79b2299da30b";
-const POLL_INTERVAL_MS = 2500;
-const POLL_MAX = 28; // ~70 seconds before giving up
+const POLL_INTERVAL_MS = 4000;
+const POLL_MAX = 60; // ~4 minutes — covers Replicate cold-start (model spin-up can take 2–3 min)
 
 type ReplicatePrediction = {
   id: string;
@@ -37,7 +37,7 @@ async function pollUntilDone(predictionId: string): Promise<ReplicatePrediction>
     }
   }
 
-  throw new Error("Surface detection timed out. Please try again with a smaller photo.");
+  throw new Error("Surface detection is taking longer than usual — the AI model may be warming up. Please tap the surface again to retry.");
 }
 
 // ─── detectSurface ────────────────────────────────────────────────────────────
@@ -177,11 +177,60 @@ export type RenderResult = {
   error: string | null;
 };
 
-const SURFACE_RENDER_HINTS: Record<string, string> = {
-  floor: "horizontal floor — apply correct perspective foreshortening and subtle stone polish reflections",
-  wall: "vertical wall — use natural flat texture with soft ambient shading",
-  countertop: "horizontal countertop — apply strong specular highlights, sharp polished reflections, and crisp edge definition",
-};
+function buildPrompt(
+  marbleName: string,
+  surfaceType: string | null,
+  bookmatch: boolean,
+): string {
+  const bookmatchNote = bookmatch
+    ? " The slab reference is a pre-mirrored bookmatched pair — maintain that symmetrical bookmatched layout across the surface."
+    : "";
+
+  // Shared preservation clause appended to every prompt — the most important instruction.
+  const preserve =
+    ` CRITICAL: Every pixel outside the masked area must be preserved exactly as in the original photo — identical colours, furniture positions, wall texture, ceiling, lighting brightness, and room ambiance. Do not alter global lighting, exposure, or colour grading anywhere in the image.`;
+
+  if (surfaceType === "floor") {
+    return (
+      `Photorealistic architectural visualization: replace ONLY the masked floor region with polished ${marbleName} marble tile flooring.` +
+      ` Match the exact colour, veining pattern, and stone texture from the reference slab image precisely.` +
+      ` Render as large-format polished marble tiles (800 × 800 mm) with 2 mm hairline grout joints, drawn in correct geometric perspective matching the camera angle and vanishing points of the room.` +
+      ` The veining must be physically accurate in scale — individual veins should appear 20–40 cm wide when mapped to real floor dimensions, not giant abstract strokes.` +
+      ` Match the floor's reflectivity and mirror-polish sheen to the room's existing light source direction and colour temperature.` +
+      `${bookmatchNote}` +
+      preserve
+    );
+  }
+
+  if (surfaceType === "wall") {
+    return (
+      `Photorealistic architectural visualization: replace ONLY the masked wall region with honed ${marbleName} marble wall cladding.` +
+      ` Match the exact colour, veining pattern, and stone texture from the reference slab image precisely.` +
+      ` Render as full-slab vertical marble cladding with a smooth, slightly reflective finish and natural flat ambient shading consistent with the room's lighting.` +
+      `${bookmatchNote}` +
+      preserve
+    );
+  }
+
+  if (surfaceType === "countertop") {
+    return (
+      `Photorealistic architectural visualization: replace ONLY the masked countertop region with polished ${marbleName} marble.` +
+      ` Match the exact colour, veining pattern, and stone texture from the reference slab image precisely.` +
+      ` Apply a mirror-polished finish with crisp specular highlights and sharp reflections matching the room's light sources.` +
+      ` The stone edge profile should follow the existing countertop geometry.` +
+      `${bookmatchNote}` +
+      preserve
+    );
+  }
+
+  // Generic fallback
+  return (
+    `Photorealistic architectural visualization: replace ONLY the masked surface region with ${marbleName} marble stone.` +
+    ` Match the exact colour, veining pattern, and texture from the reference slab image precisely.` +
+    `${bookmatchNote}` +
+    preserve
+  );
+}
 
 export async function renderVisualization(formData: FormData): Promise<RenderResult> {
   try {
@@ -217,23 +266,11 @@ export async function renderVisualization(formData: FormData): Promise<RenderRes
     const maskBuf = Buffer.from(maskRaw, "base64");
     const maskBlob = new Blob([maskBuf], { type: "image/png" });
 
-    const surfaceDesc = surfaceType
-      ? (SURFACE_RENDER_HINTS[surfaceType] ?? "surface")
-      : "surface";
-    const bookmatchNote = bookmatch
-      ? " The slab reference shows a pre-mirrored bookmatched texture — apply it as a symmetrical bookmatched pattern across the surface."
-      : "";
-
-    const prompt =
-      `Replace only the masked ${surfaceDesc} with ${marbleName} marble stone.` +
-      `${bookmatchNote} ` +
-      `Use the exact colour, veining pattern, and texture from the reference slab image. ` +
-      `Scale the veining true-to-life so individual veins appear at realistic widths relative to the actual surface dimensions. ` +
-      `Precisely match the existing light direction, cast shadows, ambient colour temperature, and surface reflectivity of the room. ` +
-      `Do not alter anything outside the masked area.`;
+    const prompt = buildPrompt(marbleName, surfaceType, bookmatch);
 
     const fd = new FormData();
     fd.append("model", "gpt-image-1");
+    fd.append("quality", "high");
     fd.append("image[]", photo, "room.jpg");
     fd.append("image[]", slabBlob, "slab.jpg");
     fd.append("mask", maskBlob, "mask.png");
