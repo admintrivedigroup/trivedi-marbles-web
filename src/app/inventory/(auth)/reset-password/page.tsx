@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     follow: false,
     index: false,
   },
-  title: "Reset Password | Trivedi Marbles",
+  title: { absolute: "Reset Password | Trivedi Marbles" },
 };
 
 export default function InventoryResetPasswordPage() {

@@ -1,0 +1,366 @@
+{
+  "jobs": [
+    {
+      "prompt": "chair",
+      "threshold": 0.01
+    },
+    {
+      "prompt": "chair",
+      "threshold": 0.05
+    },
+    {
+      "prompt": "chair",
+      "threshold": 0.1
+    },
+    {
+      "prompt": "chair",
+      "threshold": 0.2
+    },
+    {
+      "prompt": "chair",
+      "threshold": 0.3
+    },
+    {
+      "prompt": "table",
+      "threshold": 0.01
+    },
+    {
+      "prompt": "table",
+      "threshold": 0.05
+    },
+    {
+      "prompt": "table",
+      "threshold": 0.1
+    },
+    {
+      "prompt": "table",
+      "threshold": 0.2
+    },
+    {
+      "prompt": "table",
+      "threshold": 0.3
+    },
+    {
+      "prompt": "door",
+      "threshold": 0.01
+    },
+    {
+      "prompt": "door",
+      "threshold": 0.05
+    },
+    {
+      "prompt": "door",
+      "threshold": 0.1
+    },
+    {
+      "prompt": "door",
+      "threshold": 0.2
+    },
+    {
+      "prompt": "door",
+      "threshold": 0.3
+    },
+    {
+      "prompt": "stairs",
+      "threshold": 0.01
+    },
+    {
+      "prompt": "stairs",
+      "threshold": 0.05
+    },
+    {
+      "prompt": "stairs",
+      "threshold": 0.1
+    },
+    {
+      "prompt": "stairs",
+      "threshold": 0.2
+    },
+    {
+      "prompt": "stairs",
+      "threshold": 0.3
+    },
+    {
+      "prompt": "wall",
+      "threshold": 0.01
+    },
+    {
+      "prompt": "wall",
+      "threshold": 0.05
+    },
+    {
+      "prompt": "wall",
+      "threshold": 0.1
+    },
+    {
+      "prompt": "wall",
+      "threshold": 0.2
+    },
+    {
+      "prompt": "wall",
+      "threshold": 0.3
+    },
+    {
+      "prompt": "floor",
+      "threshold": 0.01
+    },
+    {
+      "prompt": "floor",
+      "threshold": 0.05
+    },
+    {
+      "prompt": "floor",
+      "threshold": 0.1
+    },
+    {
+      "prompt": "floor",
+      "threshold": 0.2
+    },
+    {
+      "prompt": "floor",
+      "threshold": 0.3
+    }
+  ],
+  "rows": [
+    {
+      "prompt": "chair",
+      "threshold": 0.01,
+      "count": 40,
+      "boxes": 40,
+      "error": null,
+      "inferenceMs": 6261
+    },
+    {
+      "prompt": "chair",
+      "threshold": 0.05,
+      "count": 0,
+      "boxes": 0,
+      "error": "queue failed",
+      "inferenceMs": 6261
+    },
+    {
+      "prompt": "chair",
+      "threshold": 0.1,
+      "count": 0,
+      "boxes": 0,
+      "error": "queue failed",
+      "inferenceMs": 6261
+    },
+    {
+      "prompt": "chair",
+      "threshold": 0.2,
+      "count": 0,
+      "boxes": 0,
+      "error": "queue failed",
+      "inferenceMs": 6261
+    },
+    {
+      "prompt": "chair",
+      "threshold": 0.3,
+      "count": 0,
+      "boxes": 0,
+      "error": "queue failed",
+      "inferenceMs": 6261
+    },
+    {
+      "prompt": "table",
+      "threshold": 0.01,
+      "count": 0,
+      "boxes": 0,
+      "error": "queue failed",
+      "inferenceMs": 6261
+    },
+    {
+      "prompt": "table",
+      "threshold": 0.05,
+      "count": 0,
+      "boxes": 0,
+      "error": "queue failed",
+      "inferenceMs": 6261
+    },
+    {
+      "prompt": "table",
+      "threshold": 0.1,
+      "count": 0,
+      "boxes": 0,
+      "error": "queue failed",
+      "inferenceMs": 6261
+    },
+    {
+      "prompt": "table",
+      "threshold": 0.2,
+      "count": 0,
+      "boxes": 0,
+      "error": "queue failed",
+      "inferenceMs": 6261
+    },
+    {
+      "prompt": "table",
+      "threshold": 0.3,
+      "count": 0,
+      "boxes": 0,
+      "error": "queue failed",
+      "inferenceMs": 6261
+    },
+    {
+      "prompt": "door",
+      "threshold": 0.01,
+      "count": 0,
+      "boxes": 0,
+      "error": "queue failed",
+      "inferenceMs": 6261
+    },
+    {
+      "prompt": "door",
+      "threshold": 0.05,
+      "count": 0,
+      "boxes": 0,
+      "error": "queue failed",
+      "inferenceMs": 6261
+    },
+    {
+      "prompt": "door",
+      "threshold": 0.1,
+      "count": 0,
+      "boxes": 0,
+      "error": "queue failed",
+      "inferenceMs": 6261
+    },
+    {
+      "prompt": "door",
+      "threshold": 0.2,
+      "count": 0,
+      "boxes": 0,
+      "error": "queue failed",
+      "inferenceMs": 6261
+    },
+    {
+      "prompt": "door",
+      "threshold": 0.3,
+      "count": 0,
+      "boxes": 0,
+      "error": "queue failed",
+      "inferenceMs": 6261
+    },
+    {
+      "prompt": "stairs",
+      "threshold": 0.01,
+      "count": 0,
+      "boxes": 0,
+      "error": "queue failed",
+      "inferenceMs": 6261
+    },
+    {
+      "prompt": "stairs",
+      "threshold": 0.05,
+      "count": 0,
+      "boxes": 0,
+      "error": "queue failed",
+      "inferenceMs": 6261
+    },
+    {
+      "prompt": "stairs",
+      "threshold": 0.1,
+      "count": 0,
+      "boxes": 0,
+      "error": "queue failed",
+      "inferenceMs": 6261
+    },
+    {
+      "prompt": "stairs",
+      "threshold": 0.2,
+      "count": 0,
+      "boxes": 0,
+      "error": "queue failed",
+      "inferenceMs": 6261
+    },
+    {
+      "prompt": "stairs",
+      "threshold": 0.3,
+      "count": 0,
+      "boxes": 0,
+      "error": "queue failed",
+      "inferenceMs": 6261
+    },
+    {
+      "prompt": "wall",
+      "threshold": 0.01,
+      "count": 0,
+      "boxes": 0,
+      "error": "queue failed",
+      "inferenceMs": 6261
+    },
+    {
+      "prompt": "wall",
+      "threshold": 0.05,
+      "count": 0,
+      "boxes": 0,
+      "error": "queue failed",
+      "inferenceMs": 6261
+    },
+    {
+      "prompt": "wall",
+      "threshold": 0.1,
+      "count": 0,
+      "boxes": 0,
+      "error": "queue failed",
+      "inferenceMs": 6261
+    },
+    {
+      "prompt": "wall",
+      "threshold": 0.2,
+      "count": 0,
+      "boxes": 0,
+      "error": "queue failed",
+      "inferenceMs": 6261
+    },
+    {
+      "prompt": "wall",
+      "threshold": 0.3,
+      "count": 0,
+      "boxes": 0,
+      "error": "queue failed",
+      "inferenceMs": 6261
+    },
+    {
+      "prompt": "floor",
+      "threshold": 0.01,
+      "count": 0,
+      "boxes": 0,
+      "error": "queue failed",
+      "inferenceMs": 6261
+    },
+    {
+      "prompt": "floor",
+      "threshold": 0.05,
+      "count": 0,
+      "boxes": 0,
+      "error": "queue failed",
+      "inferenceMs": 6261
+    },
+    {
+      "prompt": "floor",
+      "threshold": 0.1,
+      "count": 0,
+      "boxes": 0,
+      "error": "queue failed",
+      "inferenceMs": 6261
+    },
+    {
+      "prompt": "floor",
+      "threshold": 0.2,
+      "count": 0,
+      "boxes": 0,
+      "error": "queue failed",
+      "inferenceMs": 6261
+    },
+    {
+      "prompt": "floor",
+      "threshold": 0.3,
+      "count": 0,
+      "boxes": 0,
+      "error": "queue failed",
+      "inferenceMs": 6261
+    }
+  ]
+}

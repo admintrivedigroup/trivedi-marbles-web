@@ -1,11 +1,24 @@
 import type { Metadata } from "next";
 
 import { FadeIn } from "@/components/animations/FadeIn";
+import { PUBLIC_ROBOTS } from "@/lib/seo";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — Trivedi Marbles Pvt. Ltd.",
+  title: { absolute: "Privacy Policy — Trivedi Marbles Pvt. Ltd." },
   description: "How Trivedi Marbles collects, uses, and protects your personal information.",
   alternates: { canonical: "/privacy-policy" },
+  robots: PUBLIC_ROBOTS,
+  openGraph: {
+    title: "Privacy Policy | Trivedi Marbles Pvt. Ltd.",
+    description: "How Trivedi Marbles collects, uses, and protects your personal information.",
+    url: "/privacy-policy",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Privacy Policy | Trivedi Marbles Pvt. Ltd.",
+    description: "How Trivedi Marbles collects, uses, and protects your personal information.",
+  },
 };
 
 export default function PrivacyPolicyPage() {

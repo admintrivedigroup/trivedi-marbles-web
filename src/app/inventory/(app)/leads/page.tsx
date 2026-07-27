@@ -2,7 +2,7 @@ import { ClientLeads } from "@/app/inventory/_components/client-leads";
 import { getClientLeads } from "@/app/inventory/_lib/client-leads";
 
 export const metadata = {
-  title: "Client Leads | Trivedi Marbles",
+  title: { absolute: "Client Leads | Trivedi Marbles" },
 };
 
 export default async function ClientLeadsPage() {

@@ -6,13 +6,11 @@ import { LookupOptionsProvider } from "@/app/inventory/_components/lookup-option
 import { requireInventoryClaims } from "@/app/inventory/_lib/auth";
 import { getCurrentUserProfile } from "@/app/inventory/_lib/user-profile";
 import { getLookupOptions } from "@/app/inventory/_lib/lookup-options";
+import { PRIVATE_ROBOTS } from "@/lib/seo";
 
 export const metadata: Metadata = {
-  robots: {
-    follow: false,
-    index: false,
-  },
-  title: "Inventory | Trivedi Marbles",
+  robots: PRIVATE_ROBOTS,
+  title: { absolute: "Inventory | Trivedi Marbles" },
 };
 
 type InventoryAppLayoutProps = {

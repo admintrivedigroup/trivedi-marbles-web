@@ -61,7 +61,7 @@ const applications = [
 
 const testimonials = [
   {
-    text: "The Moment we saw this exquisite marble from Trivedi Marbles Pvt. Ltd, We knew it was perfect for our home. The natural veining, smooth finish, and elegant design have transformed our entrance into a work of art. Impeccable craftsmanship!",
+    text: "The moment we saw this exquisite marble from Trivedi Marbles Pvt. Ltd., we knew it was perfect for our home. The natural veining, smooth finish, and elegant design have transformed our entrance into a work of art. Impeccable craftsmanship!",
     author: "SHRI CHAKRAVATI PATEL",
     role: "Ahmedabad, Gujarat",
     image: "/images/ChakravatiPatelReview.webp",
@@ -300,7 +300,7 @@ export default function Hero() {
               Incorporated in 1984, Trivedi Marbles Pvt. Ltd. is reckoned as a trusted name in the marble sector. We have been offering high-quality Ambaji White to our clients since our inception and recently have expanded our product portfolio to include new & exotic materials from the quarry of D.K. Trivedi & Sons.
             </p>
             <p className="mb-10 leading-relaxed text-muted-foreground">
-              Trivedi Marbles, along with its sister concerns M/s. Trivedi Marmo and M/s. D.K.Trivedi Marbles has its manufacturing and wholesaling facility in Ambaji, and a retail outlet in Ahmedabad, Gujarat (India).
+              Trivedi Marbles, along with its sister concerns M/s. Trivedi Marmo and M/s. D.K. Trivedi Marbles has its manufacturing and wholesaling facility in Ambaji, and a retail outlet in Ahmedabad, Gujarat (India).
             </p>
             <Link
               href="/about"

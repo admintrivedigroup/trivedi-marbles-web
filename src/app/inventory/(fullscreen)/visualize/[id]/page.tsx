@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { notFound } from "next/navigation";
 
 import { ExitButton } from "@/app/inventory/_components/visualizer-exit-button";
-import { VisualizerAI } from "@/app/inventory/_components/visualizer-ai";
+import { VisualizerM2F } from "@/app/inventory/_components/visualizer-m2f";
 import { getSlabById, getSlabImages } from "@/app/inventory/_lib/slab-detail";
 import { withCloudinaryThumbnail } from "@/lib/cloudinary/upload";
 import { createClient } from "@/lib/supabase/server";
@@ -109,7 +109,7 @@ export default async function VisualizeSlabPage({ params }: Props) {
       {/* Content */}
       <main className="flex-1 px-5 py-6 md:px-8 md:py-8">
         <div className="mx-auto max-w-3xl">
-          <VisualizerAI currentSlab={currentSlab} comparisons={comparisons} />
+          <VisualizerM2F currentSlab={currentSlab} comparisons={comparisons} />
         </div>
       </main>
     </div>

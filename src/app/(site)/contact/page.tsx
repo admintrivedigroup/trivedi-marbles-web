@@ -4,24 +4,26 @@ import { Mail, MapPin, Phone } from "lucide-react";
 import { FadeIn } from "@/components/animations/FadeIn";
 import { ContactForm } from "@/components/contact/ContactForm";
 import { LocationSection } from "@/components/contact/LocationSection";
+import { PUBLIC_ROBOTS } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Contact Us",
   description:
-    "Get in touch with Trivedi Marbles Pvt Ltd. Visit our factory in Ahmedabad, call +91 90999 96869, or message us on WhatsApp for quotes and slab availability.",
+    "Get in touch with Trivedi Marbles Pvt. Ltd. Visit our factory in Ahmedabad, call +91 90999 96869, or message us on WhatsApp for quotes and slab availability.",
   alternates: { canonical: "/contact" },
+  robots: PUBLIC_ROBOTS,
   openGraph: {
-    title: "Contact Us | Trivedi Marbles Pvt Ltd",
+    title: "Contact Us | Trivedi Marbles Pvt. Ltd.",
     description:
-      "Get in touch with Trivedi Marbles Pvt Ltd. Visit our factory in Ahmedabad, call +91 90999 96869, or message us on WhatsApp for quotes and slab availability.",
+      "Get in touch with Trivedi Marbles Pvt. Ltd. Visit our factory in Ahmedabad, call +91 90999 96869, or message us on WhatsApp for quotes and slab availability.",
     url: "/contact",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Contact Us | Trivedi Marbles Pvt Ltd",
+    title: "Contact Us | Trivedi Marbles Pvt. Ltd.",
     description:
-      "Get in touch with Trivedi Marbles Pvt Ltd. Visit our factory in Ahmedabad, call +91 90999 96869, or message us on WhatsApp for quotes and slab availability.",
+      "Get in touch with Trivedi Marbles Pvt. Ltd. Visit our factory in Ahmedabad, call +91 90999 96869, or message us on WhatsApp for quotes and slab availability.",
   },
 };
 
@@ -89,8 +91,6 @@ export default function ContactPage() {
                 <div>
                   <h4 className="mb-1 font-serif text-xl text-primary">Email</h4>
                   <p className="text-muted-foreground">
-                    dhruvtrivedi@trivedigranimarmo.com
-                    <br />
                     info@trivedigranimarmo.com
                   </p>
                 </div>

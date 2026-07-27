@@ -1,0 +1,1302 @@
+[
+  {
+    "bbox": [
+      73,
+      367,
+      480,
+      441
+    ],
+    "confidence": 0.6156651377677917,
+    "label": "skirting board rug carpet mat"
+  },
+  {
+    "bbox": [
+      0,
+      278,
+      188,
+      425
+    ],
+    "confidence": 0.5975977182388306,
+    "label": "sofa couch"
+  },
+  {
+    "bbox": [
+      485,
+      276,
+      636,
+      392
+    ],
+    "confidence": 0.4501700699329376,
+    "label": "chair couch armchair furniture"
+  },
+  {
+    "bbox": [
+      38,
+      175,
+      220,
+      279
+    ],
+    "confidence": 0.3888254165649414,
+    "label": "console table cabinet bookshelf wardrobe dresser tv stand furniture"
+  },
+  {
+    "bbox": [
+      38,
+      174,
+      223,
+      357
+    ],
+    "confidence": 0.4282923638820648,
+    "label": "cabinet bookshelf wardrobe dresser"
+  },
+  {
+    "bbox": [
+      605,
+      0,
+      735,
+      387
+    ],
+    "confidence": 0.376443475484848,
+    "label": "wardrobe door door frame window"
+  },
+  {
+    "bbox": [
+      677,
+      235,
+      735,
+      415
+    ],
+    "confidence": 0.4709513485431671,
+    "label": "##el plant vase"
+  },
+  {
+    "bbox": [
+      250,
+      311,
+      481,
+      348
+    ],
+    "confidence": 0.4155901074409485,
+    "label": "table console table cabinet bookshelf dresser tv stand"
+  },
+  {
+    "bbox": [
+      484,
+      351,
+      635,
+      392
+    ],
+    "confidence": 0.3204629421234131,
+    "label": "chair legs table legs"
+  },
+  {
+    "bbox": [
+      484,
+      351,
+      634,
+      392
+    ],
+    "confidence": 0.16832385957241058,
+    "label": "chair legs table legs"
+  },
+  {
+    "bbox": [
+      415,
+      288,
+      430,
+      316
+    ],
+    "confidence": 0.35450097918510437,
+    "label": "newel post plant vase person"
+  },
+  {
+    "bbox": [
+      250,
+      311,
+      480,
+      341
+    ],
+    "confidence": 0.23388871550559998,
+    "label": "table console table cabinet bookshelf dresser tv stand stair riser panel stair railing baseboard"
+  },
+  {
+    "bbox": [
+      278,
+      296,
+      287,
+      315
+    ],
+    "confidence": 0.293793648481369,
+    "label": "vase"
+  },
+  {
+    "bbox": [
+      73,
+      366,
+      480,
+      441
+    ],
+    "confidence": 0.36648568511009216,
+    "label": "step skirting board rug carpet mat"
+  },
+  {
+    "bbox": [
+      628,
+      307,
+      729,
+      382
+    ],
+    "confidence": 0.2642645537853241,
+    "label": "staircase stair riser stair tread stair panel stair railing baseboard"
+  },
+  {
+    "bbox": [
+      38,
+      175,
+      220,
+      280
+    ],
+    "confidence": 0.19096967577934265,
+    "label": "cabinet bookshelf wardrobe dresser tv stand furniture"
+  },
+  {
+    "bbox": [
+      485,
+      276,
+      636,
+      391
+    ],
+    "confidence": 0.22476007044315338,
+    "label": "chair armchair furniture ottoman"
+  },
+  {
+    "bbox": [
+      661,
+      22,
+      680,
+      375
+    ],
+    "confidence": 0.3111732006072998,
+    "label": "door door frame"
+  },
+  {
+    "bbox": [
+      626,
+      355,
+      733,
+      386
+    ],
+    "confidence": 0.1791556179523468,
+    "label": "staircase stair riser stair tread stair panel stair baseboard"
+  },
+  {
+    "bbox": [
+      238,
+      348,
+      391,
+      414
+    ],
+    "confidence": 0.35463419556617737,
+    "label": "table console table bed tv stand furniture ottoman steping board rug mat"
+  },
+  {
+    "bbox": [
+      485,
+      352,
+      585,
+      391
+    ],
+    "confidence": 0.27729371190071106,
+    "label": "chair legs table legs stool"
+  },
+  {
+    "bbox": [
+      262,
+      268,
+      298,
+      313
+    ],
+    "confidence": 0.30450233817100525,
+    "label": "plant vase"
+  },
+  {
+    "bbox": [
+      605,
+      27,
+      676,
+      377
+    ],
+    "confidence": 0.285381555557251,
+    "label": "wardrobe door door frame window"
+  },
+  {
+    "bbox": [
+      688,
+      376,
+      735,
+      415
+    ],
+    "confidence": 0.25855574011802673,
+    "label": "ottoman vase"
+  },
+  {
+    "bbox": [
+      667,
+      2,
+      735,
+      385
+    ],
+    "confidence": 0.31325697898864746,
+    "label": "door door frame window"
+  },
+  {
+    "bbox": [
+      239,
+      376,
+      390,
+      412
+    ],
+    "confidence": 0.22706259787082672,
+    "label": "chair legs table legs ottoman stair rise stair stair panel step stairing board baseboard"
+  },
+  {
+    "bbox": [
+      628,
+      306,
+      732,
+      382
+    ],
+    "confidence": 0.11050091683864594,
+    "label": "staircase stair riser stair tread stair panel"
+  },
+  {
+    "bbox": [
+      627,
+      356,
+      715,
+      385
+    ],
+    "confidence": 0.1643337905406952,
+    "label": "staircase stair riser stair tread stair panel stair baseboard"
+  },
+  {
+    "bbox": [
+      631,
+      308,
+      666,
+      366
+    ],
+    "confidence": 0.15910254418849945,
+    "label": "staircase stair riser stair tread stair panel stair baseboard"
+  },
+  {
+    "bbox": [
+      0,
+      207,
+      38,
+      282
+    ],
+    "confidence": 0.193137064576149,
+    "label": "plant"
+  },
+  {
+    "bbox": [
+      571,
+      360,
+      634,
+      392
+    ],
+    "confidence": 0.18337292969226837,
+    "label": "chair legs table legs"
+  },
+  {
+    "bbox": [
+      475,
+      207,
+      507,
+      349
+    ],
+    "confidence": 0.20899882912635803,
+    "label": "newel post"
+  },
+  {
+    "bbox": [
+      261,
+      268,
+      315,
+      314
+    ],
+    "confidence": 0.23409976065158844,
+    "label": "plant"
+  },
+  {
+    "bbox": [
+      248,
+      301,
+      483,
+      359
+    ],
+    "confidence": 0.29438793659210205,
+    "label": "table console table tv stand"
+  },
+  {
+    "bbox": [
+      37,
+      70,
+      224,
+      358
+    ],
+    "confidence": 0.20904920995235443,
+    "label": "cabinet bookshelf wardrobe dresser door"
+  },
+  {
+    "bbox": [
+      548,
+      359,
+      635,
+      392
+    ],
+    "confidence": 0.1434488445520401,
+    "label": "chair legs table legs"
+  },
+  {
+    "bbox": [
+      73,
+      366,
+      480,
+      441
+    ],
+    "confidence": 0.2263868749141693,
+    "label": "skirting board rug carpet mat"
+  },
+  {
+    "bbox": [
+      627,
+      354,
+      735,
+      414
+    ],
+    "confidence": 0.11436642706394196,
+    "label": "staircase stair riser stair tread stair panel stair baseboard"
+  },
+  {
+    "bbox": [
+      238,
+      348,
+      391,
+      414
+    ],
+    "confidence": 0.1851205825805664,
+    "label": "table console table tv stand ottoman steping board base"
+  },
+  {
+    "bbox": [
+      548,
+      17,
+      610,
+      288
+    ],
+    "confidence": 0.13819855451583862,
+    "label": "wardrobe door door frame"
+  },
+  {
+    "bbox": [
+      239,
+      377,
+      389,
+      412
+    ],
+    "confidence": 0.19443045556545258,
+    "label": "stair step"
+  },
+  {
+    "bbox": [
+      37,
+      70,
+      222,
+      180
+    ],
+    "confidence": 0.25178879499435425,
+    "label": "cabinet bookshelf wardrobe dresser door"
+  },
+  {
+    "bbox": [
+      128,
+      196,
+      150,
+      223
+    ],
+    "confidence": 0.19634303450584412,
+    "label": "person"
+  },
+  {
+    "bbox": [
+      248,
+      302,
+      482,
+      371
+    ],
+    "confidence": 0.17167417705059052,
+    "label": "table console table tv stand"
+  },
+  {
+    "bbox": [
+      38,
+      174,
+      223,
+      358
+    ],
+    "confidence": 0.19300109148025513,
+    "label": "cabinet bookshelf wardrobe dresser furniture"
+  },
+  {
+    "bbox": [
+      627,
+      307,
+      676,
+      375
+    ],
+    "confidence": 0.12220495939254761,
+    "label": "staircase stair riser stair tread stair panel stair"
+  },
+  {
+    "bbox": [
+      485,
+      357,
+      557,
+      384
+    ],
+    "confidence": 0.16677699983119965,
+    "label": "chair legs table legs"
+  },
+  {
+    "bbox": [
+      625,
+      306,
+      686,
+      378
+    ],
+    "confidence": 0.11095638573169708,
+    "label": "staircase stair riser stair tread stair panel stair"
+  },
+  {
+    "bbox": [
+      621,
+      360,
+      633,
+      384
+    ],
+    "confidence": 0.1386220008134842,
+    "label": "chair legs table legs"
+  },
+  {
+    "bbox": [
+      250,
+      270,
+      481,
+      351
+    ],
+    "confidence": 0.20939716696739197,
+    "label": "table console table tv stand"
+  },
+  {
+    "bbox": [
+      485,
+      349,
+      585,
+      391
+    ],
+    "confidence": 0.1002066507935524,
+    "label": "chair legs table legs"
+  },
+  {
+    "bbox": [
+      625,
+      352,
+      734,
+      395
+    ],
+    "confidence": 0.10712789744138718,
+    "label": "stair stair stair panel stair baseboard"
+  },
+  {
+    "bbox": [
+      548,
+      361,
+      585,
+      392
+    ],
+    "confidence": 0.13951009511947632,
+    "label": "chair legs table legs"
+  },
+  {
+    "bbox": [
+      485,
+      275,
+      637,
+      391
+    ],
+    "confidence": 0.12390836328268051,
+    "label": "chair armchair furniture"
+  },
+  {
+    "bbox": [
+      49,
+      398,
+      60,
+      426
+    ],
+    "confidence": 0.1777648627758026,
+    "label": "chair legs table legs"
+  },
+  {
+    "bbox": [
+      628,
+      355,
+      671,
+      378
+    ],
+    "confidence": 0.11796557903289795,
+    "label": "stair riser stair stair panel stair baseboard"
+  },
+  {
+    "bbox": [
+      548,
+      31,
+      590,
+      284
+    ],
+    "confidence": 0.10320278257131577,
+    "label": "door door frame"
+  },
+  {
+    "bbox": [
+      415,
+      288,
+      430,
+      315
+    ],
+    "confidence": 0.13711953163146973,
+    "label": "newel post vase"
+  },
+  {
+    "bbox": [
+      42,
+      267,
+      214,
+      279
+    ],
+    "confidence": 0.12937556207180023,
+    "label": "cabinet stair railing"
+  },
+  {
+    "bbox": [
+      57,
+      251,
+      90,
+      270
+    ],
+    "confidence": 0.1536056250333786,
+    "label": "ottoman vase"
+  },
+  {
+    "bbox": [
+      605,
+      1,
+      735,
+      391
+    ],
+    "confidence": 0.1419724076986313,
+    "label": "wardrobe door door frame"
+  },
+  {
+    "bbox": [
+      675,
+      308,
+      718,
+      360
+    ],
+    "confidence": 0.11922155320644379,
+    "label": "staircase stair riser stair stair panel stairboard"
+  },
+  {
+    "bbox": [
+      0,
+      396,
+      61,
+      427
+    ],
+    "confidence": 0.14380159974098206,
+    "label": "chair legs table legs"
+  },
+  {
+    "bbox": [
+      147,
+      354,
+      189,
+      374
+    ],
+    "confidence": 0.11002485454082489,
+    "label": "chair legs table legs"
+  },
+  {
+    "bbox": [
+      274,
+      377,
+      292,
+      408
+    ],
+    "confidence": 0.14101143181324005,
+    "label": "chair legs table legs"
+  },
+  {
+    "bbox": [
+      0,
+      278,
+      188,
+      425
+    ],
+    "confidence": 0.25718775391578674,
+    "label": "chair sofa couch armchair furniture"
+  },
+  {
+    "bbox": [
+      294,
+      130,
+      397,
+      271
+    ],
+    "confidence": 0.16257250308990479,
+    "label": "newel post window mirror person"
+  },
+  {
+    "bbox": [
+      0,
+      278,
+      188,
+      424
+    ],
+    "confidence": 0.129967600107193,
+    "label": "sofa couch furniture"
+  },
+  {
+    "bbox": [
+      283,
+      347,
+      359,
+      364
+    ],
+    "confidence": 0.1362295150756836,
+    "label": "tv stand ottoman step board"
+  },
+  {
+    "bbox": [
+      177,
+      355,
+      188,
+      373
+    ],
+    "confidence": 0.10901910811662674,
+    "label": "chair legs table legs"
+  },
+  {
+    "bbox": [
+      295,
+      295,
+      314,
+      313
+    ],
+    "confidence": 0.11714286357164383,
+    "label": "plant vase"
+  },
+  {
+    "bbox": [
+      572,
+      365,
+      584,
+      393
+    ],
+    "confidence": 0.12057433277368546,
+    "label": "chair legs table legs"
+  },
+  {
+    "bbox": [
+      171,
+      201,
+      187,
+      225
+    ],
+    "confidence": 0.15456277132034302,
+    "label": "person"
+  },
+  {
+    "bbox": [
+      360,
+      337,
+      469,
+      357
+    ],
+    "confidence": 0.10532000660896301,
+    "label": "stair stair stair panel stair baseboard"
+  },
+  {
+    "bbox": [
+      631,
+      308,
+      720,
+      367
+    ],
+    "confidence": 0.18358935415744781,
+    "label": "staircase stair riser stair tread stair panel stair baseboard"
+  },
+  {
+    "bbox": [
+      74,
+      367,
+      480,
+      441
+    ],
+    "confidence": 0.11625920981168747,
+    "label": "board rug carpet mat"
+  },
+  {
+    "bbox": [
+      277,
+      294,
+      290,
+      316
+    ],
+    "confidence": 0.12268974632024765,
+    "label": "vase"
+  },
+  {
+    "bbox": [
+      221,
+      70,
+      557,
+      354
+    ],
+    "confidence": 0.11517879366874695,
+    "label": "cabinet wardrobe"
+  },
+  {
+    "bbox": [
+      37,
+      70,
+      222,
+      180
+    ],
+    "confidence": 0.11997288465499878,
+    "label": "wardrobe"
+  },
+  {
+    "bbox": [
+      184,
+      239,
+      199,
+      271
+    ],
+    "confidence": 0.18150083720684052,
+    "label": "newel post person"
+  },
+  {
+    "bbox": [
+      383,
+      313,
+      479,
+      339
+    ],
+    "confidence": 0.10409995913505554,
+    "label": "stair panel stair baseboard"
+  },
+  {
+    "bbox": [
+      43,
+      222,
+      214,
+      234
+    ],
+    "confidence": 0.10670523345470428,
+    "label": "railing"
+  },
+  {
+    "bbox": [
+      37,
+      69,
+      222,
+      280
+    ],
+    "confidence": 0.11289229989051819,
+    "label": "cabinet bookshelf wardrobe"
+  },
+  {
+    "bbox": [
+      317,
+      271,
+      329,
+      314
+    ],
+    "confidence": 0.15793754160404205,
+    "label": "stair riser newel post door vase person"
+  },
+  {
+    "bbox": [
+      688,
+      327,
+      735,
+      415
+    ],
+    "confidence": 0.19497328996658325,
+    "label": "vase"
+  },
+  {
+    "bbox": [
+      707,
+      327,
+      732,
+      382
+    ],
+    "confidence": 0.10099179297685623,
+    "label": "rise vase"
+  },
+  {
+    "bbox": [
+      240,
+      377,
+      390,
+      412
+    ],
+    "confidence": 0.11995139718055725,
+    "label": "step"
+  },
+  {
+    "bbox": [
+      40,
+      176,
+      218,
+      232
+    ],
+    "confidence": 0.12032782286405563,
+    "label": "cabinet"
+  },
+  {
+    "bbox": [
+      185,
+      207,
+      209,
+      225
+    ],
+    "confidence": 0.10553254187107086,
+    "label": "person"
+  },
+  {
+    "bbox": [
+      308,
+      381,
+      354,
+      398
+    ],
+    "confidence": 0.12759563326835632,
+    "label": "ottoman step"
+  },
+  {
+    "bbox": [
+      476,
+      207,
+      507,
+      316
+    ],
+    "confidence": 0.19967222213745117,
+    "label": "newel post"
+  },
+  {
+    "bbox": [
+      169,
+      248,
+      183,
+      272
+    ],
+    "confidence": 0.1366809606552124,
+    "label": "person"
+  },
+  {
+    "bbox": [
+      42,
+      395,
+      65,
+      428
+    ],
+    "confidence": 0.14858050644397736,
+    "label": "chair legs table legs"
+  },
+  {
+    "bbox": [
+      48,
+      322,
+      61,
+      427
+    ],
+    "confidence": 0.11287602037191391,
+    "label": "chair legs table legs"
+  },
+  {
+    "bbox": [
+      275,
+      379,
+      359,
+      406
+    ],
+    "confidence": 0.10731389373540878,
+    "label": "step"
+  },
+  {
+    "bbox": [
+      0,
+      278,
+      188,
+      425
+    ],
+    "confidence": 0.104848213493824,
+    "label": "couch"
+  },
+  {
+    "bbox": [
+      274,
+      379,
+      360,
+      408
+    ],
+    "confidence": 0.1195775493979454,
+    "label": "step"
+  },
+  {
+    "bbox": [
+      240,
+      379,
+      363,
+      411
+    ],
+    "confidence": 0.16048356890678406,
+    "label": "legs legs step board base"
+  },
+  {
+    "bbox": [
+      36,
+      70,
+      224,
+      358
+    ],
+    "confidence": 0.14364968240261078,
+    "label": "wardrobe"
+  },
+  {
+    "bbox": [
+      239,
+      349,
+      389,
+      380
+    ],
+    "confidence": 0.14222106337547302,
+    "label": "table console table ottoman step board mat"
+  },
+  {
+    "bbox": [
+      618,
+      357,
+      637,
+      386
+    ],
+    "confidence": 0.1007658839225769,
+    "label": "chair legs table legs"
+  },
+  {
+    "bbox": [
+      45,
+      355,
+      189,
+      426
+    ],
+    "confidence": 0.16343335807323456,
+    "label": "chair legs table legs"
+  },
+  {
+    "bbox": [
+      654,
+      9,
+      693,
+      382
+    ],
+    "confidence": 0.21451561152935028,
+    "label": "door door frame"
+  },
+  {
+    "bbox": [
+      122,
+      192,
+      160,
+      225
+    ],
+    "confidence": 0.16495691239833832,
+    "label": "mirror person"
+  },
+  {
+    "bbox": [
+      143,
+      360,
+      451,
+      440
+    ],
+    "confidence": 0.13173602521419525,
+    "label": "board rug mat"
+  },
+  {
+    "bbox": [
+      46,
+      273,
+      222,
+      358
+    ],
+    "confidence": 0.10180202126502991,
+    "label": "cabinet wardrobe"
+  },
+  {
+    "bbox": [
+      73,
+      366,
+      480,
+      441
+    ],
+    "confidence": 0.10630955547094345,
+    "label": "board rug mat"
+  },
+  {
+    "bbox": [
+      351,
+      379,
+      362,
+      416
+    ],
+    "confidence": 0.11723834276199341,
+    "label": "legs table legs"
+  },
+  {
+    "bbox": [
+      250,
+      310,
+      481,
+      353
+    ],
+    "confidence": 0.2600792646408081,
+    "label": "table console table cabinet dresser tv stand"
+  },
+  {
+    "bbox": [
+      0,
+      207,
+      56,
+      419
+    ],
+    "confidence": 0.11170048266649246,
+    "label": "plant"
+  },
+  {
+    "bbox": [
+      70,
+      349,
+      495,
+      468
+    ],
+    "confidence": 0.17526106536388397,
+    "label": "board rug carpet mat"
+  },
+  {
+    "bbox": [
+      41,
+      223,
+      215,
+      279
+    ],
+    "confidence": 0.1519956737756729,
+    "label": "cabinet bookshelf"
+  },
+  {
+    "bbox": [
+      186,
+      377,
+      390,
+      416
+    ],
+    "confidence": 0.24372915923595428,
+    "label": "stair steping board baseboard rug mat"
+  },
+  {
+    "bbox": [
+      133,
+      200,
+      147,
+      221
+    ],
+    "confidence": 0.12640473246574402,
+    "label": "person"
+  },
+  {
+    "bbox": [
+      0,
+      206,
+      38,
+      304
+    ],
+    "confidence": 0.1478382796049118,
+    "label": "plant"
+  },
+  {
+    "bbox": [
+      211,
+      338,
+      420,
+      435
+    ],
+    "confidence": 0.1079912781715393,
+    "label": "board mat"
+  },
+  {
+    "bbox": [
+      486,
+      356,
+      500,
+      382
+    ],
+    "confidence": 0.11223849654197693,
+    "label": "chair legs table legs"
+  },
+  {
+    "bbox": [
+      410,
+      286,
+      434,
+      318
+    ],
+    "confidence": 0.11399144679307938,
+    "label": "newel post vase"
+  },
+  {
+    "bbox": [
+      462,
+      256,
+      662,
+      416
+    ],
+    "confidence": 0.13172243535518646,
+    "label": "chair armchair furniture"
+  },
+  {
+    "bbox": [
+      625,
+      303,
+      734,
+      411
+    ],
+    "confidence": 0.11549921333789825,
+    "label": "staircase stair riser stair tread stair panel stair"
+  },
+  {
+    "bbox": [
+      42,
+      270,
+      220,
+      358
+    ],
+    "confidence": 0.12372998893260956,
+    "label": "cabinet wardrobe"
+  },
+  {
+    "bbox": [
+      35,
+      69,
+      560,
+      355
+    ],
+    "confidence": 0.1266280859708786,
+    "label": "cabinet wardrobe"
+  },
+  {
+    "bbox": [
+      553,
+      1,
+      735,
+      388
+    ],
+    "confidence": 0.11592335253953934,
+    "label": "door frame window"
+  },
+  {
+    "bbox": [
+      133,
+      201,
+      148,
+      221
+    ],
+    "confidence": 0.11994365602731705,
+    "label": "person"
+  },
+  {
+    "bbox": [
+      0,
+      264,
+      650,
+      441
+    ],
+    "confidence": 0.1177617684006691,
+    "label": "furniture"
+  },
+  {
+    "bbox": [
+      1,
+      269,
+      642,
+      433
+    ],
+    "confidence": 0.13589847087860107,
+    "label": "furniture"
+  },
+  {
+    "bbox": [
+      466,
+      199,
+      520,
+      357
+    ],
+    "confidence": 0.12737123668193817,
+    "label": "newel post"
+  },
+  {
+    "bbox": [
+      2,
+      269,
+      637,
+      431
+    ],
+    "confidence": 0.10278084874153137,
+    "label": "furniture"
+  },
+  {
+    "bbox": [
+      2,
+      261,
+      643,
+      442
+    ],
+    "confidence": 0.15340378880500793,
+    "label": "furniture"
+  },
+  {
+    "bbox": [
+      1,
+      217,
+      642,
+      443
+    ],
+    "confidence": 0.11996963620185852,
+    "label": "furniture"
+  }
+]

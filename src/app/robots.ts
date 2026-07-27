@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/inventory/", "/api/"],
+      disallow: ["/inventory/", "/api/", "/debug/"],
     },
     sitemap: "https://www.trivedimarbles.co.in/sitemap.xml",
   };

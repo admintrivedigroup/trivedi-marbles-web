@@ -10,6 +10,7 @@ import {
   getPublishedBlogPosts,
   formatBlogDate,
 } from "@/lib/blog";
+import { PUBLIC_ROBOTS } from "@/lib/seo";
 
 export const revalidate = 3600;
 export const dynamicParams = true;
@@ -25,12 +26,13 @@ export async function generateMetadata({ params }: BlogDetailPageProps): Promise
   const post = await getBlogPostById(id);
   if (!post) return {};
   const ogImage = post.cover_image
-    ? [{ url: post.cover_image, width: 1200, height: 800, alt: post.title }]
+    ? [{ url: post.cover_image, width: 1200, height: 800, alt: `${post.title} — Trivedi Marbles Journal` }]
     : undefined;
   return {
     title: `${post.title} — The Journal`,
     description: post.excerpt,
     alternates: { canonical: `/blog/${id}` },
+    robots: PUBLIC_ROBOTS,
     openGraph: {
       title: `${post.title} — The Journal`,
       description: post.excerpt,
@@ -77,12 +79,12 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
     ...(post.cover_image && { image: post.cover_image }),
     author: {
       "@type": "Organization",
-      name: "Trivedi Marbles Pvt Ltd",
+      name: "Trivedi Marbles Pvt. Ltd.",
       url: "https://www.trivedimarbles.co.in",
     },
     publisher: {
       "@type": "Organization",
-      name: "Trivedi Marbles Pvt Ltd",
+      name: "Trivedi Marbles Pvt. Ltd.",
       logo: {
         "@type": "ImageObject",
         url: "https://www.trivedimarbles.co.in/images/vijay-trivedi-logo.webp",

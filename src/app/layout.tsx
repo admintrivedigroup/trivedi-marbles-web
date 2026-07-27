@@ -8,6 +8,7 @@ import type { ReactNode } from "react";
 
 import "./globals.css";
 import { NavigationProgress } from "@/components/navigation-progress";
+import { PUBLIC_ROBOTS } from "@/lib/seo";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -33,21 +34,23 @@ const DEFAULT_OG_IMAGE = {
   url: "/images/vijay-trivedi-logo.webp",
   width: 1200,
   height: 630,
-  alt: "Trivedi Marbles Pvt Ltd Logo",
+  alt: "Trivedi Marbles Pvt. Ltd. Logo",
 };
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.trivedimarbles.co.in"),
   title: {
-    default: "Trivedi Marbles | Premium Marble Supplier in Ahmedabad",
-    template: "%s | Trivedi Marbles Pvt Ltd",
+    default: "Ambaji White Marble Manufacturer & Supplier | Trivedi Marbles",
+    template: "%s | Trivedi Marbles Pvt. Ltd.",
   },
-  description: "Trivedi Marbles Pvt Ltd is a premium marble supplier based in Ahmedabad, Gujarat. Explore our exclusive collection of luxury marble slabs for residential, commercial, and hospitality projects.",
+  description:
+    "Premium Ambaji White and exotic marble slabs from Trivedi Marbles, established in 1949. Manufacturing in Ambaji and marble supply from Ahmedabad, Gujarat.",
+  robots: PUBLIC_ROBOTS,
   icons: {
     icon: "/images/vijay-trivedi-logo.webp",
   },
   openGraph: {
-    siteName: "Trivedi Marbles Pvt Ltd",
+    siteName: "Trivedi Marbles Pvt. Ltd.",
     locale: "en_IN",
     type: "website",
     images: [DEFAULT_OG_IMAGE],

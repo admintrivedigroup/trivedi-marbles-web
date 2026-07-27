@@ -133,7 +133,7 @@ export default function AboutPage() {
                   </span>
                 </div>
                 <p>
-                  Our journey was started by late Mr. Dachharam Khushaldas Trivedi, who was a visionary temple architect. He wanted to restore the ancient temple heritage of India. He renovated the ancient and well-known Indian temples at Ranakpur in Gujarat and Delwara in Rajasthan. He discovered and founded the quarry in the year 1949, in a small town of Ambaji, which today is well known as D.K. Trivedi & Sons Quarry.
+                  Our journey was started by late Mr. Dachharam Khushaldas Trivedi, who was a visionary temple architect. He wanted to restore the ancient temple heritage of India. He renovated the ancient and well-known Indian temples at Ranakpur and Dilwara in Rajasthan. He discovered and founded the quarry in the year 1949, in a small town of Ambaji, which today is well known as D.K. Trivedi & Sons Quarry.
                 </p>
                 <p>
                   Our commitment to uncompromising quality and ethical mining

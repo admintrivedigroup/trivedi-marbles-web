@@ -4,7 +4,7 @@ import { getKraColumns, getKraEntries, getFinancialYears } from "@/app/inventory
 import { getAllManagedUsers, getCurrentUserProfile } from "@/app/inventory/_lib/user-profile";
 
 export const metadata = {
-  title: "KRA / KPI | Trivedi Marbles",
+  title: { absolute: "KRA / KPI | Trivedi Marbles" },
 };
 
 type KraPageProps = {

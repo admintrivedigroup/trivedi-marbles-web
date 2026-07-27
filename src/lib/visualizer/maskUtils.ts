@@ -134,6 +134,114 @@ function fillHolesInMask(binary: Uint8Array, W: number, H: number): Uint8Array {
   return out;
 }
 
+// ─── Multi-pixel erosion ──────────────────────────────────────────────────────
+
+/**
+ * Erode a binary mask by `n` pixels (repeated 1px erosion).
+ * Used for pre-connectivity erosion to sever thin baseboard connections between
+ * the floor and adjacent vertical surfaces (stair panels, lower wall patches).
+ *
+ * Each pass is O(W*H).  n=8 runs in ~5 ms on a 1500×1000 mask.
+ */
+export function erodeNpx(mask: Uint8Array, W: number, H: number, n: number): Uint8Array {
+  if (n <= 0) return mask;
+  let current = mask;
+  for (let i = 0; i < n; i++) current = erode1px(current, W, H);
+  return current;
+}
+
+// ─── Connectivity filters ─────────────────────────────────────────────────────
+
+/**
+ * Return the subset of `mask` that is 4-connected to (seedX, seedY).
+ * If the seed pixel is not in the mask, returns an empty mask.
+ *
+ * Used as the final anti-leakage step: since the user tapped a true floor pixel,
+ * anything disconnected from that pixel is noise (wall patch, stair, etc.).
+ */
+export function floodFillFromPoint(
+  mask:  Uint8Array,
+  W:     number,
+  H:     number,
+  seedX: number,
+  seedY: number,
+): Uint8Array {
+  const out = new Uint8Array(W * H);
+  const si  = seedY * W + seedX;
+  if (si < 0 || si >= W * H || mask[si] !== 1) return out;
+
+  const visited = new Uint8Array(W * H);
+  const queue: number[] = [si];
+  visited[si] = 1;
+  out[si]     = 1;
+
+  let head = 0;
+  while (head < queue.length) {
+    const idx = queue[head++];
+    const x   = idx % W;
+    const y   = (idx / W) | 0;
+
+    if (y > 0)     { const n = idx - W; if (!visited[n] && mask[n] === 1) { visited[n] = 1; out[n] = 1; queue.push(n); } }
+    if (y < H - 1) { const n = idx + W; if (!visited[n] && mask[n] === 1) { visited[n] = 1; out[n] = 1; queue.push(n); } }
+    if (x > 0)     { const n = idx - 1; if (!visited[n] && mask[n] === 1) { visited[n] = 1; out[n] = 1; queue.push(n); } }
+    if (x < W - 1) { const n = idx + 1; if (!visited[n] && mask[n] === 1) { visited[n] = 1; out[n] = 1; queue.push(n); } }
+  }
+
+  return out;
+}
+
+/**
+ * Return only the largest 4-connected component of `mask`.
+ * Used as a fallback when the tap pixel falls outside the filtered mask
+ * (e.g. depth/normals removed the exact tap location).
+ */
+export function largestConnectedComponent(
+  mask: Uint8Array,
+  W:    number,
+  H:    number,
+): Uint8Array {
+  const labels   = new Int32Array(W * H).fill(-1);
+  const sizes:    number[]   = [];
+  const starts:   number[]   = [];  // one seed index per component
+  let   nextLabel = 0;
+
+  for (let i = 0; i < W * H; i++) {
+    if (mask[i] !== 1 || labels[i] >= 0) continue;
+
+    const label = nextLabel++;
+    sizes.push(0);
+    starts.push(i);
+
+    const queue: number[] = [i];
+    labels[i] = label;
+    let head   = 0;
+    while (head < queue.length) {
+      const idx = queue[head++];
+      sizes[label]++;
+      const x   = idx % W;
+      const y   = (idx / W) | 0;
+
+      if (y > 0)     { const n = idx - W; if (mask[n] === 1 && labels[n] < 0) { labels[n] = label; queue.push(n); } }
+      if (y < H - 1) { const n = idx + W; if (mask[n] === 1 && labels[n] < 0) { labels[n] = label; queue.push(n); } }
+      if (x > 0)     { const n = idx - 1; if (mask[n] === 1 && labels[n] < 0) { labels[n] = label; queue.push(n); } }
+      if (x < W - 1) { const n = idx + 1; if (mask[n] === 1 && labels[n] < 0) { labels[n] = label; queue.push(n); } }
+    }
+  }
+
+  if (nextLabel === 0) return new Uint8Array(W * H); // empty mask
+
+  let bestLabel = 0;
+  for (let l = 1; l < nextLabel; l++) {
+    if (sizes[l] > sizes[bestLabel]) bestLabel = l;
+  }
+
+  const out = new Uint8Array(W * H);
+  for (let i = 0; i < W * H; i++) {
+    if (labels[i] === bestLabel) out[i] = 1;
+  }
+  return out;
+}
+
 // ─── Safety checks ────────────────────────────────────────────────────────────
 
 /** Fraction of all pixels that are floor (0–1). */

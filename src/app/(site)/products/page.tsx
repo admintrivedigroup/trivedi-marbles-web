@@ -1,55 +1,77 @@
 import type { Metadata } from "next";
 
-import { products } from "@/data/products";
+import { FadeIn } from "@/components/animations/FadeIn";
+import { CollectionStaticSection } from "@/components/collection/CollectionStaticSection";
+import { CollectionGrid } from "@/components/collection/CollectionGrid";
+import { getWebsiteLots } from "@/lib/supabase/collection";
+import { PUBLIC_ROBOTS } from "@/lib/seo";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Products",
   description:
-    "Browse the full range of natural stone products from Trivedi Marbles — Ambaji White, Fusion Black, Exotic Green, and more premium marble varieties.",
-  alternates: { canonical: "/products" },
+    "Browse our range of natural stone products from Trivedi Marbles — Ambaji White, Fusion Black, Exotic Green, and more premium marble varieties.",
+  alternates: { canonical: "/collection" },
+  robots: PUBLIC_ROBOTS,
   openGraph: {
-    title: "Products | Trivedi Marbles Pvt Ltd",
+    title: "Products | Trivedi Marbles Pvt. Ltd.",
     description:
-      "Browse the full range of natural stone products from Trivedi Marbles — Ambaji White, Fusion Black, Exotic Green, and more premium marble varieties.",
+      "Browse our range of natural stone products from Trivedi Marbles — Ambaji White, Fusion Black, Exotic Green, and more premium marble varieties.",
     url: "/products",
     type: "website",
     images: [{ url: "/images/ambaji_white_mirror.webp", width: 1200, height: 800, alt: "Ambaji White marble slab" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Products | Trivedi Marbles Pvt Ltd",
+    title: "Products | Trivedi Marbles Pvt. Ltd.",
     description:
-      "Browse the full range of natural stone products from Trivedi Marbles — Ambaji White, Fusion Black, Exotic Green, and more premium marble varieties.",
+      "Browse our range of natural stone products from Trivedi Marbles — Ambaji White, Fusion Black, Exotic Green, and more premium marble varieties.",
     images: ["/images/ambaji_white_mirror.webp"],
   },
 };
 
-export default function ProductsPage() {
-  return (
-    <section className="mx-auto max-w-6xl px-6 py-24">
-      <div className="max-w-2xl">
-        <h1 className="text-4xl font-semibold tracking-tight">Products</h1>
-        <p className="mt-4 text-base text-black/70">
-          A starter products page backed by a typed local data source.
-        </p>
-      </div>
+export default async function ProductsPage() {
+  const lots = await getWebsiteLots();
+  const categories = [...new Set(lots.map((l) => l.categoryName).filter(Boolean))];
 
-      <div className="mt-12 grid gap-6 md:grid-cols-3">
-        {products.map((product) => (
-          <article
-            key={product.slug}
-            className="rounded-2xl border border-border bg-surface p-6"
-          >
-            <p className="text-sm uppercase tracking-[0.2em] text-accent">
-              {product.category}
-            </p>
-            <h2 className="mt-3 text-2xl font-medium">{product.name}</h2>
-            <p className="mt-3 text-sm leading-6 text-black/70">
-              {product.description}
-            </p>
-          </article>
-        ))}
-      </div>
-    </section>
+  return (
+    <div className="mx-auto min-h-screen w-full max-w-400 bg-background px-6 pb-24 pt-32 md:px-12 lg:px-24">
+      <FadeIn className="mb-16">
+        <p className="mb-6 text-sm uppercase tracking-[0.3em] text-accent">Products</p>
+        <h1 className="mb-6 font-serif text-5xl text-primary md:text-6xl">
+          Our Marble Products
+        </h1>
+        <p className="max-w-2xl text-lg text-muted-foreground">
+          A range of premium natural stone products, quarried and finished by
+          Trivedi Marbles for architects, builders, and designers.
+        </p>
+      </FadeIn>
+
+      {/* Section 1: Curated catalogue */}
+      <CollectionStaticSection />
+
+      {/* Section 2: Live inventory lots */}
+      {lots.length > 0 && (
+        <div className="mt-24">
+          <FadeIn className="mb-12">
+            <div className="flex items-center gap-6">
+              <div className="h-px flex-1 bg-border" />
+              <div className="text-center">
+                <h2 className="font-serif text-3xl text-primary md:text-4xl">
+                  Available Now
+                </h2>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Live inventory — select lots available for immediate inquiry
+                </p>
+              </div>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+          </FadeIn>
+
+          <CollectionGrid lots={lots} categories={categories} />
+        </div>
+      )}
+    </div>
   );
 }

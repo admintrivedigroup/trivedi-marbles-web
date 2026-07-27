@@ -1,11 +1,24 @@
 import type { Metadata } from "next";
 
 import { FadeIn } from "@/components/animations/FadeIn";
+import { PUBLIC_ROBOTS } from "@/lib/seo";
 
 export const metadata: Metadata = {
-  title: "Terms of Service — Trivedi Marbles Pvt. Ltd.",
+  title: { absolute: "Terms of Service — Trivedi Marbles Pvt. Ltd." },
   description: "Terms and conditions for using the Trivedi Marbles website and services.",
   alternates: { canonical: "/terms" },
+  robots: PUBLIC_ROBOTS,
+  openGraph: {
+    title: "Terms of Service | Trivedi Marbles Pvt. Ltd.",
+    description: "Terms and conditions for using the Trivedi Marbles website and services.",
+    url: "/terms",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Terms of Service | Trivedi Marbles Pvt. Ltd.",
+    description: "Terms and conditions for using the Trivedi Marbles website and services.",
+  },
 };
 
 export default function TermsPage() {

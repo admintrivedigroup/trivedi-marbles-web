@@ -2,14 +2,16 @@ import type { Metadata } from "next";
 import Image from "next/image";
 
 import { FadeIn } from "@/components/animations/FadeIn";
+import { PUBLIC_ROBOTS } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Signature Projects",
   description:
     "A curated portfolio of landmark spaces and temple architecture clad in Trivedi Marbles stone — from luxury residences to iconic hospitality and religious projects.",
   alternates: { canonical: "/projects" },
+  robots: PUBLIC_ROBOTS,
   openGraph: {
-    title: "Signature Projects | Trivedi Marbles Pvt Ltd",
+    title: "Signature Projects | Trivedi Marbles Pvt. Ltd.",
     description:
       "A curated portfolio of landmark spaces and temple architecture clad in Trivedi Marbles stone — from luxury residences to iconic hospitality and religious projects.",
     url: "/projects",
@@ -18,7 +20,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Signature Projects | Trivedi Marbles Pvt Ltd",
+    title: "Signature Projects | Trivedi Marbles Pvt. Ltd.",
     description:
       "A curated portfolio of landmark spaces and temple architecture clad in Trivedi Marbles stone — from luxury residences to iconic hospitality and religious projects.",
     images: ["/images/baps_temple_london.webp"],

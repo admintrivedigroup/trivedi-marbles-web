@@ -3,7 +3,7 @@ import { getTasks } from "@/app/inventory/_lib/tasks";
 import { getAllManagedUsers, getCurrentUserProfile } from "@/app/inventory/_lib/user-profile";
 
 export const metadata = {
-  title: "Tasks | Trivedi Marbles",
+  title: { absolute: "Tasks | Trivedi Marbles" },
 };
 
 export default async function TasksPage() {

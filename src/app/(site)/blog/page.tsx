@@ -4,6 +4,7 @@ import Image from "next/image";
 import { FadeIn } from "@/components/animations/FadeIn";
 import { blogHeroImg } from "@/data/blog";
 import { getPublishedBlogPosts } from "@/lib/blog";
+import { PUBLIC_ROBOTS } from "@/lib/seo";
 import { BlogList } from "./_components/blog-list";
 
 export const revalidate = 3600;
@@ -13,8 +14,9 @@ export const metadata: Metadata = {
   description:
     "Insights, trends, and narratives from Trivedi Marbles — covering luxury natural stone, architectural design, and the art of selecting the perfect marble.",
   alternates: { canonical: "/blog" },
+  robots: PUBLIC_ROBOTS,
   openGraph: {
-    title: "The Journal | Trivedi Marbles Pvt Ltd",
+    title: "The Journal | Trivedi Marbles Pvt. Ltd.",
     description:
       "Insights, trends, and narratives from Trivedi Marbles — covering luxury natural stone, architectural design, and the art of selecting the perfect marble.",
     url: "/blog",
@@ -23,7 +25,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "The Journal | Trivedi Marbles Pvt Ltd",
+    title: "The Journal | Trivedi Marbles Pvt. Ltd.",
     description:
       "Insights, trends, and narratives from Trivedi Marbles — covering luxury natural stone, architectural design, and the art of selecting the perfect marble.",
     images: ["/images/ourheritage_home.webp"],

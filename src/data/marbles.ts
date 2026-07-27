@@ -29,12 +29,12 @@ export type SignatureProject = {
 export const marbles: Marble[] = [
   {
     id: "1",
-    name: "Ambaji White - A Essence of Purity and Contrast",
+    name: "Ambaji White - An Essence of Purity and Contrast",
     color: "White",
-    finish: "Mirror Finish, Honed Finish, Leather Finish,",
+    finish: "Mirror Finish, Honed Finish, Leather Finish",
     thickness: "20mm",
     description:
-      "A true testament to elegance and sophistication, Ambaji White is a masterpiece of purity and contrast. This Premium white marble, sourced from the finest quarry in the world of D.K. Trivedi & Sons, features a pristine surface with subtle veins, creating a scene and luxurious aesthetic that elevates any space. Ideal for grand flooring, statement walls, and refined countertops, Ambaji White brings timeless beauty and a touch of opulence to both residential and commercial interiors.",
+      "A true testament to elegance and sophistication, Ambaji White is a masterpiece of purity and contrast. This premium white marble, sourced from the world-renowned quarry of D.K. Trivedi & Sons, features a pristine surface with subtle veins, creating a serene and luxurious aesthetic that elevates any space. Ideal for grand flooring, statement walls, and refined countertops, Ambaji White brings timeless beauty and a touch of opulence to both residential and commercial interiors.",
     image: "/images/ambaji_white_mirror.webp",
     imageName: "Mirror",
     gallery: [
@@ -66,7 +66,7 @@ export const marbles: Marble[] = [
     id: "3",
     name: "Exotic Green - A Symphony of Nature's Elegance",
     color: "Green",
-    finish: "Mirror Polished",
+    finish: "Mirror Finish",
     thickness: "20mm",
     description:
       "Inspired by the lush tones of nature, Exotic Green from our Exotic Collection is a masterpiece of elegance and grandeur. With its deep green hues blended seamlessly with earthy textures, this marble transforms any space into a statement of luxury and refinement. Perfect for feature walls, tabletops, and bathroom surfaces, Exotic Green infuses interiors with a rich, natural beauty that captivates the senses and elevates design to new heights.",
@@ -78,12 +78,12 @@ export const marbles: Marble[] = [
   },
   {
     id: "4",
-    name: "Ice White - Timeless Elegence in Every Vein",
+    name: "Ice White - Timeless Elegance in Every Vein",
     color: "White",
     finish: "Mirror Finish, Leather Finish, Honed Finish, Lappato Finish",
     thickness: "20mm",
     description:
-      "A haemonious blend of purity and strength, Ice White from our Venetian Collection is a masterpiece of natural artistry. Its soft white canavs, rich in calcium, is beautifully enriched with bold quartz veins in shades of black, adding depth and character to any space. Ideal for flooring, statement walls, and high-end hospitality interiors, Ice White brings a timeless elegance and a touch of sophistication to both residential and commercial projects.",
+      "A harmonious blend of purity and strength, Ice White from our Venetian Collection is a masterpiece of natural artistry. Its soft white canvas, rich in calcium, is beautifully enriched with bold quartz veins in shades of black, adding depth and character to any space. Ideal for flooring, statement walls, and high-end hospitality interiors, Ice White brings a timeless elegance and a touch of sophistication to both residential and commercial projects.",
     image: "/images/icewhite_mirror.webp",
     imageName: "Mirror",
     gallery: [{ image: "/images/icewhite_leather.webp", name: "Leather" },
@@ -100,7 +100,7 @@ export const marbles: Marble[] = [
     finish: "Mirror Finish, Honed Finish",
     thickness: "20mm",
     description:
-      " A striking blend of earthy greens and deep textures, Lava Green from our Exotic Collection is a rare masterpiece inspired by nature's raw beauty. Its dynamic patterns and rich color palette make it an exceptional choice for creating bold and luxurious spaces.",
+      "A striking blend of earthy greens and deep textures, Lava Green from our Exotic Collection is a rare masterpiece inspired by nature's raw beauty. Its dynamic patterns and rich color palette make it an exceptional choice for creating bold and luxurious spaces.",
     image: "/images/lavagreenmirror.webp",
     imageName: "Mirror",
     gallery: [{ image: "/images/lavagreen_honed.webp", name: "Honed" }],
@@ -114,7 +114,7 @@ export const marbles: Marble[] = [
     finish: "Mirror Finish, Honed Finish, Leather Finish, Lappato Finish",
     thickness: "20mm",
     description:
-      "Fusion Green Extra (FGE) is inspired by the tranquil hues of nature. This masterpiece is a  fusion of soft green tones with striking veins of grey and white. This exquisite marble excudes serenity and sophistication, making it a perfect choice for luxury interiors and architectural marvels. Ideal for flooring, wall cladding, and statement pieces, Fusion Green Extra brings a touch of natural elegance and timeless beauty to any space.",
+      "Fusion Green Extra (FGE) is inspired by the tranquil hues of nature. This masterpiece is a fusion of soft green tones with striking veins of grey and white. This exquisite marble exudes serenity and sophistication, making it a perfect choice for luxury interiors and architectural marvels. Ideal for flooring, wall cladding, and statement pieces, Fusion Green Extra brings a touch of natural elegance and timeless beauty to any space.",
     image: "/images/fge_mirror.webp",
     imageName: "Mirror",
     gallery: [{ image: "/images/fge_honed.webp", name: "Honed" },

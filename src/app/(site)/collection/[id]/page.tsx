@@ -5,6 +5,12 @@ import CollectionDetailClient from "@/components/collection/CollectionDetailClie
 import LotCollectionDetail from "@/components/collection/LotCollectionDetail";
 import { getMarbleById } from "@/data/marbles";
 import { getWebsiteLotById, getWebsiteLots } from "@/lib/supabase/collection";
+import {
+  getMarbleImageAlt,
+  getMarbleMetaDescription,
+  getMarbleMetaTitle,
+  PUBLIC_ROBOTS,
+} from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -23,22 +29,26 @@ export async function generateMetadata({
   if (!UUID_RE.test(id)) {
     const marble = getMarbleById(id);
     if (!marble) return {};
-    const ogImage = [{ url: marble.image, width: 1200, height: 800, alt: marble.name }];
+    const title = getMarbleMetaTitle(marble);
+    const description = getMarbleMetaDescription(marble);
+    const imageAlt = getMarbleImageAlt(marble);
+    const ogImage = [{ url: marble.image, width: 1200, height: 800, alt: imageAlt }];
     return {
-      title: marble.name,
-      description: marble.description,
+      title: { absolute: title },
+      description,
       alternates: { canonical: `/collection/${id}` },
+      robots: PUBLIC_ROBOTS,
       openGraph: {
-        title: `${marble.name} | Trivedi Marbles`,
-        description: marble.description,
+        title,
+        description,
         url: `/collection/${id}`,
         type: "website",
         images: ogImage,
       },
       twitter: {
         card: "summary_large_image",
-        title: `${marble.name} | Trivedi Marbles`,
-        description: marble.description,
+        title,
+        description,
         images: [marble.image],
       },
     };
@@ -46,17 +56,19 @@ export async function generateMetadata({
 
   const lot = await getWebsiteLotById(id);
   if (!lot) return {};
-  const lotTitle = `${lot.marbleName}${lot.lotNumber ? ` — Lot ${lot.lotNumber}` : ""}`;
+  const lotTitle = `${lot.marbleName}${lot.lotNumber ? ` — Lot ${lot.lotNumber}` : ""} | Trivedi Marbles`;
   const lotDesc = `${lot.marbleName} marble slab — ${lot.categoryName}. ${lot.slabCount} slabs, ${lot.totalSqft.toLocaleString()} sq ft available. Inquire for pricing.`;
+  const lotImageAlt = `${lot.marbleName} marble slab by Trivedi Marbles`;
   const lotOgImages = lot.thumbnailUrl
-    ? [{ url: lot.thumbnailUrl, width: 1200, height: 800, alt: lot.marbleName }]
+    ? [{ url: lot.thumbnailUrl, width: 1200, height: 800, alt: lotImageAlt }]
     : undefined;
   return {
-    title: lotTitle,
+    title: { absolute: lotTitle },
     description: lotDesc,
     alternates: { canonical: `/collection/${id}` },
+    robots: PUBLIC_ROBOTS,
     openGraph: {
-      title: `${lotTitle} | Trivedi Marbles`,
+      title: lotTitle,
       description: lotDesc,
       url: `/collection/${id}`,
       type: "website",
@@ -64,7 +76,7 @@ export async function generateMetadata({
     },
     twitter: {
       card: "summary_large_image",
-      title: `${lotTitle} | Trivedi Marbles`,
+      title: lotTitle,
       description: lotDesc,
       images: lot.thumbnailUrl ? [lot.thumbnailUrl] : undefined,
     },
@@ -91,12 +103,12 @@ export default async function CollectionDetailPage({
       image: `${BASE}${marble.image}`,
       color: marble.color,
       material: "Marble",
-      brand: { "@type": "Brand", name: "Trivedi Marbles Pvt Ltd" },
+      brand: { "@type": "Brand", name: "Trivedi Marbles Pvt. Ltd." },
       offers: {
         "@type": "Offer",
         availability: "https://schema.org/InStock",
         priceCurrency: "INR",
-        seller: { "@type": "Organization", name: "Trivedi Marbles Pvt Ltd" },
+        seller: { "@type": "Organization", name: "Trivedi Marbles Pvt. Ltd." },
       },
     };
 
@@ -139,13 +151,13 @@ export default async function CollectionDetailPage({
     name: lot.marbleName,
     description: `${lot.marbleName} marble slab — ${lot.categoryName}. ${lot.slabCount} slabs, ${lot.totalSqft.toLocaleString()} sq ft available.`,
     material: "Marble",
-    brand: { "@type": "Brand", name: "Trivedi Marbles Pvt Ltd" },
+    brand: { "@type": "Brand", name: "Trivedi Marbles Pvt. Ltd." },
     offers: {
       "@type": "Offer",
       availability: "https://schema.org/InStock",
       priceCurrency: "INR",
       ...(lot.sellingPrice != null && { price: lot.sellingPrice }),
-      seller: { "@type": "Organization", name: "Trivedi Marbles Pvt Ltd" },
+      seller: { "@type": "Organization", name: "Trivedi Marbles Pvt. Ltd." },
     },
   };
   if (lot.thumbnailUrl) lotSchema.image = lot.thumbnailUrl;

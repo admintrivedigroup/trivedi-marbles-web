@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
 
 import { FadeIn } from "@/components/animations/FadeIn";
+import { PUBLIC_ROBOTS } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "The Collection",
   description:
     "Explore our curated collection of premium natural marble slabs — Ambaji White, Fusion Black, Exotic Green, and live inventory lots available for immediate inquiry.",
   alternates: { canonical: "/collection" },
+  robots: PUBLIC_ROBOTS,
   openGraph: {
-    title: "The Collection | Trivedi Marbles Pvt Ltd",
+    title: "The Collection | Trivedi Marbles Pvt. Ltd.",
     description:
       "Explore our curated collection of premium natural marble slabs — Ambaji White, Fusion Black, Exotic Green, and live inventory lots available for immediate inquiry.",
     url: "/collection",
@@ -17,7 +19,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "The Collection | Trivedi Marbles Pvt Ltd",
+    title: "The Collection | Trivedi Marbles Pvt. Ltd.",
     description:
       "Explore our curated collection of premium natural marble slabs — Ambaji White, Fusion Black, Exotic Green, and live inventory lots available for immediate inquiry.",
     images: ["/images/ambaji_white_mirror.webp"],

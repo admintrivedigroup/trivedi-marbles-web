@@ -1,0 +1,64 @@
+{
+  "tests": [
+    {
+      "label": "Furniture (narrow)",
+      "prompt": "chair . table . sofa . cabinet",
+      "boxes": [],
+      "totalRaw": 0,
+      "inferenceMs": 1492,
+      "histogram": {
+        "above80": 0,
+        "above50": 0,
+        "above20": 0,
+        "above10": 0
+      },
+      "rawOutput": null,
+      "error": "queue failed"
+    },
+    {
+      "label": "Structural",
+      "prompt": "door . wall . floor",
+      "boxes": [],
+      "totalRaw": 0,
+      "inferenceMs": 1493,
+      "histogram": {
+        "above80": 0,
+        "above50": 0,
+        "above20": 0,
+        "above10": 0
+      },
+      "rawOutput": null,
+      "error": "queue failed"
+    },
+    {
+      "label": "Stairs",
+      "prompt": "stairs . staircase . railing . step",
+      "boxes": [],
+      "totalRaw": 0,
+      "inferenceMs": 1494,
+      "histogram": {
+        "above80": 0,
+        "above50": 0,
+        "above20": 0,
+        "above10": 0
+      },
+      "rawOutput": null,
+      "error": "queue failed"
+    },
+    {
+      "label": "Full prompt @0.01",
+      "prompt": "chair . chair legs . table . table legs . console table . sofa . couch . armchair . cabinet . bookshelf . wardrobe . dresser . bed . tv stand . furniture . bench . ottoman . stool . staircase . stair riser . stair tread . stair panel . step . newel post . stair railing . railing . door . door frame . window . mirror . skirting board . baseboard . rug . carpet . mat . plant . vase . person",
+      "boxes": [],
+      "totalRaw": 0,
+      "inferenceMs": 1494,
+      "histogram": {
+        "above80": 0,
+        "above50": 0,
+        "above20": 0,
+        "above10": 0
+      },
+      "rawOutput": null,
+      "error": "queue failed"
+    }
+  ]
+}

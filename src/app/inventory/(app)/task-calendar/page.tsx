@@ -2,7 +2,7 @@ import { TasksCalendar } from "@/app/inventory/_components/tasks-calendar";
 import { getTasks } from "@/app/inventory/_lib/tasks";
 
 export const metadata = {
-  title: "Task Calendar | Trivedi Marbles",
+  title: { absolute: "Task Calendar | Trivedi Marbles" },
 };
 
 export default async function TasksCalendarPage() {

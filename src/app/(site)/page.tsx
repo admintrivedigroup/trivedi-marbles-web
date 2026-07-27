@@ -1,25 +1,28 @@
 import type { Metadata } from "next";
 
 import Hero from "@/components/home/Hero";
+import { PUBLIC_ROBOTS } from "@/lib/seo";
+
+const HOME_TITLE = "Ambaji White Marble Manufacturer & Supplier | Trivedi Marbles";
+const HOME_DESCRIPTION =
+  "Premium Ambaji White and exotic marble slabs from Trivedi Marbles, established in 1949. Manufacturing in Ambaji and marble supply from Ahmedabad, Gujarat.";
 
 export const metadata: Metadata = {
-  title: "Trivedi Marbles | Premium Marble Supplier in Ahmedabad",
-  description:
-    "Trivedi Marbles Pvt Ltd — premium Ambaji marble supplier in Ahmedabad. Discover luxury marble slabs for residential, commercial, and hospitality projects.",
+  title: { absolute: HOME_TITLE },
+  description: HOME_DESCRIPTION,
   alternates: { canonical: "/" },
+  robots: PUBLIC_ROBOTS,
   openGraph: {
-    title: "Trivedi Marbles | Premium Marble Supplier in Ahmedabad",
-    description:
-      "Trivedi Marbles Pvt Ltd — premium Ambaji marble supplier in Ahmedabad. Discover luxury marble slabs for residential, commercial, and hospitality projects.",
+    title: HOME_TITLE,
+    description: HOME_DESCRIPTION,
     url: "/",
     type: "website",
-    images: [{ url: "/images/ourheritage_home.webp", width: 1200, height: 800, alt: "Trivedi Marbles — Our Heritage" }],
+    images: [{ url: "/images/ourheritage_home.webp", width: 1200, height: 800, alt: "Trivedi Marbles — Ambaji White marble manufacturing and heritage" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Trivedi Marbles | Premium Marble Supplier in Ahmedabad",
-    description:
-      "Trivedi Marbles Pvt Ltd — premium Ambaji marble supplier in Ahmedabad. Discover luxury marble slabs for residential, commercial, and hospitality projects.",
+    title: HOME_TITLE,
+    description: HOME_DESCRIPTION,
     images: ["/images/ourheritage_home.webp"],
   },
 };
@@ -27,7 +30,7 @@ export const metadata: Metadata = {
 const localBusinessSchema = {
   "@context": "https://schema.org",
   "@type": "LocalBusiness",
-  name: "Trivedi Marbles Pvt Ltd",
+  name: "Trivedi Marbles Pvt. Ltd.",
   description:
     "Premium marble supplier based in Ahmedabad, Gujarat. Exclusive collection of luxury marble slabs sourced from D.K. Trivedi & Sons Quarries.",
   url: "https://www.trivedimarbles.co.in",

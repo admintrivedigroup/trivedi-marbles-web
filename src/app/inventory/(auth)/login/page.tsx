@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     follow: false,
     index: false,
   },
-  title: "Inventory Login | Trivedi Marbles",
+  title: { absolute: "Inventory Login | Trivedi Marbles" },
 };
 
 type Props = {
