@@ -15,7 +15,27 @@
       "Bash(curl -s \"http://localhost:3999/collection\")",
       "Bash(curl -s \"http://localhost:3999/robots.txt\")",
       "Bash(curl -s \"http://localhost:3999/sitemap.xml\")",
-      "Bash(taskkill //F //PID 10016)"
+      "Bash(taskkill //F //PID 10016)",
+      "Bash(mkdir -p \"c:/Users/ladha/Desktop/trivedi-marbles/src/app/\\(site\\)/journal/_components\" \"c:/Users/ladha/Desktop/trivedi-marbles/src/app/\\(site\\)/journal/[slug]\")",
+      "Bash(mkdir -p \"c:/Users/ladha/Desktop/trivedi-marbles/src/app/inventory/\\(app\\)/journal/new\" \"c:/Users/ladha/Desktop/trivedi-marbles/src/app/inventory/\\(app\\)/journal/[id]/edit\")",
+      "Bash(npx vitest *)",
+      "Bash(echo \"EXIT CODE: $?\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} -> %{redirect_url}\\\\n\" http://localhost:3000/inventory/journal)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/journal/nonexistent-slug)",
+      "Read(//tmp/**)",
+      "Bash(pkill -f \"next/dist/bin/next dev\")",
+      "Bash(pkill -f \"node --max-old-space-size=2048\")",
+      "Bash(node scripts/_tmp-introspect-profiles.mjs)",
+      "Bash(powershell -NoProfile -Command \"Get-ChildItem -Path . -Filter '.env*' -Force | Select-Object Name\")",
+      "Bash(curl -sIL \"https://www.trivedimarbles.co.in/inventory/login\")",
+      "Bash(curl -sIL \"https://www.trivedimarbles.co.in/inventory/reset-password?code=test123\")",
+      "Bash(curl -sIL \"https://trivedimarbles.co.in/inventory/reset-password?code=test123\")",
+      "Bash(curl -sIL \"https://exrtneowkiwdzekomlve.supabase.co/auth/v1/verify?token=pkce_6ce61dcb49d2a4e44c109cfefdca41f2a0452ba40176a627618e0731&type=recovery&redirect_to=https://www.trivedimarbles.co.in\")",
+      "Bash(curl -s -D - -o /dev/null \"https://exrtneowkiwdzekomlve.supabase.co/auth/v1/verify?token=pkce_6ce61dcb49d2a4e44c109cfefdca41f2a0452ba40176a627618e0731&type=recovery&redirect_to=https://www.trivedimarbles.co.in\")"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\ladha\\Desktop\\trivedi-marbles\\src\\app\\(site)\\journal",
+      "c:\\Users\\ladha\\Desktop\\trivedi-marbles\\src\\app\\inventory\\(app)\\journal\\[id]"
     ]
   }
 }

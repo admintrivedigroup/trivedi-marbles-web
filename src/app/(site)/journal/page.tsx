@@ -1,0 +1,61 @@
+import type { Metadata } from "next";
+import Image from "next/image";
+
+import { FadeIn } from "@/components/animations/FadeIn";
+import { blogHeroImg } from "@/data/blog";
+import { getPublishedJournalPosts } from "@/lib/journal";
+import { PUBLIC_ROBOTS } from "@/lib/seo";
+import { JournalList } from "./_components/journal-list";
+
+// Not yet linked from nav or included in the sitemap (kept dark until the
+// business approves cutting over from the legacy /blog route) — this page is
+// otherwise a complete, working implementation of the new canonical journal.
+export const revalidate = 3600;
+
+export const metadata: Metadata = {
+  title: "The Journal",
+  description:
+    "Insights, trends, and narratives from Trivedi Marbles — covering luxury natural stone, architectural design, and the art of selecting the perfect marble.",
+  alternates: { canonical: "/journal" },
+  robots: PUBLIC_ROBOTS,
+  openGraph: {
+    title: "The Journal | Trivedi Marbles Pvt. Ltd.",
+    description:
+      "Insights, trends, and narratives from Trivedi Marbles — covering luxury natural stone, architectural design, and the art of selecting the perfect marble.",
+    url: "/journal",
+    type: "website",
+    images: [{ url: "/images/ourheritage_home.webp", width: 1200, height: 800, alt: "The Trivedi Journal" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "The Journal | Trivedi Marbles Pvt. Ltd.",
+    description:
+      "Insights, trends, and narratives from Trivedi Marbles — covering luxury natural stone, architectural design, and the art of selecting the perfect marble.",
+    images: ["/images/ourheritage_home.webp"],
+  },
+};
+
+export default async function JournalPage() {
+  const posts = await getPublishedJournalPosts();
+
+  return (
+    <div className="min-h-screen w-full bg-background">
+      <section className="relative flex h-[60vh] items-center justify-center overflow-hidden">
+        <div className="absolute inset-0 z-0">
+          <Image src={blogHeroImg} alt="The Trivedi Journal" fill className="object-cover" priority />
+          <div className="absolute inset-0 bg-primary/70 backdrop-blur-sm" />
+        </div>
+        <div className="relative z-10 mx-auto max-w-3xl px-6 pt-24 text-center">
+          <FadeIn>
+            <h1 className="mb-6 font-serif text-5xl text-white md:text-7xl">The Journal</h1>
+            <p className="text-lg leading-relaxed font-light text-white/80 md:text-xl">
+              Insights, trends, and narratives from the world of luxury natural stone and architectural design.
+            </p>
+          </FadeIn>
+        </div>
+      </section>
+
+      <JournalList posts={posts} />
+    </div>
+  );
+}
