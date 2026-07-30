@@ -12,10 +12,12 @@ class Settings:
     replicate_api_token: str | None
     sam2_checkpoint: str
     depth_model: str
-    # Same Replicate version-pin env vars already used by the existing
-    # /inventory visualizer (src/app/inventory/_actions/{detectObjects,getDepthMap}.ts)
-    # — Grounding DINO and (in "replicate" mode) Depth Anything V2 hit the same
-    # Replicate account/models, so we reuse the pins rather than duplicating them.
+    # Same Replicate version-pin env vars already populated in .env.local for
+    # the existing /inventory visualizer's Grounding DINO / Depth Anything V2
+    # calls — reused here rather than duplicating separate pins. Note:
+    # getDepthMap.ts itself reads the differently-named DEPTH_ANYTHING_VERSION
+    # (a pre-existing mismatch in that file, not touched by this feature) —
+    # DEPTH_ANYTHING_V2_VERSION below is the name actually set in .env.local.
     grounding_dino_version: str
     depth_anything_version: str
 
@@ -33,5 +35,5 @@ def get_settings() -> Settings:
         sam2_checkpoint=os.environ.get("VISUALIZER_SAM2_CHECKPOINT", "facebook/sam2.1-hiera-base-plus"),
         depth_model=os.environ.get("VISUALIZER_DEPTH_MODEL", "depth-anything/Depth-Anything-V2-Base-hf"),
         grounding_dino_version=os.environ.get("GROUNDING_DINO_VERSION", ""),
-        depth_anything_version=os.environ.get("DEPTH_ANYTHING_VERSION", ""),
+        depth_anything_version=os.environ.get("DEPTH_ANYTHING_V2_VERSION", ""),
     )

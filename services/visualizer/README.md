@@ -43,15 +43,21 @@ cp .env.example .env
 pip install fastapi uvicorn[standard] python-multipart pydantic numpy \
             opencv-python-headless pillow httpx
 # set VISUALIZER_INFERENCE_MODE=replicate and REPLICATE_API_TOKEN in .env
-uvicorn app.main:app --reload --port 8787
+uvicorn app.main:app --reload --port 8000 --env-file .env
 ```
+
+`--env-file .env` is what actually loads the values from `.env` — the app
+reads `os.environ` directly (no `python-dotenv`), so without this flag the
+vars you set in `.env` are silently ignored. Port 8000 matches the
+`VISUALIZER_SERVICE_URL=http://localhost:8000` default in the Next.js app's
+`.env.local`; change both together if you use a different port.
 
 To exercise the **local** GPU path instead:
 
 ```bash
 pip install -r requirements.txt   # adds torch/transformers/accelerate — large download
 # set VISUALIZER_INFERENCE_MODE=local in .env
-uvicorn app.main:app --reload --port 8787
+uvicorn app.main:app --reload --port 8000 --env-file .env
 ```
 
 Smoke-test the pure math (no FastAPI/torch needed — just numpy + opencv-python):
@@ -85,7 +91,7 @@ modal secret create visualizer-secrets \
   VISUALIZER_SERVICE_SECRET=<generate-a-random-string> \
   REPLICATE_API_TOKEN=<same-token-as-the-nextjs-app> \
   GROUNDING_DINO_VERSION=<optional-replicate-version-hash> \
-  DEPTH_ANYTHING_VERSION=<optional-replicate-version-hash>
+  DEPTH_ANYTHING_V2_VERSION=<optional-replicate-version-hash>
 
 modal deploy modal_app.py
 ```

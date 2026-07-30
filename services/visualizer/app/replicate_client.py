@@ -92,7 +92,7 @@ def segment_via_replicate(image_rgb: np.ndarray, tap_x: int, tap_y: int) -> np.n
 def depth_via_replicate(image_rgb: np.ndarray) -> np.ndarray | None:
     """Returns a normalized (0..1) float32 depth map, same resolution as image_rgb.
 
-    Returns None (graceful skip) if DEPTH_ANYTHING_VERSION is not configured —
+    Returns None (graceful skip) if DEPTH_ANYTHING_V2_VERSION is not configured —
     same degradation behavior as getDepthMap.ts.
     """
     settings = get_settings()

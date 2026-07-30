@@ -77,7 +77,7 @@ async def render(
         depth_values = estimate_depth_local(room_rgb, settings.depth_model)
     else:
         alpha_mask = segment_via_replicate(room_rgb, tap_x, tap_y)
-        depth_values = depth_via_replicate(room_rgb)  # None if DEPTH_ANYTHING_VERSION unset
+        depth_values = depth_via_replicate(room_rgb)  # None if DEPTH_ANYTHING_V2_VERSION unset
 
     try:
         result_rgb, geo = compose.render_floor(

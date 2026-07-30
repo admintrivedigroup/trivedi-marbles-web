@@ -30,6 +30,7 @@ pnpm-debug.log*
 .vscode/
 .idea/
 *.swp
+.claude/settings.local.json
 
 # OS files
 .DS_Store
@@ -52,3 +53,7 @@ next-env.d.ts
 !yarn.lock
 
 certificates
+
+# Python
+__pycache__/
+*.pyc
