@@ -4,8 +4,9 @@ Local SAM2 segmentation — point-prompt floor/wall/product isolation.
 Loaded lazily and cached per-process: on Modal this means once per GPU
 container (see ../../modal_app.py), not once per request.
 
-Requires: torch, transformers>=4.45 (SAM2 support), a CUDA GPU for interactive
-latency (see README.md "GPU/CPU implications").
+Requires: torch, transformers>=4.56 (Sam2Model/Sam2Processor were added in
+transformers 4.56.0), a CUDA GPU for interactive latency (see README.md
+"GPU/CPU implications").
 """
 
 from __future__ import annotations
