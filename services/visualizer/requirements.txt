@@ -10,5 +10,6 @@ httpx==0.28.1
 # Local-inference path only (VISUALIZER_INFERENCE_MODE=local). Not needed for
 # VISUALIZER_INFERENCE_MODE=replicate — see README.md.
 torch==2.5.1
+torchvision==0.20.1
 transformers==4.56.2
 accelerate==1.2.1
