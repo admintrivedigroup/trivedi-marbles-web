@@ -26,6 +26,12 @@ image = (
     .apt_install("libgl1", "libglib2.0-0")  # required by opencv-python-headless
     .pip_install_from_requirements("requirements.txt")
     .env({"HF_HOME": MODEL_CACHE_PATH})
+    # Mounts the local `app/` package into the container — without this, pip
+    # installs only third-party deps and `from app.config import ...` (used in
+    # load_models()/web() below) fails with ModuleNotFoundError at runtime,
+    # since Modal doesn't auto-include local packages that are only imported
+    # inside function bodies (as opposed to at this file's top level).
+    .add_local_python_source("app")
 )
 
 app = modal.App("trivedi-visualizer", image=image)
