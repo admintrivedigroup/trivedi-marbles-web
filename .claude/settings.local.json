@@ -31,7 +31,8 @@
       "Bash(curl -sIL \"https://www.trivedimarbles.co.in/inventory/reset-password?code=test123\")",
       "Bash(curl -sIL \"https://trivedimarbles.co.in/inventory/reset-password?code=test123\")",
       "Bash(curl -sIL \"https://exrtneowkiwdzekomlve.supabase.co/auth/v1/verify?token=pkce_6ce61dcb49d2a4e44c109cfefdca41f2a0452ba40176a627618e0731&type=recovery&redirect_to=https://www.trivedimarbles.co.in\")",
-      "Bash(curl -s -D - -o /dev/null \"https://exrtneowkiwdzekomlve.supabase.co/auth/v1/verify?token=pkce_6ce61dcb49d2a4e44c109cfefdca41f2a0452ba40176a627618e0731&type=recovery&redirect_to=https://www.trivedimarbles.co.in\")"
+      "Bash(curl -s -D - -o /dev/null \"https://exrtneowkiwdzekomlve.supabase.co/auth/v1/verify?token=pkce_6ce61dcb49d2a4e44c109cfefdca41f2a0452ba40176a627618e0731&type=recovery&redirect_to=https://www.trivedimarbles.co.in\")",
+      "Bash(curl -s -o /dev/null -w 'HTTP %{http_code}\\\\n' -X POST https://exrtneowkiwdzekomlve.supabase.co/auth/v1/recover?redirect_to=https%3A%2F%2Fwww.trivedimarbles.co.in%2Finventory%2Freset-password -H 'apikey: sb_publishable_msFOLjx3fCjfJm8YiJz_6w_Q-oXTXD-' -H 'Content-Type: application/json' -d '{\"email\":\"admin@trivedigranimarmo.com\"}')"
     ],
     "additionalDirectories": [
       "c:\\Users\\ladha\\Desktop\\trivedi-marbles\\src\\app\\(site)\\journal",
