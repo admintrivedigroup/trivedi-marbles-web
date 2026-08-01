@@ -2,9 +2,7 @@
  * In-memory RoomCache store for the Mask2Former-based production visualizer.
  *
  * A module-level singleton is sufficient today (single-tab showroom tool,
- * one active session at a time). Kept fully independent from the SAM-2
- * pipeline's RoomCacheManager (src/lib/visualizer/RoomCacheManager.ts) so
- * the two caches never interact.
+ * one active session at a time).
  */
 
 import type { RoomCache } from "./RoomCache";

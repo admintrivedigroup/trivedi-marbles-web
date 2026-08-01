@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import { getCategory } from "../../surface-benchmark/_lib/labelMap";
-import type { PipelineSegment } from "../_lib/types";
+import { getCategory } from "@/lib/visualizerM2F/labelMap";
+import type { PipelineSegment } from "@/lib/visualizerM2F/types";
 
 type Props = {
   segments: PipelineSegment[];

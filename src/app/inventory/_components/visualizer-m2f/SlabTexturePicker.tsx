@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getSlabTextures }    from "../_actions/getSlabTextures";
-import { fetchTextureBase64 } from "../_actions/fetchTextureBase64";
-import type { SlabTexture }   from "../_lib/types";
+import { getSlabTextures }    from "@/lib/visualizerM2F/actions/getSlabTextures";
+import { fetchTextureBase64 } from "@/lib/visualizerM2F/actions/fetchTextureBase64";
+import type { SlabTexture }   from "@/lib/visualizerM2F/types";
 
 type Props = {
   selectedId:    string | null;

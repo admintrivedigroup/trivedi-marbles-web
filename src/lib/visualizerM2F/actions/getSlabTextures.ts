@@ -1,7 +1,7 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { SlabTexture } from "../_lib/types";
+import type { SlabTexture } from "../types";
 
 type SlabImageRow = { image_url?: unknown; sort_order?: unknown };
 type LotRow       = { marble_name?: unknown; lot_number?: unknown };

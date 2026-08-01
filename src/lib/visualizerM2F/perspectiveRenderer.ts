@@ -1,10 +1,8 @@
 // Client-side only — Canvas API required.
 //
-// Production copy of src/app/debug/combined-visualizer-test/_lib/perspectiveRenderer.ts,
-// split into a geometry stage and a texture stage so RoomCache (renderFromCache.ts) can
+// Split into a geometry stage and a texture stage so RoomCache (renderFromCache.ts) can
 // cache the expensive half (mask decode/union, largest-CC, quad, homography) across slab
-// swaps and texture-setting changes. No algorithm changes from the debug version — the
-// debug page keeps calling its own original, unmodified, standalone copy.
+// swaps and texture-setting changes.
 //
 // Algorithm (unchanged):
 //   1. Find the largest connected component of the floor mask (BFS)
@@ -14,10 +12,10 @@
 //   5. Preserve occluder pixels on top
 //   6. Build a debug overlay showing the CC tint, quad outline, and corner labels
 
-import { decodeMask, unionMasks, loadImage } from "@/app/debug/combined-visualizer-test/_lib/maskUtils";
-import type { RenderJob } from "@/app/debug/combined-visualizer-test/_lib/renderUtils";
-import type { SlabSettings } from "@/app/debug/combined-visualizer-test/_lib/types";
-import { DEFAULT_SLAB_SETTINGS } from "@/app/debug/combined-visualizer-test/_lib/types";
+import { decodeMask, unionMasks, loadImage } from "./maskUtils";
+import type { RenderJob } from "./renderUtils";
+import type { SlabSettings } from "./types";
+import { DEFAULT_SLAB_SETTINGS } from "./types";
 
 // ── Canvas helper ────────────────────────────────────────────────────────────
 

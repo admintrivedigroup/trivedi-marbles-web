@@ -1,5 +1,9 @@
-// Types for the combined visualizer pipeline.
-// Keep self-contained — do not import from other debug features here.
+// Types for the Mask2Former-based production visualizer pipeline.
+// Keep self-contained.
+
+export type SurfaceCategory =
+  | "floor" | "wall" | "ceiling" | "stairs"
+  | "opening" | "furniture" | "fixture" | "countertop" | "other";
 
 export type PipelineSegment = {
   label:      string;

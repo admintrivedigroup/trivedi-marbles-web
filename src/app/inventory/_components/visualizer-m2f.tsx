@@ -1,16 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { runMask2Former }     from "@/app/debug/combined-visualizer-test/_actions/runMask2Former";
-import { runDepthEstimation } from "@/app/debug/combined-visualizer-test/_actions/runDepthEstimation";
-import { fetchTextureBase64 } from "@/app/debug/combined-visualizer-test/_actions/fetchTextureBase64";
-import { getCategory, getLabelColor } from "@/app/debug/surface-benchmark/_lib/labelMap";
-import { generateSegOverlay, renderMarbleOnSurface } from "@/app/debug/combined-visualizer-test/_lib/renderUtils";
-import { renderMaskHighlight } from "@/app/debug/combined-visualizer-test/_lib/maskUtils";
+import { runMask2Former }     from "@/lib/visualizerM2F/actions/runMask2Former";
+import { runDepthEstimation } from "@/lib/visualizerM2F/actions/runDepthEstimation";
+import { fetchTextureBase64 } from "@/lib/visualizerM2F/actions/fetchTextureBase64";
+import { getCategory, getLabelColor } from "@/lib/visualizerM2F/labelMap";
+import { generateSegOverlay, renderMarbleOnSurface } from "@/lib/visualizerM2F/renderUtils";
+import { renderMaskHighlight } from "@/lib/visualizerM2F/maskUtils";
 import {
   DEFAULT_TEXTURE_SETTINGS,
   DEFAULT_SLAB_SETTINGS,
-} from "@/app/debug/combined-visualizer-test/_lib/types";
+} from "@/lib/visualizerM2F/types";
 import type {
   PipelineSegResult,
   PipelineDepthResult,
@@ -19,13 +19,13 @@ import type {
   SlabTexture,
   SlabSettings,
   RenderMode,
-} from "@/app/debug/combined-visualizer-test/_lib/types";
-import { SurfaceSelector }   from "@/app/debug/combined-visualizer-test/_components/SurfaceSelector";
-import { TextureControls }  from "@/app/debug/combined-visualizer-test/_components/TextureControls";
-import { DebugPanels }      from "@/app/debug/combined-visualizer-test/_components/DebugPanels";
-import { BeforeAfter }      from "@/app/debug/combined-visualizer-test/_components/BeforeAfter";
-import { SlabTexturePicker } from "@/app/debug/combined-visualizer-test/_components/SlabTexturePicker";
-import { SlabControls }     from "@/app/debug/combined-visualizer-test/_components/SlabControls";
+} from "@/lib/visualizerM2F/types";
+import { SurfaceSelector }   from "@/app/inventory/_components/visualizer-m2f/SurfaceSelector";
+import { TextureControls }  from "@/app/inventory/_components/visualizer-m2f/TextureControls";
+import { DebugPanels }      from "@/app/inventory/_components/visualizer-m2f/DebugPanels";
+import { BeforeAfter }      from "@/app/inventory/_components/visualizer-m2f/BeforeAfter";
+import { SlabTexturePicker } from "@/app/inventory/_components/visualizer-m2f/SlabTexturePicker";
+import { SlabControls }     from "@/app/inventory/_components/visualizer-m2f/SlabControls";
 
 import type { RoomCache } from "@/lib/visualizerM2F/RoomCache";
 import { roomCacheManagerM2F } from "@/lib/visualizerM2F/RoomCacheManager";

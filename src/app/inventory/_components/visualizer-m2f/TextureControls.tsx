@@ -1,6 +1,6 @@
 "use client";
 
-import type { TextureSettings } from "../_lib/types";
+import type { TextureSettings } from "@/lib/visualizerM2F/types";
 
 type Props = {
   settings:  TextureSettings;

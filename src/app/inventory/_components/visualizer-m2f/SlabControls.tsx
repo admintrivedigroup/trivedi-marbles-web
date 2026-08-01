@@ -1,6 +1,6 @@
 "use client";
 
-import type { SlabSettings } from "../_lib/types";
+import type { SlabSettings } from "@/lib/visualizerM2F/types";
 
 type Props = {
   settings: SlabSettings;

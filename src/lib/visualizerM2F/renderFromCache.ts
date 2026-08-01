@@ -9,7 +9,7 @@
  * null) — there's no quad-comparison edge case to get wrong here.
  */
 
-import type { TextureSettings, SlabSettings, RenderMode } from "@/app/debug/combined-visualizer-test/_lib/types";
+import type { TextureSettings, SlabSettings, RenderMode } from "./types";
 import type { RoomCache } from "./RoomCache";
 import { roomCacheManagerM2F } from "./RoomCacheManager";
 import {

@@ -8,7 +8,7 @@
  * the same RoomCache via renderFromCache.ts instead of re-running any of this.
  */
 
-import type { PipelineSegResult, PipelineDepthResult } from "@/app/debug/combined-visualizer-test/_lib/types";
+import type { PipelineSegResult, PipelineDepthResult } from "./types";
 import type { FloorGeometry } from "./perspectiveRenderer";
 
 export type RoomCache = {

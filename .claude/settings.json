@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(echo \"exit code: $?\")",
+      "Bash(git branch *)",
+      "Bash(git check-ignore *)",
+      "Bash(git ls-tree *)",
+      "Bash(git remote *)",
+      "Bash(grep -v \"\\\\\\\\\\\\\\\\\\(\")",
+      "WebSearch",
+      "Bash(python -m modal --version)",
+      "Bash(python -m modal profile current)",
+      "Bash(python -m modal secret list)",
+      "Bash(python -c \"import transformers; print\\(transformers.__version__\\)\")",
+      "Bash(python -c \"import torch; print\\(torch.__version__\\)\")",
+      "Bash(python -m pip install --quiet --no-deps transformers==4.56.2)",
+      "Bash(python -c ' *)",
+      "Bash(python -m pip install --quiet transformers==4.56.2)",
+      "Bash(python -m py_compile app/pipeline/segmentation.py)",
+      "Bash(rm -rf app/pipeline/__pycache__ __pycache__)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(npx next *)",
+      "Bash(npx eslint *)",
+      "Bash(npx vitest *)"
+    ]
+  }
+}
