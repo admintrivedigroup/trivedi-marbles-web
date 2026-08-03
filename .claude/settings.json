@@ -21,7 +21,14 @@
       "Bash(echo \"EXIT:$?\")",
       "Bash(npx next *)",
       "Bash(npx eslint *)",
-      "Bash(npx vitest *)"
+      "Bash(npx vitest *)",
+      "Bash(echo \"TSC_EXIT:$?\")",
+      "Bash(grep -iE '^\\(sharp|pngjs|jimp|canvas\\)$')",
+      "Bash(node -e ' *)",
+      "Bash(node \"C:/Users/ladha/AppData/Local/Temp/claude/c--Users-ladha-Desktop-trivedi-marbles/f5db3def-696a-44e1-b7a1-0af0fed38c24/scratchpad/check_quad.js\")",
+      "Bash(NODE_PATH=\"$\\(pwd\\)/node_modules\" node \"C:/Users/ladha/AppData/Local/Temp/claude/c--Users-ladha-Desktop-trivedi-marbles/f5db3def-696a-44e1-b7a1-0af0fed38c24/scratchpad/check_quad.js\")",
+      "Bash(NODE_PATH=\"$\\(pwd\\)/node_modules\" node \"C:/Users/ladha/AppData/Local/Temp/claude/c--Users-ladha-Desktop-trivedi-marbles/f5db3def-696a-44e1-b7a1-0af0fed38c24/scratchpad/lighting_test.js\")",
+      "Bash(NODE_PATH=/c/Users/ladha/Desktop/trivedi-marbles/node_modules node -e ' *)"
     ]
   }
 }

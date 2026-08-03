@@ -142,6 +142,12 @@ export type FloorGeometry = {
   quad:     FloorQuad | null;
   h:        number[] | null;
   debugUrl: string;
+  /** Per-pixel multiplier (~1.0 mean) from blurred original-floor luminance — soft ambient shadow/gradient. */
+  lowMul:    Float32Array;
+  /** Per-pixel signed residual (orig luminance − blurred) — specular highlights / fine shadow detail. */
+  highRes:   Float32Array;
+  /** Per-pixel 0..1 feather alpha, 1 deep inside the floor mask, ramping to 0 at the mask edge. */
+  edgeAlpha: Float32Array;
 };
 
 // ── Step 1: Largest connected component (BFS) ────────────────────────────────
@@ -440,6 +446,159 @@ function sampleBilinear(
   ];
 }
 
+// ── Lighting decomposition: low/high-frequency luminance + edge feather ──────
+//
+// The old composite was a flat "tex*op + orig*(1-op)" cross-dissolve applied
+// uniformly across the whole floor — it doesn't reproduce the room's lighting
+// at all, it just fades a fixed fraction of the original photo back in. That's
+// why renders read as pasted-on. Instead we decompose the *original* floor
+// region's luminance into:
+//   - a low-frequency layer (blurred luminance) → soft ambient shadows/gradients
+//     cast by furniture, windows, fixtures — reapplied via multiply.
+//   - a high-frequency layer (blur residual) → specular highlights/reflections
+//     and fine shadow detail — reapplied via screen (brighten) / multiply (darken).
+// Both are derived solely from the room photo + floor mask, so they're computed
+// once per room and cached on FloorGeometry (independent of slab texture/settings).
+
+function boxBlurPass(src: Float32Array, dst: Float32Array, W: number, H: number, r: number, horizontal: boolean) {
+  const norm = 1 / (2 * r + 1);
+  if (horizontal) {
+    for (let y = 0; y < H; y++) {
+      const off = y * W;
+      let sum = 0;
+      for (let x = -r; x <= r; x++) sum += src[off + Math.min(W - 1, Math.max(0, x))]!;
+      for (let x = 0; x < W; x++) {
+        dst[off + x] = sum * norm;
+        sum += src[off + Math.min(W - 1, x + r + 1)]! - src[off + Math.max(0, x - r)]!;
+      }
+    }
+  } else {
+    for (let x = 0; x < W; x++) {
+      let sum = 0;
+      for (let y = -r; y <= r; y++) sum += src[Math.min(H - 1, Math.max(0, y)) * W + x]!;
+      for (let y = 0; y < H; y++) {
+        dst[y * W + x] = sum * norm;
+        sum += src[Math.min(H - 1, y + r + 1) * W + x]! - src[Math.max(0, y - r) * W + x]!;
+      }
+    }
+  }
+}
+
+// Three-pass box blur approximates a Gaussian blur of similar radius, cheaply.
+function boxBlur3(src: Float32Array, W: number, H: number, r: number): Float32Array {
+  if (r < 1) return src.slice();
+  let a = src.slice();
+  const b = new Float32Array(W * H);
+  for (let pass = 0; pass < 3; pass++) {
+    boxBlurPass(a, b, W, H, r, true);
+    boxBlurPass(b, a, W, H, r, false);
+  }
+  return a;
+}
+
+const SHADOW_STRENGTH    = 0.85;  // how strongly the low-freq (ambient shadow) layer modulates the texture
+const HIGHLIGHT_STRENGTH = 0.55;  // how strongly the high-freq (specular) layer modulates the texture
+const LOW_MUL_MIN = 0.4, LOW_MUL_MAX = 1.75; // clamp so deep shadows/hot spots don't crush or blow out the texture
+const FEATHER_PX_FRAC = 1 / 250; // floor-boundary feather width as a fraction of min(W,H)
+
+function computeLightingLayers(
+  origPx: Uint8ClampedArray,
+  surfMask: Uint8Array,
+  W: number,
+  H: number,
+): { lowMul: Float32Array; highRes: Float32Array } {
+  const n   = W * H;
+  const lum = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const ri = i * 4;
+    lum[i] = 0.299 * origPx[ri]! + 0.587 * origPx[ri + 1]! + 0.114 * origPx[ri + 2]!;
+  }
+
+  // Blur radius scaled to the floor's on-screen size — bigger floors need a
+  // wider kernel so shadow gradients read as soft, not blotchy.
+  let xMin = W, xMax = 0, yMin = H, yMax = 0, found = false;
+  for (let i = 0; i < n; i++) {
+    if ((surfMask[i] ?? 0) > 128) {
+      found = true;
+      const x = i % W, y = (i / W) | 0;
+      if (x < xMin) xMin = x; if (x > xMax) xMax = x;
+      if (y < yMin) yMin = y; if (y > yMax) yMax = y;
+    }
+  }
+  const diag   = found ? Math.hypot(xMax - xMin, yMax - yMin) : Math.min(W, H);
+  const radius = Math.max(10, Math.min(90, Math.round(diag / 7)));
+
+  const low = boxBlur3(lum, W, H, radius);
+
+  let sum = 0, count = 0;
+  for (let i = 0; i < n; i++) {
+    if ((surfMask[i] ?? 0) > 128) { sum += low[i]!; count++; }
+  }
+  const meanLow = count > 0 ? sum / count : 128;
+
+  const lowMul  = new Float32Array(n);
+  const highRes = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const rawMul = meanLow > 1e-3 ? low[i]! / meanLow : 1;
+    const damped = 1 + (rawMul - 1) * SHADOW_STRENGTH;
+    lowMul[i]  = Math.max(LOW_MUL_MIN, Math.min(LOW_MUL_MAX, damped));
+    highRes[i] = lum[i]! - low[i]!;
+  }
+
+  return { lowMul, highRes };
+}
+
+// Soft alpha, 1 deep inside the floor mask, ramping to 0 over a few pixels at
+// the mask boundary — replaces the current hard binary cutline at the floor/wall
+// (and floor/baseboard) edge.
+function computeEdgeAlpha(surfMask: Uint8Array, W: number, H: number): Float32Array {
+  const n   = W * H;
+  const bin = new Float32Array(n);
+  for (let i = 0; i < n; i++) bin[i] = (surfMask[i] ?? 0) > 128 ? 1 : 0;
+
+  const featherPx = Math.max(2, Math.round(Math.min(W, H) * FEATHER_PX_FRAC));
+  const tmp     = new Float32Array(n);
+  const blurred = new Float32Array(n);
+  boxBlurPass(bin, tmp, W, H, featherPx, true);
+  boxBlurPass(tmp, blurred, W, H, featherPx, false);
+
+  // Only fade inward from the mask edge — never extend alpha past the original mask.
+  for (let i = 0; i < n; i++) blurred[i] = bin[i]! > 0 ? Math.min(1, blurred[i]!) : 0;
+  return blurred;
+}
+
+// Applies the low/high-frequency lighting layers to a texture-space RGB triplet,
+// then cross-dissolves with the original pixel using opacity scaled by the edge
+// feather (so op still behaves as before in the mask interior, but transitions
+// smoothly to the original photo at the floor boundary).
+function compositeLit(
+  srcR: number, srcG: number, srcB: number,
+  origR: number, origG: number, origB: number,
+  lowMul: number, highRes: number, edgeA: number,
+  op: number,
+): [number, number, number] {
+  let r = srcR * lowMul, g = srcG * lowMul, b = srcB * lowMul;
+
+  const eff = highRes * HIGHLIGHT_STRENGTH;
+  if (eff >= 0) {
+    // Screen blend — brightens toward specular highlights/reflections without clipping.
+    r = 255 - (255 - r) * (255 - eff) / 255;
+    g = 255 - (255 - g) * (255 - eff) / 255;
+    b = 255 - (255 - b) * (255 - eff) / 255;
+  } else {
+    // Multiply blend — reintroduces fine shadow detail the low-freq layer missed.
+    const f = Math.max(0, 1 + eff / 255);
+    r *= f; g *= f; b *= f;
+  }
+
+  const effOp = op * edgeA;
+  return [
+    clamp(r * effOp + origR * (1 - effOp)),
+    clamp(g * effOp + origG * (1 - effOp)),
+    clamp(b * effOp + origB * (1 - effOp)),
+  ];
+}
+
 // ── Debug overlay ─────────────────────────────────────────────────────────────
 
 async function makeDebugOverlay(
@@ -583,7 +742,10 @@ export async function computeFloorGeometry(
 
   const debugUrl = await makeDebugOverlay(originalDataUrl, cc, quad, W, H);
 
-  return { W, H, origPx, surfMask, occMask, cc, quad, h, debugUrl };
+  const { lowMul, highRes } = computeLightingLayers(origPx, surfMask, W, H);
+  const edgeAlpha = computeEdgeAlpha(surfMask, W, H);
+
+  return { W, H, origPx, surfMask, occMask, cc, quad, h, debugUrl, lowMul, highRes, edgeAlpha };
 }
 
 // ── Texture stage: geometry + slab texture + settings → composite ────────────
@@ -596,7 +758,7 @@ export async function renderTextureFromGeometry(
   const isUVDebug      = job.debugUV          === true;
   const isCheckerboard = job.debugCheckerboard === true;
 
-  const { W, H, origPx, surfMask, occMask, h, quad } = geometry;
+  const { W, H, origPx, surfMask, occMask, h, quad, lowMul, highRes, edgeAlpha } = geometry;
 
   // ── Slab layout setup ────────────────────────────────────────────────────────
   const renderMode  = job.renderMode ?? "slab";
@@ -681,9 +843,12 @@ export async function renderTextureFromGeometry(
                        || slabFracV < halfJointV || slabFracV > 1 - halfJointV;
 
         if (inJoint) {
-          result[ri]     = clamp(jointRgb[0]! * op + origPx[ri]!     * (1 - op));
-          result[ri + 1] = clamp(jointRgb[1]! * op + origPx[ri + 1]! * (1 - op));
-          result[ri + 2] = clamp(jointRgb[2]! * op + origPx[ri + 2]! * (1 - op));
+          const [jr, jg, jb] = compositeLit(
+            jointRgb[0]!, jointRgb[1]!, jointRgb[2]!,
+            origPx[ri]!, origPx[ri + 1]!, origPx[ri + 2]!,
+            lowMul[i]!, highRes[i]!, edgeAlpha[i]!, op,
+          );
+          result[ri] = jr; result[ri + 1] = jg; result[ri + 2] = jb;
         } else if (isSequential) {
           // ── Sequential ────────────────────────────────────────────────────────
           // Sampling depends ONLY on rawU, rawV, slabW, slabH, sc, rotation.
@@ -703,9 +868,12 @@ export async function renderTextureFromGeometry(
           const wu = ((su % 1) + 1) % 1;   // mirrors sampleBilinear's internal wrap
           const wv = ((sv % 1) + 1) % 1;
           const [tr, tg, tb] = sampleBilinear(texPx, texW, texH, su, sv);
-          result[ri]     = clamp(tr * brt * op + origPx[ri]!     * (1 - op));
-          result[ri + 1] = clamp(tg * brt * op + origPx[ri + 1]! * (1 - op));
-          result[ri + 2] = clamp(tb * brt * op + origPx[ri + 2]! * (1 - op));
+          const [sr, sg, sb] = compositeLit(
+            tr * brt, tg * brt, tb * brt,
+            origPx[ri]!, origPx[ri + 1]!, origPx[ri + 2]!,
+            lowMul[i]!, highRes[i]!, edgeAlpha[i]!, op,
+          );
+          result[ri] = sr; result[ri + 1] = sg; result[ri + 2] = sb;
           // Capture trace: last row-0 pixel near grout edge, and first row-1 pixel past grout.
           const rowIdx = Math.floor(rawV / slabH);
           if (rowIdx === 0 && slabFracV > 1 - halfJointV - 0.05) {
@@ -759,9 +927,12 @@ export async function renderTextureFromGeometry(
 
             const [tr, tg, tb] = sampleBilinear(texPx, texW, texH, su, sv);
             const totalBrt = brt * p.brightness;
-            result[ri]     = clamp(tr * totalBrt * op + origPx[ri]!     * (1 - op));
-            result[ri + 1] = clamp(tg * totalBrt * op + origPx[ri + 1]! * (1 - op));
-            result[ri + 2] = clamp(tb * totalBrt * op + origPx[ri + 2]! * (1 - op));
+            const [rr, rg, rb] = compositeLit(
+              tr * totalBrt, tg * totalBrt, tb * totalBrt,
+              origPx[ri]!, origPx[ri + 1]!, origPx[ri + 2]!,
+              lowMul[i]!, highRes[i]!, edgeAlpha[i]!, op,
+            );
+            result[ri] = rr; result[ri + 1] = rg; result[ri + 2] = rb;
           }
         }
       } else {
@@ -779,9 +950,12 @@ export async function renderTextureFromGeometry(
 
         const [tr, tg, tb] = sampleBilinear(texPx, texW, texH, u, v);
 
-        result[ri]     = clamp(tr * brt * op + origPx[ri]!     * (1 - op));
-        result[ri + 1] = clamp(tg * brt * op + origPx[ri + 1]! * (1 - op));
-        result[ri + 2] = clamp(tb * brt * op + origPx[ri + 2]! * (1 - op));
+        const [cr, cg, cb] = compositeLit(
+          tr * brt, tg * brt, tb * brt,
+          origPx[ri]!, origPx[ri + 1]!, origPx[ri + 2]!,
+          lowMul[i]!, highRes[i]!, edgeAlpha[i]!, op,
+        );
+        result[ri] = cr; result[ri + 1] = cg; result[ri + 2] = cb;
       }
     } else {
       result[ri]     = origPx[ri]!;
