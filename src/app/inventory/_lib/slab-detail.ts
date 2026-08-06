@@ -22,7 +22,7 @@ export type SlabMovement = {
 
 export async function getSlabById(id: string): Promise<SlabDetailResult> {
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const { data, error } = await supabase
       .from("slabs")
       .select(`
@@ -113,7 +113,7 @@ export type SlabImage = {
 
 export async function getSlabImages(slabId: string): Promise<SlabImage[]> {
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const { data, error } = await supabase
       .from("slab_images")
       .select("id, image_url, public_id, sort_order")

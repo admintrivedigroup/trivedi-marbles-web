@@ -19,5 +19,7 @@ export default async function SlabPublicViewPage({ params }: Props) {
     notFound();
   }
 
-  return <SlabPublicView slab={slab} images={images} />;
+  const publicSlab = { ...slab, dealerPrice: null, notes: null, reservedFor: null };
+
+  return <SlabPublicView slab={publicSlab} images={images} />;
 }

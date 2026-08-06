@@ -15,5 +15,13 @@ export default async function LotPublicViewPage({ params }: Props) {
     notFound();
   }
 
-  return <LotPublicView lot={lot} slabs={slabs} />;
+  const publicLot = { ...lot, dealerPrice: null, notes: null };
+  const publicSlabs = slabs.map((slab) => ({
+    ...slab,
+    dealerPrice: null,
+    notes: null,
+    reservedFor: null,
+  }));
+
+  return <LotPublicView lot={publicLot} slabs={publicSlabs} />;
 }

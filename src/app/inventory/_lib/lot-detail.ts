@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 import type { InventoryListSlab } from "./inventory-list";
 import { toNum, toStr, relName } from "./normalize";
@@ -29,7 +29,7 @@ export type LotDetailResult = {
 
 export async function getLotDetail(lotId: string): Promise<LotDetailResult> {
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     const [lotResult, slabsResult] = await Promise.all([
       supabase
