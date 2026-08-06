@@ -38,7 +38,15 @@ export type SlabTexture = {
   marbleName:   string | null;
   lotNumber:    string | null;
   thumbnailUrl: string;   // Cloudinary URL — for display only, not canvas
+  length:       number | null; // feet — raw slab dimension, matches inventory's slab.length
+  width:        number | null; // feet — raw slab dimension, matches inventory's slab.width
 };
+
+// Formats raw slab dimensions the same way the inventory detail page does (`8' × 5'`).
+export function formatSlabDimensions(length: number | null, width: number | null): string | null {
+  if (!length || !width) return null;
+  return `${length}' × ${width}'`;
+}
 
 export const DEFAULT_TEXTURE_SETTINGS: TextureSettings = {
   scale:      1.0,
@@ -52,12 +60,15 @@ export const DEFAULT_TEXTURE_SETTINGS: TextureSettings = {
 
 export type RenderMode = "repeat" | "slab" | "sequential";
 
+export type SlabLayout = "straight" | "herringbone";
+
 export type SlabSettings = {
   slabWidth:  number;  // fraction of floor UV width occupied by one slab  (0.10–0.50)
   slabHeight: number;  // fraction of floor UV height occupied by one slab (0.10–0.50)
   jointSize:  number;  // total grout-line width in UV space  (0–0.015)
   jointColor: string;  // CSS hex color for grout
   randomize:  boolean; // per-slab offset / flip / brightness variation
+  layout:     SlabLayout; // "straight" (default grid) | "herringbone" — only affects renderMode "slab"
 };
 
 export const DEFAULT_SLAB_SETTINGS: SlabSettings = {
@@ -66,4 +77,5 @@ export const DEFAULT_SLAB_SETTINGS: SlabSettings = {
   jointSize:  0.004,
   jointColor: "#c8c0b0",
   randomize:  true,
+  layout:     "straight",
 };

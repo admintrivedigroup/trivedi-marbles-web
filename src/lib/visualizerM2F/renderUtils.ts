@@ -1,7 +1,7 @@
 // Client-side only — Canvas API required.
 
 import { decodeMask, unionMasks, loadImage } from "./maskUtils";
-import type { TextureSettings, SlabSettings, RenderMode } from "./types";
+import type { TextureSettings, SlabSettings, RenderMode, PipelineSegment } from "./types";
 
 // ── Canvas helper ─────────────────────────────────────────────────────────────
 
@@ -165,6 +165,10 @@ export type RenderJob = {
   debugCheckerboard?: boolean;
   /** Debug: color each slab distinctly and label col:row. */
   debugSlab?:         boolean;
+  /** All Mask2Former segments (not just surface/occluder) — used by perspectiveRenderer to find window/fixture segments for the art-directed specular highlight. */
+  segments?:          PipelineSegment[];
+  /** Depth Anything V2 grayscale output (base64, no data: prefix) — secondary signal for the specular highlight's intensity. */
+  depthBase64?:       string | null;
 };
 
 const MAX_DIM = 1280;

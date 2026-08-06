@@ -29,6 +29,29 @@ export async function decodeMask(maskBase64: string, w: number, h: number): Prom
   return out;
 }
 
+// Centroid (as 0–1 fractions of width/height) of the union of the given masks —
+// used to place a floating surface-label pill over the region on screen.
+export async function computeMaskCentroid(
+  maskBases: string[],
+  w: number,
+  h: number,
+): Promise<{ xFrac: number; yFrac: number } | null> {
+  if (maskBases.length === 0) return null;
+  const masks = await Promise.all(maskBases.map((b) => decodeMask(b, w, h)));
+  const union = unionMasks(masks);
+
+  let sumX = 0, sumY = 0, count = 0;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if ((union[y * w + x] ?? 0) > 128) {
+        sumX += x; sumY += y; count++;
+      }
+    }
+  }
+  if (count === 0) return null;
+  return { xFrac: sumX / count / w, yFrac: sumY / count / h };
+}
+
 // Union of multiple masks — any pixel > 128 in any mask → 255 in output.
 export function unionMasks(masks: Uint8Array[]): Uint8Array {
   if (masks.length === 0) return new Uint8Array(0);

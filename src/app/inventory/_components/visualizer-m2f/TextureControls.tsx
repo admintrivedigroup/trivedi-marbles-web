@@ -39,8 +39,8 @@ export function TextureControls({ settings, onChange, onApply, rendering }: Prop
 
       {/* Finish toggle */}
       <div className="flex items-center justify-between">
-        <span className="w-24 shrink-0 text-xs font-medium text-gray-600">Finish</span>
-        <div className="flex overflow-hidden rounded-lg border border-gray-200 text-xs">
+        <span className="w-24 shrink-0 text-xs font-medium text-stone-600">Finish</span>
+        <div className="flex overflow-hidden rounded-lg border border-stone-200 text-xs">
           {(["matte", "gloss"] as const).map((f) => (
             <button
               key={f}
@@ -48,8 +48,8 @@ export function TextureControls({ settings, onChange, onApply, rendering }: Prop
               onClick={() => set("finish", f)}
               className={`px-3 py-1 font-medium capitalize transition-colors ${
                 settings.finish === f
-                  ? "bg-indigo-600 text-white"
-                  : "bg-white text-gray-600 hover:bg-gray-50"
+                  ? "bg-stone-900 text-stone-50"
+                  : "bg-white text-stone-600 hover:bg-stone-50"
               }`}
             >
               {f}
@@ -63,7 +63,7 @@ export function TextureControls({ settings, onChange, onApply, rendering }: Prop
         type="button"
         disabled={rendering}
         onClick={onApply}
-        className="mt-1 w-full rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+        className="mt-1 w-full rounded-lg bg-stone-900 px-4 py-2.5 text-sm font-semibold text-stone-50 shadow-sm shadow-stone-900/20 transition-colors hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {rendering ? "Rendering…" : "Apply Texture"}
       </button>
@@ -79,14 +79,14 @@ function SliderRow({
 }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="w-24 shrink-0 text-xs font-medium text-gray-600">{label}</span>
+      <span className="w-24 shrink-0 text-xs font-medium text-stone-600">{label}</span>
       <input
         type="range"
         min={min} max={max} step={step} value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="flex-1 accent-indigo-600"
+        className="flex-1 accent-[#9c7c42]"
       />
-      <span className="w-12 text-right text-xs tabular-nums text-gray-700">{display}</span>
+      <span className="w-12 text-right text-xs tabular-nums text-stone-700">{display}</span>
     </div>
   );
 }

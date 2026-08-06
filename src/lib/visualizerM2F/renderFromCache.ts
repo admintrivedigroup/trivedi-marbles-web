@@ -35,6 +35,8 @@ export async function renderFromCache(
       occluderMaskBases: cache.occluderMaskBases,
       width:             cache.imgWidth,
       height:            cache.imgHeight,
+      segments:          cache.segResult.segments,
+      depthBase64:       cache.depthResult?.depthBase64 ?? null,
     });
     roomCacheManagerM2F.updateGeometry(cache.roomId, geometry);
     cache.geometry = geometry;

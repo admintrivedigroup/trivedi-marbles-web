@@ -7,9 +7,11 @@ import { fetchTextureBase64 } from "@/lib/visualizerM2F/actions/fetchTextureBase
 import { getCategory, getLabelColor } from "@/lib/visualizerM2F/labelMap";
 import { generateSegOverlay, renderMarbleOnSurface } from "@/lib/visualizerM2F/renderUtils";
 import { renderMaskHighlight } from "@/lib/visualizerM2F/maskUtils";
+import { useFavorites } from "@/lib/visualizerM2F/useFavorites";
 import {
   DEFAULT_TEXTURE_SETTINGS,
   DEFAULT_SLAB_SETTINGS,
+  formatSlabDimensions,
 } from "@/lib/visualizerM2F/types";
 import type {
   PipelineSegResult,
@@ -20,12 +22,16 @@ import type {
   SlabSettings,
   RenderMode,
 } from "@/lib/visualizerM2F/types";
-import { SurfaceSelector }   from "@/app/inventory/_components/visualizer-m2f/SurfaceSelector";
 import { TextureControls }  from "@/app/inventory/_components/visualizer-m2f/TextureControls";
-import { DebugPanels }      from "@/app/inventory/_components/visualizer-m2f/DebugPanels";
-import { BeforeAfter }      from "@/app/inventory/_components/visualizer-m2f/BeforeAfter";
-import { SlabTexturePicker } from "@/app/inventory/_components/visualizer-m2f/SlabTexturePicker";
 import { SlabControls }     from "@/app/inventory/_components/visualizer-m2f/SlabControls";
+import { DebugPanels }      from "@/app/inventory/_components/visualizer-m2f/DebugPanels";
+import { TopBar }           from "@/app/inventory/_components/visualizer-m2f/TopBar";
+import { Sidebar }          from "@/app/inventory/_components/visualizer-m2f/Sidebar";
+import { SurfacePills }     from "@/app/inventory/_components/visualizer-m2f/SurfacePills";
+import { BottomBar }        from "@/app/inventory/_components/visualizer-m2f/BottomBar";
+import { ZoomLightbox }     from "@/app/inventory/_components/visualizer-m2f/ZoomLightbox";
+import { CompareView }      from "@/app/inventory/_components/visualizer-m2f/CompareView";
+import { EnquireModal }     from "@/app/inventory/_components/visualizer-m2f/EnquireModal";
 
 import type { RoomCache } from "@/lib/visualizerM2F/RoomCache";
 import { roomCacheManagerM2F } from "@/lib/visualizerM2F/RoomCacheManager";
@@ -41,11 +47,14 @@ type SlabOption = {
   marbleName: string | null;
   thumbnailUrl: string | null;
   imageUrl: string | null;
+  length?: number | null;
+  width?: number | null;
 };
 
 type Props = {
   currentSlab: SlabOption;
   comparisons: SlabOption[];
+  exitHref: string;
 };
 
 // ─── Client-side helpers ──────────────────────────────────────────────────────
@@ -86,7 +95,7 @@ function measureImage(url: string): Promise<{ w: number; h: number }> {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function VisualizerM2F({ currentSlab }: Props) {
+export function VisualizerM2F({ currentSlab, comparisons, exitHref }: Props) {
   // ── Image ─────────────────────────────────────────────────────────────────
   const [photo,    setPhoto]    = useState<File | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
@@ -111,25 +120,36 @@ export function VisualizerM2F({ currentSlab }: Props) {
   const [renderUrl,    setRenderUrl]    = useState<string | null>(null);
   const [renderRunning, setRenderRunning] = useState(false);
 
-  // ── Debug panels (staff-only, matches "Debug panels / UV debug / Grid debug / Slab debug") ──
+  // ── Debug panels (staff-only) ──────────────────────────────────────────────
   const [overlayUrl,       setOverlayUrl]       = useState<string | null>(null);
   const [maskHighlightUrl, setMaskHighlightUrl] = useState<string | null>(null);
   const [floorDebugUrl,    setFloorDebugUrl]    = useState<string | null>(null);
   const [showDebug,        setShowDebug]        = useState(false);
-  const [uvDebug,          setUVDebug]          = useState(false);
-  const [checkerboard,     setCheckerboard]     = useState(false);
-  const [debugSlab,        setDebugSlab]        = useState(false);
 
   // ── Slab layout ───────────────────────────────────────────────────────────
   const [renderMode,   setRenderMode]   = useState<RenderMode>("slab");
   const [slabSettings, setSlabSettings] = useState<SlabSettings>(DEFAULT_SLAB_SETTINGS);
 
-  // Roomvo-style room cache — Mask2Former + depth outputs and derived floor
-  // geometry, computed once per photo and reused across slab/setting changes.
+  // ── Favorites (session-only) ───────────────────────────────────────────────
+  const favorites = useFavorites();
+
+  // ── Compare ───────────────────────────────────────────────────────────────
+  const [compareOpen,       setCompareOpen]       = useState(false);
+  const [compareRightSlab,  setCompareRightSlab]  = useState<{ id: string; slabCode: string; marbleName: string | null; thumbnailUrl: string | null } | null>(null);
+  const [compareRightUrl,   setCompareRightUrl]   = useState<string | null>(null);
+  const [compareRendering,  setCompareRendering]  = useState(false);
+
+  // ── Zoom / Enquire / Share ────────────────────────────────────────────────
+  const [zoomUrl,       setZoomUrl]       = useState<string | null>(null);
+  const [enquireOpen,   setEnquireOpen]   = useState(false);
+  const [lastSharedUrl, setLastSharedUrl] = useState<string | null>(null);
+
+  // Room cache — Mask2Former + depth outputs and derived floor geometry,
+  // computed once per photo and reused across slab/setting changes.
   const roomCacheRef = useRef<RoomCache | null>(null);
 
-  // Pre-select the slab this page was opened for (matches the old visualizer's
-  // "currentSlab" behavior) while still allowing free choice via SlabTexturePicker.
+  // Pre-select the slab this page was opened for, while still allowing free
+  // choice via the sidebar.
   useEffect(() => {
     if (!currentSlab.imageUrl) return;
     let cancelled = false;
@@ -141,6 +161,8 @@ export function VisualizerM2F({ currentSlab }: Props) {
         marbleName:   currentSlab.marbleName,
         lotNumber:    null,
         thumbnailUrl: currentSlab.thumbnailUrl ?? currentSlab.imageUrl!,
+        length:       currentSlab.length ?? null,
+        width:        currentSlab.width ?? null,
       });
       setTextureUrl(b64);
     });
@@ -179,6 +201,8 @@ export function VisualizerM2F({ currentSlab }: Props) {
     setSelectedCat(null);
     setSelectedSegs([]);
     setPipelineError(null);
+    setCompareRightUrl(null);
+    setCompareRightSlab(null);
 
     await runPipeline(compressed, url, dims);
   }
@@ -194,6 +218,10 @@ export function VisualizerM2F({ currentSlab }: Props) {
     if (f?.type.startsWith("image/")) void handleFile(f);
   }
 
+  function handleChangeRoom() {
+    document.getElementById("m2f-file-input")?.click();
+  }
+
   // AI runs automatically once a photo is selected — no manual "Run pipeline" step.
   async function runPipeline(
     currentPhoto: File,
@@ -205,8 +233,6 @@ export function VisualizerM2F({ currentSlab }: Props) {
 
     const W = String(dims.w);
     const H = String(dims.h);
-
-    console.log("Production visualizer: AI started");
 
     await Promise.all([
       (async () => {
@@ -267,9 +293,6 @@ export function VisualizerM2F({ currentSlab }: Props) {
 
     if (cat === "stairs") return;
 
-    // Roomvo-style cache: build (or refresh) the RoomCache used by renderFromCache
-    // so marble/setting changes on the floor never re-run Mask2Former/Depth or
-    // the largest-CC/quad/homography geometry.
     if (cat === "floor" && photoUrl && segResult) {
       const occluderSegs = segResult.segments.filter((s) => OCCLUDER_CATS.has(getCategory(s.label)));
       const surfaceMaskBases  = segs.map((s) => s.maskBase64);
@@ -291,7 +314,6 @@ export function VisualizerM2F({ currentSlab }: Props) {
         };
         roomCacheManagerM2F.saveRoom(room);
         roomCacheRef.current = room;
-        console.log("Production visualizer: room cached");
       } else {
         roomCacheRef.current.selectedCategory  = cat;
         roomCacheRef.current.surfaceMaskBases  = surfaceMaskBases;
@@ -303,20 +325,13 @@ export function VisualizerM2F({ currentSlab }: Props) {
   }
 
   async function applyTexture(
-    cat:       string,
-    segs:      PipelineSegment[],
-    cfg:       TextureSettings,
-    dbgUV?:    boolean,
-    dbgGrid?:  boolean,
-    dbgSlab?:  boolean,
+    cat:  string,
+    segs: PipelineSegment[],
+    cfg:  TextureSettings,
   ) {
     if (!photoUrl || !textureUrl || !segResult) return;
 
     const occluderSegs = segResult.segments.filter((s) => OCCLUDER_CATS.has(getCategory(s.label)));
-
-    const useDebugUV      = cat === "floor" && (dbgUV   ?? uvDebug);
-    const useCheckerboard = cat === "floor" && (dbgGrid ?? checkerboard);
-    const useDebugSlab    = cat === "floor" && (dbgSlab ?? debugSlab);
 
     setRenderRunning(true);
     setFloorDebugUrl(null);
@@ -329,7 +344,6 @@ export function VisualizerM2F({ currentSlab }: Props) {
           cfg,
           renderMode,
           slabSettings,
-          { debugUV: useDebugUV, debugCheckerboard: useCheckerboard, debugSlab: useDebugSlab },
         );
         setRenderUrl(compositeUrl);
         setFloorDebugUrl(debugUrl);
@@ -352,46 +366,124 @@ export function VisualizerM2F({ currentSlab }: Props) {
     }
   }
 
+  function handleApply() {
+    if (selectedCat) void applyTexture(selectedCat, selectedSegs, settings);
+  }
+
+  function handleReset() {
+    setSettings(DEFAULT_TEXTURE_SETTINGS);
+    setSlabSettings(DEFAULT_SLAB_SETTINGS);
+    setRenderMode("slab");
+    if (selectedCat) void applyTexture(selectedCat, selectedSegs, DEFAULT_TEXTURE_SETTINGS);
+  }
+
+  function handleSelectSlabFromSidebar(slab: SlabTexture, b64: string) {
+    setSelectedSlab(slab);
+    setTextureUrl(b64);
+  }
+
+  async function handleSelectCompareSlab(slab: { id: string; slabCode: string; marbleName: string | null; thumbnailUrl: string | null }) {
+    if (!roomCacheRef.current || !slab.thumbnailUrl) return;
+    setCompareRightSlab(slab);
+    setCompareRendering(true);
+    try {
+      const b64 = await fetchTextureBase64(slab.thumbnailUrl);
+      if (!b64) return;
+      const { compositeUrl } = await renderFromCache(
+        roomCacheRef.current,
+        b64,
+        settings,
+        renderMode,
+        slabSettings,
+      );
+      setCompareRightUrl(compositeUrl);
+    } finally {
+      setCompareRendering(false);
+    }
+  }
+
   // ── Derived state ─────────────────────────────────────────────────────────
   const pipelineDone  = !!(segResult || depthResult) && !segRunning && !depthRunning;
-  const anyRunning    = segRunning || depthRunning;
+  const shareableUrl  = renderUrl ?? photoUrl;
   const depthDisplayUrl = depthResult?.colorDepthBase64
     ? `data:image/png;base64,${depthResult.colorDepthBase64}`
     : depthResult?.depthBase64
     ? `data:image/png;base64,${depthResult.depthBase64}`
     : null;
+  const currentSlabSize = formatSlabDimensions(selectedSlab?.length ?? null, selectedSlab?.width ?? null);
+
+  const moreSettings = (
+    <div className="max-h-[50vh] space-y-5 overflow-y-auto text-left">
+      {selectedCat === "floor" && textureUrl && (
+        <div>
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-stone-400">Render mode</p>
+          <div className="flex gap-2">
+            {(["slab", "sequential", "repeat"] as RenderMode[]).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setRenderMode(mode)}
+                className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  renderMode === mode
+                    ? "border-[#c8a96a] bg-[#c8a96a]/10 text-stone-900"
+                    : "border-stone-200 bg-white text-stone-500 hover:border-[#c8a96a]/50"
+                }`}
+              >
+                {mode === "slab" ? "Random Slabs" : mode === "sequential" ? "Sequential Slabs" : "Texture Repeat"}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {selectedCat === "floor" && (renderMode === "slab" || renderMode === "sequential") && textureUrl && (
+        <div className="rounded-xl border border-stone-200 bg-stone-50 p-4">
+          <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-stone-400">Slab layout</p>
+          <SlabControls settings={slabSettings} onChange={setSlabSettings} />
+        </div>
+      )}
+
+      {textureUrl && (
+        <div>
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-stone-400">Texture</p>
+          <TextureControls settings={settings} onChange={setSettings} onApply={handleApply} rendering={renderRunning} />
+        </div>
+      )}
+    </div>
+  );
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-6">
-      {/* Upload */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-        <p className="mb-3 text-xs font-bold uppercase tracking-widest text-gray-500">
-          Room photo
-        </p>
-        <div
-          onClick={() => document.getElementById("m2f-file-input")?.click()}
-          onDrop={handleDrop}
-          onDragOver={(e) => e.preventDefault()}
-          className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-gray-300 px-6 py-8 transition-colors hover:border-indigo-400 hover:bg-indigo-50"
-        >
-          {photoUrl && photo ? (
-            <div className="flex items-center gap-4">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={photoUrl} alt="Preview" className="h-16 rounded-xl border border-gray-200 object-cover shadow-sm" draggable={false} />
-              <div>
-                <p className="text-sm font-semibold text-gray-700">{photo.name}</p>
-                <p className="text-xs text-gray-400">{Math.round(photo.size / 1024)} KB</p>
-                <p className="mt-0.5 text-[10px] text-indigo-400">Click to change</p>
-              </div>
-            </div>
-          ) : (
-            <>
-              <span className="text-3xl">🖼</span>
-              <span className="text-sm font-medium text-gray-700">Upload a room photo</span>
-              <span className="text-xs text-gray-400">drag &amp; drop or click · JPEG · PNG · WebP</span>
-            </>
-          )}
+    <div className="flex h-screen flex-col bg-[#faf8f5]">
+      <TopBar
+        exitHref={exitHref}
+        productPageHref={`/inventory/slab/${currentSlab.id}`}
+        isFavorite={favorites.isFavorite(currentSlab.id)}
+        onToggleFavorite={() => favorites.toggle(currentSlab.id)}
+        shareableUrl={shareableUrl}
+        onZoom={() => shareableUrl && setZoomUrl(shareableUrl)}
+        onCompare={() => setCompareOpen(true)}
+        compareDisabled={!roomCacheRef.current}
+        compareActive={compareOpen}
+        onChangeRoom={handleChangeRoom}
+        onEnquire={() => setEnquireOpen(true)}
+        onToggleDebug={() => setShowDebug((v) => !v)}
+        onReset={handleReset}
+        onShared={setLastSharedUrl}
+      />
+
+      <div className="flex min-h-0 flex-1">
+        <Sidebar
+          segments={segResult?.segments ?? []}
+          selectedCat={selectedCat}
+          onSelectSurface={(cat, segs) => void handleSurfaceSelect(cat, segs)}
+          selectedSlabId={selectedSlab?.id ?? null}
+          onSelectSlab={handleSelectSlabFromSidebar}
+          isFavorite={favorites.isFavorite}
+          onToggleFavorite={favorites.toggle}
+        />
+
+        <div className="relative flex-1 overflow-hidden bg-[#0f0d0b]">
           <input
             id="m2f-file-input"
             type="file"
@@ -399,236 +491,150 @@ export function VisualizerM2F({ currentSlab }: Props) {
             className="hidden"
             onChange={handleFileChange}
           />
-        </div>
 
-        {anyRunning && (
-          <p className="mt-3 flex items-center gap-2 text-xs text-indigo-500">
-            <span className="h-3 w-3 animate-spin rounded-full border-2 border-indigo-400 border-t-transparent" />
-            Analyzing room… (first run may take 1–2 min to warm up)
-          </p>
-        )}
-        {pipelineError && !anyRunning && (
-          <p className="mt-3 text-xs text-red-600">{pipelineError}</p>
-        )}
-      </div>
-
-      {/* Surface selection */}
-      {segResult && !segRunning && (
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm space-y-3">
-          <p className="text-xs font-bold uppercase tracking-widest text-gray-500">
-            Select surface to apply marble
-          </p>
-          {segResult.error ? (
-            <p className="text-sm text-red-600">{segResult.error}</p>
-          ) : (
-            <SurfaceSelector
-              segments={segResult.segments}
-              selected={selectedCat}
-              onSelect={(cat, segs) => void handleSurfaceSelect(cat, segs)}
-            />
-          )}
-        </div>
-      )}
-
-      {/* Texture settings (shown once a surface is selected) */}
-      {selectedCat && selectedCat !== "stairs" && (
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm space-y-5">
-          <p className="text-xs font-bold uppercase tracking-widest text-gray-500">
-            Texture settings
-          </p>
-
-          <div>
-            <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">
-              Select marble from inventory
-            </p>
-            <SlabTexturePicker
-              selectedId={selectedSlab?.id ?? null}
-              onSelect={(slab, b64) => {
-                setSelectedSlab(slab);
-                setTextureUrl(b64);
-              }}
-            />
-          </div>
-
-          {selectedCat === "floor" && textureUrl && (
-            <div>
-              <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                Render mode
-              </p>
-              <div className="flex gap-2">
-                {(["slab", "sequential", "repeat"] as RenderMode[]).map((mode) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    onClick={() => setRenderMode(mode)}
-                    className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                      renderMode === mode
-                        ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-                        : "border-gray-200 bg-white text-gray-500 hover:border-indigo-300"
-                    }`}
-                  >
-                    {mode === "slab" ? "Random Slabs" : mode === "sequential" ? "Sequential Slabs" : "Texture Repeat"}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {selectedCat === "floor" && (renderMode === "slab" || renderMode === "sequential") && textureUrl && (
-            <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-4">
-              <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                Slab layout settings
-              </p>
-              <SlabControls settings={slabSettings} onChange={setSlabSettings} />
-            </div>
-          )}
-
-          {textureUrl && selectedSlab && (
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <div>
-                <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                  Selected · {selectedSlab.marbleName ?? selectedSlab.slabCode ?? selectedSlab.id}
-                </p>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={textureUrl}
-                  alt="Selected texture"
-                  className="h-32 w-full rounded-xl border border-gray-100 object-cover"
-                />
-              </div>
-              <TextureControls
-                settings={settings}
-                onChange={setSettings}
-                onApply={() => void applyTexture(selectedCat, selectedSegs, settings)}
-                rendering={renderRunning}
-              />
-            </div>
-          )}
-
-          {!textureUrl && (
-            <p className="text-xs text-gray-400">← Pick a slab above to enable texture controls.</p>
-          )}
-        </div>
-      )}
-
-      {/* Result */}
-      {renderUrl && photoUrl && (
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-          <p className="mb-3 text-xs font-bold uppercase tracking-widest text-gray-500">Result</p>
-          <BeforeAfter beforeUrl={photoUrl} afterUrl={renderUrl} downloadUrl={renderUrl} />
-        </div>
-      )}
-
-      {depthResult?.error && !depthRunning && (
-        <p className="text-xs text-red-600">Depth Anything V2: {depthResult.error}</p>
-      )}
-
-      {/* Debug panels — staff toggle */}
-      {(photo || pipelineDone) && (
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-          <div className="mb-3 flex items-center justify-between">
-            <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Debug</p>
-            <button
-              type="button"
-              onClick={() => setShowDebug((v) => !v)}
-              className="text-[10px] font-medium text-gray-400 hover:text-gray-600"
+          {!photoUrl ? (
+            <div
+              onClick={handleChangeRoom}
+              onDrop={handleDrop}
+              onDragOver={(e) => e.preventDefault()}
+              className="flex h-full cursor-pointer flex-col items-center justify-center gap-3 text-center"
             >
-              {showDebug ? "▲ hide" : "▼ show"}
-            </button>
-          </div>
-          {showDebug && (
+              <span className="text-sm font-medium text-[#faf8f5]">Upload a room photo</span>
+              <span className="text-xs text-stone-500">drag &amp; drop or click · JPEG · PNG · WebP</span>
+            </div>
+          ) : (
             <>
-              <DebugPanels
-                originalUrl={photoUrl}
-                overlayUrl={overlayUrl}
-                maskHighlightUrl={maskHighlightUrl}
-                depthUrl={depthDisplayUrl}
-                renderUrl={renderUrl}
-                segRunning={segRunning}
-                depthRunning={depthRunning}
-                renderRunning={renderRunning}
+              {/* Blurred fill for letterboxed edges */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={renderUrl ?? photoUrl}
+                alt=""
+                aria-hidden="true"
+                className="absolute -inset-7.5 h-[calc(100%+60px)] w-[calc(100%+60px)] scale-110 object-cover opacity-55 blur-3xl saturate-150"
               />
 
-              {(floorDebugUrl || (renderRunning && selectedCat === "floor")) && (
-                <div className="mt-4 border-t border-gray-100 pt-4">
-                  <div className="mb-2 flex items-center justify-between">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                      Floor geometry — largest CC · extracted quadrilateral
-                    </p>
-                    {selectedCat === "floor" && (
-                      <div className="flex flex-wrap items-center gap-4">
-                        <label className="flex cursor-pointer items-center gap-1.5 text-[10px] font-medium text-indigo-600">
-                          <input
-                            type="checkbox"
-                            checked={uvDebug}
-                            onChange={(e) => {
-                              const next = e.target.checked;
-                              setUVDebug(next);
-                              if (next) { setCheckerboard(false); setDebugSlab(false); }
-                              if (selectedCat && selectedSegs.length > 0 && textureUrl) {
-                                void applyTexture(selectedCat, selectedSegs, settings, next, false, false);
-                              }
-                            }}
-                            className="h-3 w-3 rounded"
-                          />
-                          UV debug (U=red, V=green)
-                        </label>
-                        <label className="flex cursor-pointer items-center gap-1.5 text-[10px] font-medium text-amber-600">
-                          <input
-                            type="checkbox"
-                            checked={checkerboard}
-                            onChange={(e) => {
-                              const next = e.target.checked;
-                              setCheckerboard(next);
-                              if (next) { setUVDebug(false); setDebugSlab(false); }
-                              if (selectedCat && selectedSegs.length > 0 && textureUrl) {
-                                void applyTexture(selectedCat, selectedSegs, settings, false, next, false);
-                              }
-                            }}
-                            className="h-3 w-3 rounded"
-                          />
-                          Grid debug
-                        </label>
-                        {(renderMode === "slab" || renderMode === "sequential") && (
-                          <label className="flex cursor-pointer items-center gap-1.5 text-[10px] font-medium text-emerald-600">
-                            <input
-                              type="checkbox"
-                              checked={debugSlab}
-                              onChange={(e) => {
-                                const next = e.target.checked;
-                                setDebugSlab(next);
-                                if (next) { setUVDebug(false); setCheckerboard(false); }
-                                if (selectedCat && selectedSegs.length > 0 && textureUrl) {
-                                  void applyTexture(selectedCat, selectedSegs, settings, false, false, next);
-                                }
-                              }}
-                              className="h-3 w-3 rounded"
-                            />
-                            {renderMode === "sequential" ? "UV continuity lines" : "Slab debug (col:row labels)"}
-                          </label>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  {renderRunning && selectedCat === "floor" && !floorDebugUrl ? (
-                    <div className="flex h-32 items-center justify-center rounded-xl border border-indigo-100 bg-indigo-50">
-                      <div className="flex flex-col items-center gap-2">
-                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-indigo-400 border-t-transparent" />
-                        <p className="text-[10px] text-indigo-500">Analysing floor…</p>
+              <div className="absolute inset-0 flex items-center justify-center p-6">
+                <div className="relative max-h-full max-w-full overflow-hidden rounded-sm shadow-2xl">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={renderUrl ?? photoUrl}
+                    alt="Room preview"
+                    className="max-h-[calc(100vh-220px)] max-w-full object-contain"
+                    draggable={false}
+                  />
+
+                  {(segRunning || depthRunning) && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                      <div className="flex flex-col items-center gap-2 text-white">
+                        <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#c8a96a] border-t-transparent" />
+                        <p className="text-xs">Analyzing room… (first run may take 1–2 min)</p>
                       </div>
                     </div>
-                  ) : floorDebugUrl ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img
-                      src={floorDebugUrl}
-                      alt="Floor geometry debug"
-                      className="max-h-72 w-full rounded-xl border border-gray-100 object-contain"
-                      draggable={false}
+                  )}
+
+                  {segResult && !segRunning && (
+                    <SurfacePills
+                      segments={segResult.segments}
+                      selected={selectedCat}
+                      imgWidth={imgDims.w}
+                      imgHeight={imgDims.h}
+                      onSelect={(cat, segs) => void handleSurfaceSelect(cat, segs)}
                     />
-                  ) : null}
+                  )}
                 </div>
+              </div>
+
+              <p className="absolute bottom-4 right-5 z-5 font-serif text-[13px] italic text-[#faf8f5]/55">
+                Visualized by <span className="not-italic text-[#faf8f5]/80">Trivedi Grani Marmo</span>
+              </p>
+
+              {pipelineError && !segRunning && (
+                <p className="absolute left-5 top-4 z-5 max-w-sm rounded-lg bg-red-950/80 px-3 py-2 text-xs text-red-200">
+                  {pipelineError}
+                </p>
+              )}
+
+              {textureUrl && selectedCat && selectedCat !== "stairs" && (
+                <BottomBar
+                  slab={selectedSlab ? {
+                    thumbnailUrl: selectedSlab.thumbnailUrl,
+                    name: selectedSlab.marbleName ?? selectedSlab.slabCode ?? "Selected slab",
+                    size: currentSlabSize,
+                  } : null}
+                  settings={settings}
+                  onSettingsChange={setSettings}
+                  slabSettings={slabSettings}
+                  onSlabSettingsChange={setSlabSettings}
+                  onApply={handleApply}
+                  rendering={renderRunning}
+                  onReset={handleReset}
+                  moreSettings={moreSettings}
+                  floorControlsDisabled={selectedCat !== "floor"}
+                />
               )}
             </>
+          )}
+        </div>
+      </div>
+
+      {zoomUrl && <ZoomLightbox url={zoomUrl} onClose={() => setZoomUrl(null)} />}
+
+      {compareOpen && shareableUrl && (
+        <CompareView
+          onClose={() => setCompareOpen(false)}
+          leftUrl={shareableUrl}
+          leftLabel={selectedSlab?.marbleName ?? selectedSlab?.slabCode ?? "Current selection"}
+          comparisons={comparisons.filter((c) => c.id !== currentSlab.id)}
+          rightSlabId={compareRightSlab?.id ?? null}
+          onSelectRight={(slab) => void handleSelectCompareSlab(slab)}
+          rightUrl={compareRightUrl}
+          rightLabel={compareRightSlab?.marbleName ?? compareRightSlab?.slabCode ?? null}
+          rightRendering={compareRendering}
+        />
+      )}
+
+      <EnquireModal
+        open={enquireOpen}
+        onClose={() => setEnquireOpen(false)}
+        slabCode={selectedSlab?.slabCode ?? null}
+        marbleName={selectedSlab?.marbleName ?? null}
+        dimensions={currentSlabSize}
+        renderShareUrl={lastSharedUrl}
+      />
+
+      {/* Debug panels — staff toggle, normal document flow below the app shell */}
+      {showDebug && (photo || pipelineDone) && (
+        <div className="border-t border-stone-200 bg-white p-6">
+          <p className="mb-3 text-xs font-bold uppercase tracking-widest text-stone-500">Debug</p>
+          <DebugPanels
+            originalUrl={photoUrl}
+            overlayUrl={overlayUrl}
+            maskHighlightUrl={maskHighlightUrl}
+            depthUrl={depthDisplayUrl}
+            renderUrl={renderUrl}
+            segRunning={segRunning}
+            depthRunning={depthRunning}
+            renderRunning={renderRunning}
+          />
+          {(floorDebugUrl || (renderRunning && selectedCat === "floor")) && (
+            <div className="mt-4 border-t border-stone-100 pt-4">
+              <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-stone-400">
+                Floor geometry — largest CC · extracted quadrilateral
+              </p>
+              {renderRunning && selectedCat === "floor" && !floorDebugUrl ? (
+                <div className="flex h-32 items-center justify-center rounded-xl border border-stone-200 bg-stone-50">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#c8a96a] border-t-transparent" />
+                </div>
+              ) : floorDebugUrl ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={floorDebugUrl}
+                  alt="Floor geometry debug"
+                  className="max-h-72 w-full rounded-xl border border-stone-200 object-contain"
+                  draggable={false}
+                />
+              ) : null}
+            </div>
           )}
         </div>
       )}

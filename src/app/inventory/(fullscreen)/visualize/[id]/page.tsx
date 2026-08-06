@@ -1,9 +1,5 @@
-import Image from "next/image";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
 import { notFound } from "next/navigation";
 
-import { ExitButton } from "@/app/inventory/_components/visualizer-exit-button";
 import { VisualizerM2F } from "@/app/inventory/_components/visualizer-m2f";
 import { getSlabById, getSlabImages } from "@/app/inventory/_lib/slab-detail";
 import { withCloudinaryThumbnail } from "@/lib/cloudinary/upload";
@@ -17,7 +13,7 @@ async function getComparisonSlabs(excludeId: string) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("slabs")
-    .select("id, slab_code, marble_lots(marble_name), slab_images(image_url, sort_order)")
+    .select("id, slab_code, length, width, marble_lots(marble_name), slab_images(image_url, sort_order)")
     .neq("id", excludeId)
     .order("created_at", { ascending: false })
     .limit(10);
@@ -25,6 +21,8 @@ async function getComparisonSlabs(excludeId: string) {
   return (data ?? []).map((row: {
     id: string;
     slab_code: string | null;
+    length: number | null;
+    width: number | null;
     marble_lots: Array<{ marble_name: string | null }> | { marble_name: string | null } | null;
     slab_images: Array<{ image_url: string | null; sort_order: number | null }>;
   }) => {
@@ -38,6 +36,8 @@ async function getComparisonSlabs(excludeId: string) {
       marbleName: lot?.marble_name ?? null,
       thumbnailUrl: rawUrl ? withCloudinaryThumbnail(rawUrl) : null,
       imageUrl: rawUrl,
+      length: row.length ?? null,
+      width: row.width ?? null,
     };
   });
 }
@@ -61,57 +61,15 @@ export default async function VisualizeSlabPage({ params }: Props) {
     marbleName: slab.marbleName ?? null,
     thumbnailUrl: rawImageUrl ? withCloudinaryThumbnail(rawImageUrl) : slab.thumbnailUrl,
     imageUrl: rawImageUrl,
+    length: slab.length,
+    width: slab.width,
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50">
-      {/* Dark header */}
-      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-white/5 bg-gray-950 px-5 py-3 md:px-8">
-        <div className="flex items-center gap-3">
-          <div className="relative h-9 w-9 shrink-0">
-            <Image
-              src="/images/vijay-trivedi-logo.webp"
-              alt="Vijay Trivedi Group"
-              fill
-              className="object-contain"
-            />
-          </div>
-          <span className="h-7 w-px shrink-0 bg-white/20" aria-hidden="true" />
-          <Image
-            src="/images/TRIVEDI MARBLES PVT.LTD.webp"
-            alt="Trivedi Marbles Pvt. Ltd."
-            width={90}
-            height={36}
-            className="h-9 w-auto shrink-0 object-contain"
-          />
-          <div className="flex flex-col leading-tight">
-            <span className="text-[10px] font-medium uppercase tracking-widest text-stone-500">
-              Trivedi Technologies
-            </span>
-            <span className="text-sm font-semibold text-white">
-              Marble Visualizer
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Link
-            href="/inventory/visualize"
-            className="flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-gray-900 transition-colors hover:bg-stone-100"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Change slab</span>
-          </Link>
-          <ExitButton href={`/inventory/slab/${currentSlab.id}`} />
-        </div>
-      </header>
-
-      {/* Content */}
-      <main className="flex-1 px-5 py-6 md:px-8 md:py-8">
-        <div className="mx-auto max-w-3xl">
-          <VisualizerM2F currentSlab={currentSlab} comparisons={comparisons} />
-        </div>
-      </main>
-    </div>
+    <VisualizerM2F
+      currentSlab={currentSlab}
+      comparisons={comparisons}
+      exitHref={`/inventory/slab/${currentSlab.id}`}
+    />
   );
 }

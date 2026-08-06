@@ -70,7 +70,7 @@ export default async function VisualizePage() {
 
   return (
     <VisualizerSplash>
-      <div className="flex min-h-screen flex-col bg-gray-50">
+      <div className="flex min-h-screen flex-col bg-stone-50">
         {/* Dark header */}
         <header className="sticky top-0 z-20 flex items-center justify-between border-b border-white/5 bg-gray-950 px-5 py-3 md:px-8">
           <div className="flex items-center gap-3">
@@ -104,7 +104,7 @@ export default async function VisualizePage() {
         </header>
 
         {/* Content */}
-        <div className="flex-1 px-5 py-6 md:px-8 md:py-8">
+        <div className="flex-1 px-5 py-10 md:px-8 md:py-14">
           <VisualizerPicker lots={lots} />
         </div>
       </div>

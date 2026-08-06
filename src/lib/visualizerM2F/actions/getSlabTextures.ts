@@ -16,6 +16,8 @@ export async function getSlabTextures(limit = 48): Promise<SlabTexture[]> {
       .select(`
         id,
         slab_code,
+        length,
+        width,
         marble_lots(marble_name, lot_number),
         slab_images!inner(image_url, sort_order)
       `)
@@ -32,6 +34,8 @@ export async function getSlabTextures(limit = 48): Promise<SlabTexture[]> {
         const r = row as {
           id: unknown;
           slab_code: unknown;
+          length: unknown;
+          width: unknown;
           marble_lots: unknown;
           slab_images: unknown;
         };
@@ -62,6 +66,8 @@ export async function getSlabTextures(limit = 48): Promise<SlabTexture[]> {
           marbleName:   typeof lot?.marble_name === "string" ? lot.marble_name : null,
           lotNumber:    typeof lot?.lot_number === "string" ? lot.lot_number : null,
           thumbnailUrl,
+          length:       typeof r.length === "number" ? r.length : null,
+          width:        typeof r.width  === "number" ? r.width  : null,
         } satisfies SlabTexture;
       })
       .filter((s): s is SlabTexture => s !== null);

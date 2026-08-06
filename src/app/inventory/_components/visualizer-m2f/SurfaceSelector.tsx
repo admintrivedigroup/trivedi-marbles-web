@@ -12,12 +12,50 @@ type Props = {
 
 const SURFACE_CATS = ["floor", "wall", "ceiling", "stairs", "countertop"] as const;
 
-const CAT_META: Record<string, { label: string; icon: string; color: string }> = {
-  floor:      { label: "Floor",      icon: "🔲", color: "bg-violet-100 border-violet-400 text-violet-700" },
-  wall:       { label: "Wall",       icon: "🟦", color: "bg-sky-100 border-sky-400 text-sky-700" },
-  ceiling:    { label: "Ceiling",    icon: "⬜", color: "bg-yellow-100 border-yellow-400 text-yellow-700" },
-  stairs:     { label: "Stairs",     icon: "🪜", color: "bg-orange-100 border-orange-400 text-orange-700" },
-  countertop: { label: "Countertop", icon: "📋", color: "bg-amber-100 border-amber-400 text-amber-700" },
+function FloorIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect x="3" y="10" width="18" height="9" rx="1" />
+      <path d="M3 10l9-6 9 6" />
+    </svg>
+  );
+}
+function WallIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect x="4" y="4" width="16" height="16" rx="1" />
+    </svg>
+  );
+}
+function CeilingIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M4 8h16M4 8l3-4h10l3 4" />
+    </svg>
+  );
+}
+function StairsIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M4 20v-4h4v-4h4V8h4V4h4" />
+    </svg>
+  );
+}
+function CountertopIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect x="3" y="9" width="18" height="4" rx="0.5" />
+      <path d="M6 13v6M18 13v6" />
+    </svg>
+  );
+}
+
+const CAT_META: Record<string, { label: string; Icon: (p: React.SVGProps<SVGSVGElement>) => React.ReactElement }> = {
+  floor:      { label: "Floor",      Icon: FloorIcon },
+  wall:       { label: "Wall",       Icon: WallIcon },
+  ceiling:    { label: "Ceiling",    Icon: CeilingIcon },
+  stairs:     { label: "Stairs",     Icon: StairsIcon },
+  countertop: { label: "Countertop", Icon: CountertopIcon },
 };
 
 export function SurfaceSelector({ segments, selected, onSelect }: Props) {
@@ -36,43 +74,43 @@ export function SurfaceSelector({ segments, selected, onSelect }: Props) {
 
   if (groups.size === 0) {
     return (
-      <p className="text-sm text-gray-400">
-        No surface segments detected — check that MASK2FORMER_VERSION is set and the image has recognisable surfaces.
+      <p className="px-3 py-2 text-[11px] text-stone-400">
+        No surfaces detected yet.
       </p>
     );
   }
 
   return (
-    <div className="flex flex-wrap gap-2">
-      {SURFACE_CATS.map((cat) => {
-        const segs = groups.get(cat);
-        if (!segs) return null;
-        const meta     = CAT_META[cat]!;
-        const isActive = selected === cat;
+    <div>
+      <div className="flex gap-1 p-2">
+        {SURFACE_CATS.map((cat) => {
+          const segs = groups.get(cat);
+          if (!segs) return null;
+          const meta     = CAT_META[cat]!;
+          const Icon     = meta.Icon;
+          const isActive = selected === cat;
 
-        return (
-          <button
-            key={cat}
-            type="button"
-            onClick={() => onSelect(cat, segs)}
-            className={`flex items-center gap-2 rounded-xl border-2 px-4 py-2 text-sm font-semibold transition-all ${
-              isActive ? meta.color : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
-            }`}
-          >
-            <span>{meta.icon}</span>
-            <span>{meta.label}</span>
-            {segs.length > 1 && (
-              <span className="rounded-full bg-black/10 px-1.5 py-0.5 text-[10px]">
-                {segs.length}
-              </span>
-            )}
-          </button>
-        );
-      })}
+          return (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => onSelect(cat, segs)}
+              className={`flex flex-1 flex-col items-center gap-1 rounded-lg px-2 py-2 text-[11px] font-semibold transition-colors ${
+                isActive
+                  ? "bg-[#17130f] text-[#faf8f5]"
+                  : "text-stone-500 hover:bg-stone-100"
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              {meta.label}
+            </button>
+          );
+        })}
+      </div>
 
       {/* Stairs explanation */}
       {groups.has("stairs") && selected === "stairs" && (
-        <p className="w-full text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+        <p className="mx-2 mb-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-700">
           Stair rendering requires separate tread/riser handling — showing mask overlay only.
         </p>
       )}

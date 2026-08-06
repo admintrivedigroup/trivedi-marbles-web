@@ -14,7 +14,7 @@
 
 import { decodeMask, unionMasks, loadImage } from "./maskUtils";
 import type { RenderJob } from "./renderUtils";
-import type { SlabSettings } from "./types";
+import type { PipelineSegment, SlabSettings } from "./types";
 import { DEFAULT_SLAB_SETTINGS } from "./types";
 
 // ── Canvas helper ────────────────────────────────────────────────────────────
@@ -148,6 +148,8 @@ export type FloorGeometry = {
   highRes:   Float32Array;
   /** Per-pixel 0..1 feather alpha, 1 deep inside the floor mask, ramping to 0 at the mask edge. */
   edgeAlpha: Float32Array;
+  /** Art-directed glossy highlight anchored near a detected light source — see computeSpecularHighlight. Null when no window/fixture segment is found. */
+  specular: SpecularHighlight | null;
 };
 
 // ── Step 1: Largest connected component (BFS) ────────────────────────────────
@@ -567,6 +569,36 @@ function computeEdgeAlpha(surfMask: Uint8Array, W: number, H: number): Float32Ar
   return blurred;
 }
 
+const CONTACT_SHADOW_STRENGTH   = 0.45;  // 0..1 — how dark the rim gets right at an occluder's edge
+const CONTACT_SHADOW_PX_FRAC    = 1 / 130; // rim width as a fraction of min(W,H) — a physical-width contact
+                                            // shadow, so it doesn't scale with how big the object itself is
+
+// Per-pixel multiplier (1 = unaffected) that darkens the floor texture in a soft rim just
+// outside each occluder's mask boundary, fading back to 1 a few pixels out — makes furniture
+// read as resting on the floor rather than pasted over it. The occluder's own cutout stays
+// hard-edged: this only ever touches floor-side pixels (occBin === 0), the compositing
+// decision of what counts as "occluder" is untouched, so there's nothing here that could
+// soften that boundary — only darken the texture just beyond it.
+export function computeContactShadow(occMask: Uint8Array, W: number, H: number): Float32Array {
+  const n = W * H;
+  const occBin = new Float32Array(n);
+  for (let i = 0; i < n; i++) occBin[i] = (occMask[i] ?? 0) > 128 ? 1 : 0;
+
+  const radius  = Math.max(2, Math.round(Math.min(W, H) * CONTACT_SHADOW_PX_FRAC));
+  const tmp     = new Float32Array(n);
+  const blurred = new Float32Array(n);
+  boxBlurPass(occBin, tmp, W, H, radius, true);
+  boxBlurPass(tmp, blurred, W, H, radius, false);
+
+  const mul = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    if (occBin[i]! > 0) { mul[i] = 1; continue; } // occluder pixels aren't rendered — value unused
+    const closeness = Math.min(1, blurred[i]!);
+    mul[i] = 1 - closeness * CONTACT_SHADOW_STRENGTH;
+  }
+  return mul;
+}
+
 // Applies the low/high-frequency lighting layers to a texture-space RGB triplet,
 // then cross-dissolves with the original pixel using opacity scaled by the edge
 // feather (so op still behaves as before in the mask interior, but transitions
@@ -597,6 +629,149 @@ function compositeLit(
     clamp(g * effOp + origG * (1 - effOp)),
     clamp(b * effOp + origB * (1 - effOp)),
   ];
+}
+
+// ── Art-directed specular highlight ───────────────────────────────────────────
+//
+// A deliberate glossy hotspot placed where a detected light source (window, lamp,
+// chandelier, sconce) would plausibly cast light onto the floor, rather than relying
+// only on the photo's own derived luminance (computeLightingLayers, above). This is
+// not a physical light-transport simulation — monocular depth can't recover that — so
+// depth is used only as a secondary intensity nudge, and placement/sizing rides on the
+// SAME already-correct per-pixel UV the texture sampler uses (rawU/rawV), which is why
+// this needs no new warp math and inherits perspective foreshortening for free.
+//
+// Split into pure/testable pieces (anchor-finding, param derivation, falloff) and a
+// thin async orchestrator that does the mask/depth decoding.
+
+export type SpecularHighlight = {
+  au: number; av: number;           // anchor position in homography UV space
+  radiusU: number; radiusV: number; // Gaussian falloff radii in UV space (1σ)
+  intensity: number;                // 0..1 peak brightening strength
+};
+
+const LIGHT_SOURCE_LABEL_RE = /window|windowpane|skylight|lamp|chandelier|sconce|streetlight/i;
+const SPECULAR_RADIUS_U        = 0.16;
+const SPECULAR_RADIUS_V        = 0.22;
+const SPECULAR_BASE_INTENSITY  = 0.5;
+const SPECULAR_FALLOFF_CUTOFF2 = 9; // 3σ² — beyond this, contribution is visually negligible
+
+/**
+ * Walks straight down from a light-source mask's lowest point (its sill/base — the
+ * point closest to the floor) until it finds a floor pixel in the same column.
+ * Approximates where that light source's illumination would meet the floor.
+ * Returns null rather than guessing if no floor is found within a sane scan range.
+ */
+export function findFloorAnchorBelowMask(
+  lightMask: Uint8Array, surfMask: Uint8Array, W: number, H: number,
+): FloorPoint | null {
+  let sumX = 0, count = 0, bottomY = -1;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      if ((lightMask[y * W + x] ?? 0) > 128) {
+        sumX += x; count++;
+        if (y > bottomY) bottomY = y;
+      }
+    }
+  }
+  if (count === 0) return null;
+  const cx = Math.round(sumX / count);
+
+  const maxScan = Math.round(H * 0.6);
+  for (let dy = 0; dy < maxScan; dy++) {
+    const y = bottomY + dy;
+    if (y >= H) break;
+    if ((surfMask[y * W + cx] ?? 0) > 128) return { x: cx, y };
+  }
+  return null;
+}
+
+/**
+ * Derives the UV-space highlight params from an image-space anchor. Depth (if present)
+ * only nudges intensity — brighter depth pixel (Depth Anything V2 convention: nearer =
+ * brighter) ⇒ a modestly more prominent highlight, since near-camera specular reflections
+ * are naturally more visible than distant ones. Missing/failed depth just keeps the base
+ * intensity rather than blocking the highlight.
+ */
+export function computeSpecularParams(
+  anchor: FloorPoint, depth: Uint8Array | null, W: number, h: number[],
+): SpecularHighlight {
+  const { x: au, y: av } = applyH(h, anchor.x, anchor.y);
+
+  let intensity = SPECULAR_BASE_INTENSITY;
+  if (depth) {
+    const dNear = depth[Math.round(anchor.y) * W + Math.round(anchor.x)] ?? 128;
+    intensity = SPECULAR_BASE_INTENSITY * (0.7 + 0.6 * (dNear / 255));
+    intensity = Math.max(0.25, Math.min(0.85, intensity));
+  }
+
+  return { au, av, radiusU: SPECULAR_RADIUS_U, radiusV: SPECULAR_RADIUS_V, intensity };
+}
+
+/** Gaussian falloff, screen-blended onto an already-composited pixel — brightens toward white, never darkens, never overflows. */
+export function applySpecularHighlight(
+  r: number, g: number, b: number,
+  rawU: number, rawV: number,
+  specular: SpecularHighlight | null,
+): [number, number, number] {
+  if (!specular) return [r, g, b];
+  const dU = (rawU - specular.au) / specular.radiusU;
+  const dV = (rawV - specular.av) / specular.radiusV;
+  const d2 = dU * dU + dV * dV;
+  if (d2 > SPECULAR_FALLOFF_CUTOFF2) return [r, g, b];
+
+  const eff = Math.exp(-d2 / 2) * specular.intensity * 255;
+  return [
+    clamp(255 - (255 - r) * (255 - eff) / 255),
+    clamp(255 - (255 - g) * (255 - eff) / 255),
+    clamp(255 - (255 - b) * (255 - eff) / 255),
+  ];
+}
+
+// Picks the largest-area segment whose label matches a light-source keyword — the most
+// visually prominent light source gets one deliberate highlight, rather than one per
+// window/fixture (which would read as busy/artificial).
+async function findBrightestLightMask(
+  segments: PipelineSegment[], W: number, H: number,
+): Promise<Uint8Array | null> {
+  const candidates = segments.filter((s) => LIGHT_SOURCE_LABEL_RE.test(s.label));
+  if (candidates.length === 0) return null;
+
+  const decoded = await Promise.all(candidates.map((s) => decodeMask(s.maskBase64, W, H)));
+  let bestIdx = -1, bestCount = 0;
+  for (let i = 0; i < decoded.length; i++) {
+    let count = 0;
+    for (let p = 0; p < decoded[i]!.length; p++) if (decoded[i]![p]! > 128) count++;
+    if (count > bestCount) { bestCount = count; bestIdx = i; }
+  }
+  // Too small to be a meaningful light source (a sliver of window at the image edge, etc).
+  if (bestIdx === -1 || bestCount < 25) return null;
+  return decoded[bestIdx]!;
+}
+
+async function computeSpecularHighlight(
+  segments: PipelineSegment[],
+  depthBase64: string | null,
+  surfMask: Uint8Array,
+  W: number, H: number,
+  h: number[],
+): Promise<SpecularHighlight | null> {
+  const lightMask = await findBrightestLightMask(segments, W, H);
+  if (!lightMask) return null;
+
+  const anchor = findFloorAnchorBelowMask(lightMask, surfMask, W, H);
+  if (!anchor) return null; // no floor found below this light source — skip rather than guess
+
+  let depth: Uint8Array | null = null;
+  if (depthBase64) {
+    try {
+      depth = await decodeMask(depthBase64, W, H);
+    } catch {
+      // Depth decode failed — keep depth null, base intensity still applies below.
+    }
+  }
+
+  return computeSpecularParams(anchor, depth, W, h);
 }
 
 // ── Debug overlay ─────────────────────────────────────────────────────────────
@@ -676,9 +851,9 @@ async function makeDebugOverlay(
 const MAX_DIM = 1280;
 
 export async function computeFloorGeometry(
-  job: Pick<RenderJob, "originalDataUrl" | "surfaceMaskBases" | "occluderMaskBases" | "width" | "height">,
+  job: Pick<RenderJob, "originalDataUrl" | "surfaceMaskBases" | "occluderMaskBases" | "width" | "height" | "segments" | "depthBase64">,
 ): Promise<FloorGeometry> {
-  const { originalDataUrl, surfaceMaskBases, occluderMaskBases, width, height } = job;
+  const { originalDataUrl, surfaceMaskBases, occluderMaskBases, width, height, segments, depthBase64 } = job;
 
   // Cap resolution
   const scl = Math.min(1, MAX_DIM / Math.max(width || 1, height || 1));
@@ -745,7 +920,17 @@ export async function computeFloorGeometry(
   const { lowMul, highRes } = computeLightingLayers(origPx, surfMask, W, H);
   const edgeAlpha = computeEdgeAlpha(surfMask, W, H);
 
-  return { W, H, origPx, surfMask, occMask, cc, quad, h, debugUrl, lowMul, highRes, edgeAlpha };
+  // Fold the contact shadow into the same ambient multiplier lowMul already applies —
+  // conceptually the same kind of soft darkening, just sourced from occluder proximity
+  // instead of the photo's own luminance.
+  const contactShadow = computeContactShadow(occMask, W, H);
+  for (let i = 0; i < W * H; i++) lowMul[i] = lowMul[i]! * contactShadow[i]!;
+
+  const specular = h
+    ? await computeSpecularHighlight(segments ?? [], depthBase64 ?? null, surfMask, W, H, h)
+    : null;
+
+  return { W, H, origPx, surfMask, occMask, cc, quad, h, debugUrl, lowMul, highRes, edgeAlpha, specular };
 }
 
 // ── Texture stage: geometry + slab texture + settings → composite ────────────
@@ -758,7 +943,7 @@ export async function renderTextureFromGeometry(
   const isUVDebug      = job.debugUV          === true;
   const isCheckerboard = job.debugCheckerboard === true;
 
-  const { W, H, origPx, surfMask, occMask, h, quad, lowMul, highRes, edgeAlpha } = geometry;
+  const { W, H, origPx, surfMask, occMask, h, quad, lowMul, highRes, edgeAlpha, specular } = geometry;
 
   // ── Slab layout setup ────────────────────────────────────────────────────────
   const renderMode  = job.renderMode ?? "slab";
@@ -843,11 +1028,12 @@ export async function renderTextureFromGeometry(
                        || slabFracV < halfJointV || slabFracV > 1 - halfJointV;
 
         if (inJoint) {
-          const [jr, jg, jb] = compositeLit(
+          const [jr0, jg0, jb0] = compositeLit(
             jointRgb[0]!, jointRgb[1]!, jointRgb[2]!,
             origPx[ri]!, origPx[ri + 1]!, origPx[ri + 2]!,
             lowMul[i]!, highRes[i]!, edgeAlpha[i]!, op,
           );
+          const [jr, jg, jb] = applySpecularHighlight(jr0, jg0, jb0, rawU, rawV, specular);
           result[ri] = jr; result[ri + 1] = jg; result[ri + 2] = jb;
         } else if (isSequential) {
           // ── Sequential ────────────────────────────────────────────────────────
@@ -868,11 +1054,12 @@ export async function renderTextureFromGeometry(
           const wu = ((su % 1) + 1) % 1;   // mirrors sampleBilinear's internal wrap
           const wv = ((sv % 1) + 1) % 1;
           const [tr, tg, tb] = sampleBilinear(texPx, texW, texH, su, sv);
-          const [sr, sg, sb] = compositeLit(
+          const [sr0, sg0, sb0] = compositeLit(
             tr * brt, tg * brt, tb * brt,
             origPx[ri]!, origPx[ri + 1]!, origPx[ri + 2]!,
             lowMul[i]!, highRes[i]!, edgeAlpha[i]!, op,
           );
+          const [sr, sg, sb] = applySpecularHighlight(sr0, sg0, sb0, rawU, rawV, specular);
           result[ri] = sr; result[ri + 1] = sg; result[ri + 2] = sb;
           // Capture trace: last row-0 pixel near grout edge, and first row-1 pixel past grout.
           const rowIdx = Math.floor(rawV / slabH);
@@ -927,11 +1114,12 @@ export async function renderTextureFromGeometry(
 
             const [tr, tg, tb] = sampleBilinear(texPx, texW, texH, su, sv);
             const totalBrt = brt * p.brightness;
-            const [rr, rg, rb] = compositeLit(
+            const [rr0, rg0, rb0] = compositeLit(
               tr * totalBrt, tg * totalBrt, tb * totalBrt,
               origPx[ri]!, origPx[ri + 1]!, origPx[ri + 2]!,
               lowMul[i]!, highRes[i]!, edgeAlpha[i]!, op,
             );
+            const [rr, rg, rb] = applySpecularHighlight(rr0, rg0, rb0, rawU, rawV, specular);
             result[ri] = rr; result[ri + 1] = rg; result[ri + 2] = rb;
           }
         }
@@ -950,11 +1138,12 @@ export async function renderTextureFromGeometry(
 
         const [tr, tg, tb] = sampleBilinear(texPx, texW, texH, u, v);
 
-        const [cr, cg, cb] = compositeLit(
+        const [cr0, cg0, cb0] = compositeLit(
           tr * brt, tg * brt, tb * brt,
           origPx[ri]!, origPx[ri + 1]!, origPx[ri + 2]!,
           lowMul[i]!, highRes[i]!, edgeAlpha[i]!, op,
         );
+        const [cr, cg, cb] = applySpecularHighlight(cr0, cg0, cb0, rawU, rawV, specular);
         result[ri] = cr; result[ri + 1] = cg; result[ri + 2] = cb;
       }
     } else {

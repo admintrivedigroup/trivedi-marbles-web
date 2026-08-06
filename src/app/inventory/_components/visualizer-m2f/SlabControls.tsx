@@ -20,7 +20,7 @@ export function SlabControls({ settings, onChange }: Props) {
 
         {/* Slab width */}
         <div>
-          <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-gray-400">
+          <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-stone-400">
             Slab width — ≈{approxAcross} across
           </label>
           <input
@@ -28,16 +28,16 @@ export function SlabControls({ settings, onChange }: Props) {
             min={0.10} max={0.50} step={0.025}
             value={settings.slabWidth}
             onChange={(e) => set("slabWidth", Number(e.target.value))}
-            className="w-full accent-indigo-500"
+            className="w-full accent-[#9c7c42]"
           />
-          <div className="flex justify-between text-[9px] text-gray-300 mt-0.5">
+          <div className="flex justify-between text-[9px] text-stone-300 mt-0.5">
             <span>narrow</span><span>wide</span>
           </div>
         </div>
 
         {/* Slab height */}
         <div>
-          <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-gray-400">
+          <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-stone-400">
             Slab height — ≈{approxDeep} rows
           </label>
           <input
@@ -45,16 +45,16 @@ export function SlabControls({ settings, onChange }: Props) {
             min={0.10} max={0.50} step={0.025}
             value={settings.slabHeight}
             onChange={(e) => set("slabHeight", Number(e.target.value))}
-            className="w-full accent-indigo-500"
+            className="w-full accent-[#9c7c42]"
           />
-          <div className="flex justify-between text-[9px] text-gray-300 mt-0.5">
+          <div className="flex justify-between text-[9px] text-stone-300 mt-0.5">
             <span>short</span><span>tall</span>
           </div>
         </div>
 
         {/* Joint size */}
         <div>
-          <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-gray-400">
+          <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-stone-400">
             Grout thickness — {settings.jointSize === 0 ? "none" : settings.jointSize.toFixed(3)}
           </label>
           <input
@@ -62,16 +62,16 @@ export function SlabControls({ settings, onChange }: Props) {
             min={0} max={0.015} step={0.001}
             value={settings.jointSize}
             onChange={(e) => set("jointSize", Number(e.target.value))}
-            className="w-full accent-indigo-500"
+            className="w-full accent-[#9c7c42]"
           />
-          <div className="flex justify-between text-[9px] text-gray-300 mt-0.5">
+          <div className="flex justify-between text-[9px] text-stone-300 mt-0.5">
             <span>none</span><span>wide</span>
           </div>
         </div>
 
         {/* Joint color */}
         <div>
-          <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-gray-400">
+          <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-stone-400">
             Grout color
           </label>
           <div className="flex items-center gap-2">
@@ -79,25 +79,25 @@ export function SlabControls({ settings, onChange }: Props) {
               type="color"
               value={settings.jointColor}
               onChange={(e) => set("jointColor", e.target.value)}
-              className="h-8 w-16 cursor-pointer rounded-lg border border-gray-200 p-0.5"
+              className="h-8 w-16 cursor-pointer rounded-lg border border-stone-200 p-0.5"
             />
-            <span className="text-[10px] text-gray-400">{settings.jointColor}</span>
+            <span className="text-[10px] text-stone-400">{settings.jointColor}</span>
           </div>
         </div>
       </div>
 
       {/* Toggles */}
       <div className="flex items-center gap-5 pt-1">
-        <label className="flex cursor-pointer items-center gap-1.5 text-[10px] font-medium text-gray-600">
+        <label className="flex cursor-pointer items-center gap-1.5 text-[10px] font-medium text-stone-600">
           <input
             type="checkbox"
             checked={settings.randomize}
             onChange={(e) => set("randomize", e.target.checked)}
-            className="h-3 w-3 rounded"
+            className="h-3 w-3 rounded accent-[#9c7c42]"
           />
           Randomize offset / flip / brightness per slab
         </label>
-        <label className="flex cursor-not-allowed items-center gap-1.5 text-[10px] text-gray-300">
+        <label className="flex cursor-not-allowed items-center gap-1.5 text-[10px] text-stone-300">
           <input type="checkbox" disabled className="h-3 w-3 rounded" />
           Bookmatch (coming soon)
         </label>
