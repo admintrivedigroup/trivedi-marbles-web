@@ -116,13 +116,14 @@ export async function updateUserRole(
     .eq("user_id", userId);
 
   const actor = await getActingUser();
+  const { data: targetUser } = await admin.auth.admin.getUserById(userId);
   logAudit({
     userId: actor.id,
     userEmail: actor.email,
     action: "user.role_changed",
     targetType: "user",
     targetId: userId,
-    targetLabel: userId,
+    targetLabel: targetUser?.user?.email ?? userId,
     diff: { role },
   }).catch(() => {});
 
@@ -149,13 +150,14 @@ export async function updateUserPermission(
   if (error) return { error: `Failed to update permission. ${error.message}` };
 
   const actor = await getActingUser();
+  const { data: targetUser } = await admin.auth.admin.getUserById(userId);
   logAudit({
     userId: actor.id,
     userEmail: actor.email,
     action: "user.permission_changed",
     targetType: "user",
     targetId: userId,
-    targetLabel: userId,
+    targetLabel: targetUser?.user?.email ?? userId,
     diff: { permission, enabled },
   }).catch(() => {});
 
@@ -195,6 +197,9 @@ export async function removeUser(userId: string): Promise<UserManagementResult> 
 
   const admin = createAdminClient();
 
+  const { data: targetUser } = await admin.auth.admin.getUserById(userId);
+  const targetEmail = targetUser?.user?.email ?? userId;
+
   await admin.from("transfer_requests").update({ created_by: null }).eq("created_by", userId);
   await admin.from("user_warehouse_access").delete().eq("user_id", userId);
   await admin.from("user_permissions").delete().eq("user_id", userId);
@@ -210,7 +215,7 @@ export async function removeUser(userId: string): Promise<UserManagementResult> 
     action: "user.removed",
     targetType: "user",
     targetId: userId,
-    targetLabel: userId,
+    targetLabel: targetEmail,
     diff: {},
   }).catch(() => {});
 

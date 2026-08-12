@@ -36,6 +36,7 @@ import {
   type ResolvedPermissions,
 } from "@/app/inventory/_lib/permissions";
 import type { AuditLogEntry } from "@/app/inventory/_lib/audit-log";
+import { actionLabel } from "@/app/inventory/_lib/audit-labels";
 import type { ManagedUser } from "@/app/inventory/_lib/user-profile";
 import type { StockLookupOption } from "@/app/inventory/_lib/stock";
 
@@ -61,7 +62,7 @@ function describeAuditAction(entry: AuditLogEntry): string {
     case "user.role_changed": return `Changed role${label ? ` for ${label}` : ""}`;
     case "user.permission_changed": return `Updated a permission${label ? ` for ${label}` : ""}`;
     case "user.removed": return `Removed a user`;
-    default: return `${entry.action}${label ? ` — ${label}` : ""}`;
+    default: return `${actionLabel(entry.action)}${label ? ` — ${label}` : ""}`;
   }
 }
 
@@ -208,7 +209,9 @@ function UserCard({
           <div className="mt-0.5 flex items-center gap-3 text-xs text-gray-400">
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
-              {user.invitePending ? "Never signed in" : `Active ${formatRelativeTime(user.lastSignInAt)}`}
+              {user.invitePending
+                ? "Never signed in"
+                : `Active ${formatRelativeTime(user.lastSeenAt ?? user.lastSignInAt)}`}
             </span>
             {user.openTaskCount > 0 && (
               <span className="flex items-center gap-1">
@@ -559,7 +562,9 @@ export function UserManagement({
 
     return [...filtered].sort((a, b) => {
       if (sortBy === "active") {
-        return (b.lastSignInAt ?? "").localeCompare(a.lastSignInAt ?? "");
+        const aActive = a.lastSeenAt ?? a.lastSignInAt ?? "";
+        const bActive = b.lastSeenAt ?? b.lastSignInAt ?? "";
+        return bActive.localeCompare(aActive);
       }
       if (sortBy === "newest") {
         return (b.createdAt ?? "").localeCompare(a.createdAt ?? "");

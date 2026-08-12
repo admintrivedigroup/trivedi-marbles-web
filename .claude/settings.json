@@ -75,7 +75,8 @@
       "Bash(npx --yes playwright screenshot --viewport-size=800,700 --wait-for-timeout=2000 \"http://localhost:3000/inventory/login\" \"C:/Users/ladha/AppData/Local/Temp/claude/c--Users-ladha-Desktop-trivedi-marbles/ab70605b-5f56-4a51-8008-1e79f81e8861/scratchpad/login-fixed.png\")",
       "Bash(echo \"EXIT_CODE=$?\")",
       "Bash(node -e \"console.log\\(JSON.stringify\\(require\\('./package.json'\\).scripts, null, 2\\)\\)\")",
-      "Bash(curl -s -o /dev/null -w \"status=%{http_code} redirect=%{redirect_url}\\\\n\" http://localhost:3000/inventory/tasks)"
+      "Bash(curl -s -o /dev/null -w \"status=%{http_code} redirect=%{redirect_url}\\\\n\" http://localhost:3000/inventory/tasks)",
+      "Bash(node scratch-build-css-test.mjs)"
     ],
     "additionalDirectories": [
       "C:\\Users\\ladha\\AppData\\Local\\Temp\\claude\\c--Users-ladha-Desktop-trivedi-marbles\\19d4f574-d73e-4c4d-a67f-4e65879212d6\\scratchpad",

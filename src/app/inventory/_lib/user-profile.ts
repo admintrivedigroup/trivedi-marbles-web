@@ -28,6 +28,7 @@ export type ManagedUser = {
   warehouseIds: string[] | null;
   createdAt: string;
   lastSignInAt: string | null;
+  lastSeenAt: string | null;
   invitePending: boolean;
   openTaskCount: number;
 };
@@ -81,7 +82,7 @@ export async function getAllManagedUsers(): Promise<ManagedUser[]> {
   const [profilesRes, permissionsRes, warehouseRes, openTasksRes] = await Promise.all([
     admin
       .from("user_profiles")
-      .select("user_id, role, display_name, created_at")
+      .select("user_id, role, display_name, created_at, last_seen_at")
       .in("user_id", userIds),
     admin
       .from("user_permissions")
@@ -122,6 +123,7 @@ export async function getAllManagedUsers(): Promise<ManagedUser[]> {
           : null,
         createdAt: profile?.created_at ?? u.created_at ?? "",
         lastSignInAt: u.last_sign_in_at ?? null,
+        lastSeenAt: profile?.last_seen_at ?? null,
         invitePending: !u.last_sign_in_at,
         openTaskCount: openTasks.filter((t) => t.assigned_to === u.id).length,
       };

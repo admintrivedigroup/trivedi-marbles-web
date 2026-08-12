@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -30,6 +30,7 @@ import type { ReactNode } from "react";
 import dynamic from "next/dynamic";
 
 import { logout } from "@/app/inventory/_actions/auth";
+import { pingActivity } from "@/app/inventory/_actions/activity";
 import { cn } from "@/lib/utils";
 
 const QrScanner = dynamic(
@@ -171,6 +172,19 @@ export function InventoryShell({
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+
+  useEffect(() => {
+    const ping = () => {
+      if (document.visibilityState === "visible") pingActivity();
+    };
+    ping();
+    const interval = setInterval(ping, 2 * 60_000);
+    document.addEventListener("visibilitychange", ping);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", ping);
+    };
+  }, []);
 
   const visibleItems = navigationItems.filter((item) => {
     if (item.roles && !item.roles.includes(role)) return false;

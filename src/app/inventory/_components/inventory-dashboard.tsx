@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { actionLabel } from "@/app/inventory/_lib/audit-labels";
 import {
   Bar,
   BarChart,
@@ -378,7 +379,7 @@ function UserAuditFeedCard({
               <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-gray-900" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm text-gray-900">
-                  {entry.action}
+                  {actionLabel(entry.action)}
                   {entry.targetLabel ? ` · ${entry.targetLabel}` : ""}
                 </p>
                 <p className="mt-0.5 truncate text-xs text-gray-400">

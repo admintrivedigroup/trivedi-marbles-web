@@ -98,13 +98,22 @@ export async function updateLotSlabsStatus(
     return { error: `Unable to update slabs. ${updateError.message}`, updatedCount: 0 };
   }
 
+  const { data: lotRow } = await supabase
+    .from("marble_lots")
+    .select("lot_number, marble_name")
+    .eq("id", lotId)
+    .maybeSingle();
+  const lotLabel = lotRow
+    ? [lotRow.marble_name, lotRow.lot_number].filter(Boolean).join(" · ") || lotId
+    : lotId;
+
   logAudit({
     userId: user.id,
     userEmail: user.email ?? null,
     action: "lot.bulk_status_changed",
     targetType: "lot",
     targetId: lotId,
-    targetLabel: lotId,
+    targetLabel: lotLabel,
     diff: {
       action,
       after: config.targetStatus,
