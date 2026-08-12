@@ -8,12 +8,14 @@ export const metadata = {
 };
 
 export default async function TasksPage() {
-  const [tasks, users, profile, taskCategories] = await Promise.all([
-    getTasks(),
-    getAllManagedUsers(),
+  const [profile, users, taskCategories] = await Promise.all([
     getCurrentUserProfile(),
+    getAllManagedUsers(),
     getTaskCategoryColumns(),
   ]);
+
+  const isAdmin = profile?.role === "admin" || profile?.role === "superadmin";
+  const tasks = await getTasks(isAdmin ? undefined : { userId: profile?.userId ?? "" });
 
   const assignableUsers = users.map((u) => ({
     userId: u.userId,

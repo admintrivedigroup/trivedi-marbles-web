@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { TaskStatus } from "@/app/inventory/_lib/tasks";
+import { requireUser, requireAdmin } from "@/app/inventory/_lib/action-auth";
 
 export type ChecklistItemFormData = {
   title: string;
@@ -52,12 +53,33 @@ async function syncTaskFromChecklist(
   return { status, progress };
 }
 
+// ─── Ownership helper ───────────────────────────────────────────────────────────
+async function assertChecklistAccess(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  taskId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const auth = await requireUser();
+  if (!auth.ok) return auth;
+
+  const isAdmin = auth.profile.role === "admin" || auth.profile.role === "superadmin";
+  if (isAdmin) return { ok: true };
+
+  const { data: task } = await supabase.from("tasks").select("assigned_to").eq("id", taskId).maybeSingle();
+  if (!task || task.assigned_to !== auth.profile.userId) {
+    return { ok: false, error: "Not authorized" };
+  }
+  return { ok: true };
+}
+
 // ─── Create ───────────────────────────────────────────────────────────────────
 export async function createChecklistItem(
   taskId: string,
   data: ChecklistItemFormData,
 ): Promise<ChecklistActionResult> {
   const supabase = await createClient();
+
+  const access = await assertChecklistAccess(supabase, taskId);
+  if (!access.ok) return { success: false, error: access.error };
 
   const { data: row, error } = await supabase
     .from("task_checklist_items")
@@ -89,6 +111,9 @@ export async function toggleChecklistItem(
 ): Promise<ToggleResult> {
   const supabase = await createClient();
 
+  const access = await assertChecklistAccess(supabase, taskId);
+  if (!access.ok) return { success: false, error: access.error };
+
   const { error } = await supabase
     .from("task_checklist_items")
     .update({ completed })
@@ -110,6 +135,9 @@ export async function deleteChecklistItem(
 ): Promise<{ success: boolean; error?: string; newStatus?: TaskStatus; newProgress?: number }> {
   const supabase = await createClient();
 
+  const access = await assertChecklistAccess(supabase, taskId);
+  if (!access.ok) return { success: false, error: access.error };
+
   const { error } = await supabase
     .from("task_checklist_items")
     .delete()
@@ -128,6 +156,9 @@ export async function deleteChecklistItem(
 export async function approveTaskCompletion(
   taskId: string,
 ): Promise<{ success: boolean; error?: string }> {
+  const auth = await requireAdmin();
+  if (!auth.ok) return { success: false, error: auth.error };
+
   const supabase = await createClient();
 
   const { error } = await supabase

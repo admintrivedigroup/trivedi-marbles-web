@@ -42,12 +42,16 @@ export type TaskWithChecklist = Task & {
   checklist: ChecklistItem[];
 };
 
-export async function getTasks(): Promise<Task[]> {
+export async function getTasks(scope?: { userId: string }): Promise<Task[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("tasks")
     .select("*")
     .order("created_at", { ascending: false });
+
+  if (scope) query = query.eq("assigned_to", scope.userId);
+
+  const { data, error } = await query;
 
   if (error) throw new Error(error.message);
   return (data ?? []) as Task[];

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { TaskStatus, TaskPriority } from "@/app/inventory/_lib/tasks";
+import { requireUser, requireAdmin } from "@/app/inventory/_lib/action-auth";
 
 export type TaskFormData = {
   title: string;
@@ -27,11 +28,32 @@ type PendingChecklistItem = {
   assigned_name: string;
 };
 
+// ─── Ownership helper ───────────────────────────────────────────────────────────
+async function assertTaskOwnerOrAdmin(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  taskId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const auth = await requireUser();
+  if (!auth.ok) return auth;
+
+  const isAdmin = auth.profile.role === "admin" || auth.profile.role === "superadmin";
+  if (isAdmin) return { ok: true };
+
+  const { data: task } = await supabase.from("tasks").select("assigned_to").eq("id", taskId).maybeSingle();
+  if (!task || task.assigned_to !== auth.profile.userId) {
+    return { ok: false, error: "Not authorized" };
+  }
+  return { ok: true };
+}
+
 // ─── Create ───────────────────────────────────────────────────────────────────
 export async function createTask(
   data: TaskFormData,
   checklistItems: PendingChecklistItem[] = [],
 ): Promise<TaskActionResult> {
+  const auth = await requireUser();
+  if (!auth.ok) return { success: false, error: auth.error };
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -70,6 +92,9 @@ export async function updateTask(
 ): Promise<TaskActionResult> {
   const supabase = await createClient();
 
+  const access = await assertTaskOwnerOrAdmin(supabase, id);
+  if (!access.ok) return { success: false, error: access.error };
+
   const { error } = await supabase
     .from("tasks")
     .update({ ...sanitize(data, null), updated_at: new Date().toISOString() })
@@ -86,6 +111,9 @@ export async function updateTaskStatus(
   id: string,
   status: TaskStatus,
 ): Promise<{ success: boolean; error?: string }> {
+  const auth = await requireAdmin();
+  if (!auth.ok) return { success: false, error: auth.error };
+
   const supabase = await createClient();
 
   const patch: Record<string, unknown> = { status, updated_at: new Date().toISOString() };
@@ -105,6 +133,9 @@ export async function updateTaskProgress(
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient();
 
+  const access = await assertTaskOwnerOrAdmin(supabase, id);
+  if (!access.ok) return { success: false, error: access.error };
+
   const { error } = await supabase
     .from("tasks")
     .update({ progress, updated_at: new Date().toISOString() })
@@ -122,6 +153,9 @@ export async function deleteTask(
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient();
 
+  const access = await assertTaskOwnerOrAdmin(supabase, id);
+  if (!access.ok) return { success: false, error: access.error };
+
   const { error } = await supabase.from("tasks").delete().eq("id", id);
   if (error) return { success: false, error: error.message };
 
@@ -135,7 +169,24 @@ export async function deleteTasks(
   if (ids.length === 0) return { success: true };
   const supabase = await createClient();
 
-  const { error } = await supabase.from("tasks").delete().in("id", ids);
+  const auth = await requireUser();
+  if (!auth.ok) return { success: false, error: auth.error };
+
+  const isAdmin = auth.profile.role === "admin" || auth.profile.role === "superadmin";
+
+  let allowedIds = ids;
+  if (!isAdmin) {
+    const { data: ownedTasks } = await supabase
+      .from("tasks")
+      .select("id")
+      .in("id", ids)
+      .eq("assigned_to", auth.profile.userId);
+    allowedIds = (ownedTasks ?? []).map((t) => t.id as string);
+  }
+
+  if (allowedIds.length === 0) return { success: true };
+
+  const { error } = await supabase.from("tasks").delete().in("id", allowedIds);
   if (error) return { success: false, error: error.message };
 
   revalidatePath("/inventory/tasks");

@@ -9,8 +9,13 @@ type Props = {
 
 export async function generateMetadata({ params }: Props) {
   const { id } = await params;
-  const task = await getTaskWithChecklist(id);
-  return { title: task ? `${task.title} | Tasks` : "Task Not Found" };
+  const [task, profile] = await Promise.all([
+    getTaskWithChecklist(id),
+    getCurrentUserProfile(),
+  ]);
+  const isAdmin = profile?.role === "admin" || profile?.role === "superadmin";
+  const visible = task && (isAdmin || task.assigned_to === profile?.userId);
+  return { title: visible ? `${task.title} | Tasks` : "Task Not Found" };
 }
 
 export default async function TaskDetailPage({ params }: Props) {
@@ -23,6 +28,9 @@ export default async function TaskDetailPage({ params }: Props) {
   ]);
 
   if (!task) notFound();
+
+  const isAdmin = profile?.role === "admin" || profile?.role === "superadmin";
+  if (!isAdmin && task.assigned_to !== profile?.userId) notFound();
 
   const assignableUsers = users.map((u) => ({
     userId: u.userId,

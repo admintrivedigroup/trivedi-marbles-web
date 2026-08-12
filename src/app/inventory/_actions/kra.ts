@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { KraCalcType } from "@/app/inventory/_lib/kra-shared";
+import { requireAdmin } from "@/app/inventory/_lib/action-auth";
 
 type SimpleResult = { success: true } | { success: false; error: string };
 
@@ -16,6 +17,9 @@ export async function upsertKraEntry(
   points: number,
   reversePoints: number | null,
 ): Promise<SimpleResult> {
+  const auth = await requireAdmin();
+  if (!auth.ok) return { success: false, error: auth.error };
+
   const supabase = createAdminClient();
   const { error } = await supabase.from("kra_entries").upsert(
     {
@@ -53,6 +57,9 @@ export async function createKraColumn(
   employeeId: string,
   data: KraColumnFormData,
 ): Promise<{ success: true; id: string } | { success: false; error: string }> {
+  const auth = await requireAdmin();
+  if (!auth.ok) return { success: false, error: auth.error };
+
   const supabase = createAdminClient();
 
   const { data: top } = await supabase
@@ -80,6 +87,9 @@ export async function updateKraColumn(
   id: string,
   data: KraColumnFormData,
 ): Promise<SimpleResult> {
+  const auth = await requireAdmin();
+  if (!auth.ok) return { success: false, error: auth.error };
+
   const supabase = createAdminClient();
   const { error } = await supabase
     .from("kra_columns")
@@ -91,6 +101,9 @@ export async function updateKraColumn(
 }
 
 export async function deleteKraColumn(id: string): Promise<SimpleResult> {
+  const auth = await requireAdmin();
+  if (!auth.ok) return { success: false, error: auth.error };
+
   const supabase = createAdminClient();
 
   const { data: col } = await supabase
@@ -113,6 +126,9 @@ export async function moveKraColumn(
   direction: "up" | "down",
   employeeId: string,
 ): Promise<SimpleResult> {
+  const auth = await requireAdmin();
+  if (!auth.ok) return { success: false, error: auth.error };
+
   const supabase = createAdminClient();
 
   const { data: cols, error: fetchErr } = await supabase
