@@ -67,7 +67,7 @@ trivedi-marbles/
 │   │       ├── login/               # Login page
 │   │       ├── forgot-password/     # Password recovery
 │   │       ├── reset-password/      # Password reset
-│   │       ├── auth/callback/       # OAuth callback handler
+│   │       ├── auth/confirm/        # Click-to-confirm invite/reset/signup links
 │   │       ├── dashboard/           # Analytics & KPIs
 │   │       ├── list/                # Slab inventory table
 │   │       ├── add/                 # Add new stock (lot + slabs)
@@ -280,15 +280,17 @@ All routes under `/inventory/*` require authentication. Unauthenticated users ar
 
 1. User requests reset at `/inventory/forgot-password`.
 2. `forgotPassword()` server action calls `supabase.auth.resetPasswordForEmail()`.
-3. Supabase sends an email with a magic link pointing to `/inventory/auth/callback`.
-4. The callback route exchanges the code for a session, then redirects to `/inventory/reset-password`.
+3. The email (custom template in `supabase/templates/reset-password.html`) links to `/inventory/auth/confirm?token_hash=...&type=recovery` — a page in the app, not Supabase's hosted verify endpoint.
+4. The page only calls `supabase.auth.verifyOtp({ token_hash, type })` when the user clicks "Continue" — a bare GET (e.g. from a mail-security link scanner) never consumes the token. On success it redirects to `/inventory/reset-password`.
 5. User sets a new password.
 
 ### Invite / New User Flow
 
 1. Superadmin creates a new user in `/inventory/users`.
-2. Supabase Admin API (using `service_role` key) sends a magic-link invite email.
-3. User clicks the link, lands on `/inventory/auth/callback`, then is taken to `/inventory/reset-password` to set their password.
+2. Supabase Admin API (using `service_role` key) sends the invite email (custom template in `supabase/templates/invite-user.html`), linking to `/inventory/auth/confirm?token_hash=...&type=invite`.
+3. User clicks "Accept Invitation" on that page, which calls `verifyOtp` and redirects to `/inventory/reset-password?from=invite` to set their password.
+
+Note: earlier invite/reset links pointed directly at Supabase's hosted verify URL, which corporate mail scanners would auto-visit and consume before the recipient ever clicked — expiring the link in transit. Routing through `/inventory/auth/confirm` and verifying only on an explicit click fixes that.
 
 ### Role System
 
@@ -481,14 +483,6 @@ Superadmin-only section to:
 
 ## API Routes
 
-### `GET /inventory/auth/callback`
-
-Handles the Supabase OAuth code exchange after password reset emails and magic link invites.
-
-- Receives `code` in the query string.
-- Exchanges the code for a Supabase session.
-- Redirects to `/inventory/reset-password` for new invites, or a custom `next` URL otherwise.
-
 ### `GET /inventory/export`
 
 Generates and streams a formatted `.xlsx` Excel file.
@@ -638,7 +632,7 @@ npm run start    # Starts on port 3000
 3. Configure Supabase Auth:
    - Enable the **Email provider**.
    - Set the **Site URL** to your production domain.
-   - Add `/inventory/auth/callback` as an allowed redirect URL.
+   - Under **Email Templates**, paste the branded templates from `supabase/templates/` into Invite user, Reset password, and Confirm signup.
 4. Create the first `superadmin` user in Supabase Auth dashboard, then insert their profile into `user_profiles` with `role = 'superadmin'`.
 
 ### Cloudinary Setup

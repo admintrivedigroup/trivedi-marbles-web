@@ -45,11 +45,8 @@ export async function inviteUser(formData: FormData): Promise<UserManagementResu
 
   const admin = createAdminClient();
 
-  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/$/, "");
-
   const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
     data: { display_name: displayName || null },
-    redirectTo: `${siteUrl}/inventory/auth/callback?type=invite`,
   });
 
   if (inviteError || !invited.user) {
