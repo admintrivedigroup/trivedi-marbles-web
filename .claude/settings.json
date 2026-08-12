@@ -76,7 +76,22 @@
       "Bash(echo \"EXIT_CODE=$?\")",
       "Bash(node -e \"console.log\\(JSON.stringify\\(require\\('./package.json'\\).scripts, null, 2\\)\\)\")",
       "Bash(curl -s -o /dev/null -w \"status=%{http_code} redirect=%{redirect_url}\\\\n\" http://localhost:3000/inventory/tasks)",
-      "Bash(node scratch-build-css-test.mjs)"
+      "Bash(node scratch-build-css-test.mjs)",
+      "Bash(npx supabase *)",
+      "Bash(echo \"---exit:$?---\")",
+      "Bash(find / -iname \"*supabase*\" -type f \\\\\\( -name \"*.exe\" -o -name \"supabase\" \\\\\\) 2>/dev/null | grep -v node_modules/.bin | head -20)",
+      "Bash(ls -la ~/AppData/Local/npm-cache/_npx 2>/dev/null | head; find ~/AppData/Local/npm-cache/_npx -maxdepth 3 -iname \"*supabase*\" 2>/dev/null | head -20)",
+      "Read(//c/Users/ladha/AppData/Local/npm-cache/_npx/**)",
+      "Bash(find \"/c/Users/ladha/AppData/Local/npm-cache/_npx/aa8e5c70f9d8d161/node_modules/supabase\" -type f -iname \"*.exe\" 2>/dev/null)",
+      "Read(//c/Users/ladha/AppData/Local/npm-cache/_npx/aa8e5c70f9d8d161/node_modules/supabase/**)",
+      "Bash(find \"/c/Users/ladha/AppData/Local/npm-cache/_npx/aa8e5c70f9d8d161/node_modules/@supabase\" -maxdepth 2 -type d 2>/dev/null)",
+      "Read(//c/Users/ladha/AppData/Local/npm-cache/_npx/aa8e5c70f9d8d161/node_modules/@supabase/**)",
+      "Read(//c/Users/ladha/AppData/Local/npm-cache/_npx/aa8e5c70f9d8d161/node_modules/@supabase/cli-windows-x64/bin/**)",
+      "Bash(grep -aoE \"auth\\\\.email\\\\.template\\\\.[a-z_]+\" \"/c/Users/ladha/AppData/Local/npm-cache/_npx/aa8e5c70f9d8d161/node_modules/@supabase/cli-windows-x64/bin/supabase.exe\" 2>/dev/null | sort -u)",
+      "Bash(grep -aoE \"toml:\\\\\"[a-z_]+\\\\\"\" \"/c/Users/ladha/AppData/Local/npm-cache/_npx/aa8e5c70f9d8d161/node_modules/@supabase/cli-windows-x64/bin/supabase.exe\" 2>/dev/null | sort -u | grep -iE \"invite|recovery|confirm|magic|change|reauth\")",
+      "Bash(grep -aoE \"\\\\\"\\(invite|recovery|confirmation|magic_link|magiclink|email_change|reauthentication\\)\\\\\"\" \"/c/Users/ladha/AppData/Local/npm-cache/_npx/aa8e5c70f9d8d161/node_modules/@supabase/cli-windows-x64/bin/supabase.exe\" 2>/dev/null | sort -u)",
+      "WebFetch(domain:supabase.com)",
+      "WebFetch(domain:api.supabase.com)"
     ],
     "additionalDirectories": [
       "C:\\Users\\ladha\\AppData\\Local\\Temp\\claude\\c--Users-ladha-Desktop-trivedi-marbles\\19d4f574-d73e-4c4d-a67f-4e65879212d6\\scratchpad",
