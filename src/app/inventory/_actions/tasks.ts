@@ -14,6 +14,7 @@ export type TaskFormData = {
   assigned_name: string;
   start_date: string;
   due_date: string;
+  kra_column_id: string;
 };
 
 export type TaskActionResult =
@@ -128,6 +129,19 @@ export async function deleteTask(
   return { success: true };
 }
 
+export async function deleteTasks(
+  ids: string[],
+): Promise<{ success: boolean; error?: string }> {
+  if (ids.length === 0) return { success: true };
+  const supabase = await createClient();
+
+  const { error } = await supabase.from("tasks").delete().in("id", ids);
+  if (error) return { success: false, error: error.message };
+
+  revalidatePath("/inventory/tasks");
+  return { success: true };
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function nullIfEmpty(v: string | null | undefined): string | null {
   if (!v || v.trim() === "") return null;
@@ -145,6 +159,7 @@ function sanitize(data: TaskFormData, createdBy: string | null) {
     assigned_name: nullIfEmpty(data.assigned_name),
     start_date: nullIfEmpty(data.start_date),
     due_date: nullIfEmpty(data.due_date),
+    kra_column_id: nullIfEmpty(data.kra_column_id),
     ...(createdBy !== null ? { created_by: createdBy } : {}),
   };
 }

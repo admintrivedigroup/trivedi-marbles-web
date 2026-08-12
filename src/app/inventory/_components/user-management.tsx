@@ -1,12 +1,16 @@
 "use client";
 
-import { useState, useTransition, type FormEvent } from "react";
+import { useEffect, useMemo, useState, useTransition, type FormEvent } from "react";
 import {
   Check,
   ChevronDown,
   ChevronUp,
+  Clock,
+  History,
+  ListChecks,
   LoaderCircle,
   Mail,
+  Search,
   Shield,
   Trash2,
   UserPlus,
@@ -16,6 +20,7 @@ import {
 } from "lucide-react";
 
 import {
+  getUserActivity,
   inviteUser,
   removeUser,
   updateUserPermission,
@@ -30,8 +35,35 @@ import {
   type Role,
   type ResolvedPermissions,
 } from "@/app/inventory/_lib/permissions";
+import type { AuditLogEntry } from "@/app/inventory/_lib/audit-log";
 import type { ManagedUser } from "@/app/inventory/_lib/user-profile";
 import type { StockLookupOption } from "@/app/inventory/_lib/stock";
+
+function formatRelativeTime(dateStr: string | null): string {
+  if (!dateStr) return "Never";
+  const diffMs = Date.now() - new Date(dateStr).getTime();
+  const minutes = Math.floor(diffMs / 60_000);
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}mo ago`;
+  return `${Math.floor(months / 12)}y ago`;
+}
+
+function describeAuditAction(entry: AuditLogEntry): string {
+  const label = entry.targetLabel ?? entry.targetType ?? "";
+  switch (entry.action) {
+    case "user.invited": return `Invited ${label}`;
+    case "user.role_changed": return `Changed role${label ? ` for ${label}` : ""}`;
+    case "user.permission_changed": return `Updated a permission${label ? ` for ${label}` : ""}`;
+    case "user.removed": return `Removed a user`;
+    default: return `${entry.action}${label ? ` — ${label}` : ""}`;
+  }
+}
 
 type UserManagementProps = {
   users: ManagedUser[];
@@ -108,10 +140,17 @@ function UserCard({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const [activity, setActivity] = useState<AuditLogEntry[] | null>(null);
+  const activityLoading = expanded && activity === null;
 
   const isSelf = user.userId === currentUserId;
   const canEdit = currentRole === "superadmin" || (currentRole === "admin" && user.role !== "superadmin");
   const defaults = getDefaultPermissions(user.role);
+
+  useEffect(() => {
+    if (!expanded || activity !== null) return;
+    getUserActivity(user.userId).then(setActivity);
+  }, [expanded, activity, user.userId]);
 
   function handleRoleChange(role: Role) {
     startTransition(async () => {
@@ -155,10 +194,29 @@ function UserCard({
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="truncate font-semibold text-gray-900">
-            {user.displayName ?? "—"}
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="truncate font-semibold text-gray-900">
+              {user.displayName ?? "—"}
+            </p>
+            {user.invitePending && (
+              <span className="shrink-0 rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-700">
+                Invite pending
+              </span>
+            )}
+          </div>
           <p className="truncate text-sm text-gray-500">{user.email}</p>
+          <div className="mt-0.5 flex items-center gap-3 text-xs text-gray-400">
+            <span className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              {user.invitePending ? "Never signed in" : `Active ${formatRelativeTime(user.lastSignInAt)}`}
+            </span>
+            {user.openTaskCount > 0 && (
+              <span className="flex items-center gap-1">
+                <ListChecks className="h-3 w-3" />
+                {user.openTaskCount} open task{user.openTaskCount !== 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
@@ -259,6 +317,31 @@ function UserCard({
                 );
               })}
             </div>
+          </div>
+
+          {/* Recent activity */}
+          <div className="mb-4">
+            <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
+              <History className="h-3.5 w-3.5" />
+              Recent Activity
+            </p>
+            {activityLoading ? (
+              <div className="flex items-center gap-2 text-xs text-gray-400">
+                <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                Loading...
+              </div>
+            ) : activity && activity.length > 0 ? (
+              <ul className="space-y-1.5">
+                {activity.map((entry) => (
+                  <li key={entry.id} className="flex items-baseline justify-between gap-3 text-xs">
+                    <span className="truncate text-gray-600">{describeAuditAction(entry)}</span>
+                    <span className="shrink-0 text-gray-400">{formatRelativeTime(entry.createdAt)}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-gray-400">No recorded activity yet.</p>
+            )}
           </div>
 
           {/* Remove user */}
@@ -443,6 +526,15 @@ function InvitePanel({
   );
 }
 
+type RoleFilter = Role | "all";
+type SortBy = "name" | "active" | "newest";
+
+const SORT_OPTIONS: { value: SortBy; label: string }[] = [
+  { value: "name", label: "Name" },
+  { value: "active", label: "Last active" },
+  { value: "newest", label: "Newest" },
+];
+
 export function UserManagement({
   users,
   warehouses,
@@ -450,6 +542,31 @@ export function UserManagement({
   currentRole,
 }: UserManagementProps) {
   const [showInvite, setShowInvite] = useState(false);
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
+  const [sortBy, setSortBy] = useState<SortBy>("name");
+
+  const visibleUsers = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    const filtered = users.filter((u) => {
+      if (roleFilter !== "all" && u.role !== roleFilter) return false;
+      if (!query) return true;
+      return (
+        (u.displayName ?? "").toLowerCase().includes(query) ||
+        u.email.toLowerCase().includes(query)
+      );
+    });
+
+    return [...filtered].sort((a, b) => {
+      if (sortBy === "active") {
+        return (b.lastSignInAt ?? "").localeCompare(a.lastSignInAt ?? "");
+      }
+      if (sortBy === "newest") {
+        return (b.createdAt ?? "").localeCompare(a.createdAt ?? "");
+      }
+      return (a.displayName ?? a.email).localeCompare(b.displayName ?? b.email);
+    });
+  }, [users, search, roleFilter, sortBy]);
 
   return (
     <div>
@@ -471,13 +588,52 @@ export function UserManagement({
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         {/* Users list */}
         <div className="min-w-0 space-y-3">
+          {users.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative min-w-0 flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search by name or email"
+                  className="w-full rounded-xl border border-gray-200 py-2 pl-9 pr-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800"
+                />
+              </div>
+              <select
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value as RoleFilter)}
+                className="rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800"
+              >
+                <option value="all">All roles</option>
+                {ROLE_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as SortBy)}
+                className="rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800"
+              >
+                {SORT_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>Sort: {o.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {users.length === 0 ? (
             <div className="flex flex-col items-center gap-3 rounded-xl border border-gray-100 bg-white py-16 text-center text-gray-400 shadow-sm">
               <Users className="h-8 w-8" />
               <p className="text-sm">No users yet. Invite someone to get started.</p>
             </div>
+          ) : visibleUsers.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 rounded-xl border border-gray-100 bg-white py-16 text-center text-gray-400 shadow-sm">
+              <Search className="h-8 w-8" />
+              <p className="text-sm">No users match your search.</p>
+            </div>
           ) : (
-            users.map((user) => (
+            visibleUsers.map((user) => (
               <UserCard
                 key={user.userId}
                 user={user}

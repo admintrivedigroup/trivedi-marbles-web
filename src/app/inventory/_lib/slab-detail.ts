@@ -104,6 +104,44 @@ export async function getSlabById(id: string): Promise<SlabDetailResult> {
   }
 }
 
+export type SlabSiblingNav = {
+  prevId: string | null;
+  nextId: string | null;
+  position: number | null;
+  total: number;
+};
+
+export async function getSlabSiblingNav(lotId: string, slabId: string): Promise<SlabSiblingNav> {
+  try {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from("slabs")
+      .select("id")
+      .eq("lot_id", lotId)
+      .order("slab_code", { ascending: true });
+
+    if (error || !data) {
+      return { prevId: null, nextId: null, position: null, total: 0 };
+    }
+
+    const ids = (data as Array<{ id: unknown }>).map((row) => String(row.id));
+    const index = ids.indexOf(slabId);
+
+    if (index === -1) {
+      return { prevId: null, nextId: null, position: null, total: ids.length };
+    }
+
+    return {
+      prevId: index > 0 ? ids[index - 1] : null,
+      nextId: index < ids.length - 1 ? ids[index + 1] : null,
+      position: index + 1,
+      total: ids.length,
+    };
+  } catch {
+    return { prevId: null, nextId: null, position: null, total: 0 };
+  }
+}
+
 export type SlabImage = {
   id: string;
   imageUrl: string;

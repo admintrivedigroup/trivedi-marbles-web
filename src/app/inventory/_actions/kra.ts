@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { KraCalcType } from "@/app/inventory/_lib/kra-shared";
 
 type SimpleResult = { success: true } | { success: false; error: string };
 
@@ -43,6 +44,9 @@ export type KraColumnFormData = {
   frequency: string;
   approval_required: boolean;
   active: boolean;
+  calc_type: KraCalcType;
+  is_bonus: boolean;
+  is_compulsory: boolean;
 };
 
 export async function createKraColumn(
@@ -88,6 +92,16 @@ export async function updateKraColumn(
 
 export async function deleteKraColumn(id: string): Promise<SimpleResult> {
   const supabase = createAdminClient();
+
+  const { data: col } = await supabase
+    .from("kra_columns")
+    .select("is_compulsory")
+    .eq("id", id)
+    .maybeSingle();
+  if (col?.is_compulsory) {
+    return { success: false, error: "This column is compulsory and cannot be deleted." };
+  }
+
   const { error } = await supabase.from("kra_columns").delete().eq("id", id);
   if (error) return { success: false, error: error.message };
   revalidatePath("/inventory/kra");

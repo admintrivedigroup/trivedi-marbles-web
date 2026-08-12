@@ -356,6 +356,7 @@ export function TaskDetail({ task: initialTask, users, currentUserId, currentUse
         assigned_name: task.assigned_name ?? "",
         start_date: task.start_date ?? "",
         due_date: task.due_date ?? "",
+        kra_column_id: task.kra_column_id ?? "",
       });
       setTask((prev) => ({ ...prev, title: editTitle.trim(), description: editDescription || null }));
       setIsEditing(false);

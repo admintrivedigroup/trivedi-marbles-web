@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { MapPin, Package, Phone, MessageCircle, Layers, X, ZoomIn } from "lucide-react";
+import { MapPin, Package, Phone, MessageCircle, Layers, X, ZoomIn, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { withCloudinaryTransforms } from "@/lib/cloudinary/upload";
 import type { InventoryListSlab } from "@/app/inventory/_lib/inventory-list";
-import type { SlabImage } from "@/app/inventory/_lib/slab-detail";
+import type { SlabImage, SlabSiblingNav } from "@/app/inventory/_lib/slab-detail";
 import { formatThickness, getStatusBadgeStyle } from "@/app/inventory/_lib/format";
 
 const CONTACT_PHONE = "+919876543210";
@@ -14,9 +14,10 @@ const CONTACT_PHONE = "+919876543210";
 type SlabPublicViewProps = {
   slab: InventoryListSlab;
   images: SlabImage[];
+  nav?: SlabSiblingNav;
 };
 
-export function SlabPublicView({ slab, images }: SlabPublicViewProps) {
+export function SlabPublicView({ slab, images, nav }: SlabPublicViewProps) {
   const [activeIdx, setActiveIdx] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
@@ -45,8 +46,33 @@ export function SlabPublicView({ slab, images }: SlabPublicViewProps) {
       </div>
 
       <div className="mx-auto max-w-lg px-4 pb-10 pt-5 space-y-4">
+        {/* Lot position */}
+        {nav && nav.position && nav.total > 1 && (
+          <p className="text-center text-xs font-medium text-gray-400">
+            Slab {nav.position} of {nav.total} in this lot
+          </p>
+        )}
+
         {/* Image gallery */}
-        <div className="overflow-hidden rounded-2xl border border-gray-100 bg-gray-100 shadow-sm">
+        <div className="relative overflow-hidden rounded-2xl border border-gray-100 bg-gray-100 shadow-sm">
+          {nav?.prevId && (
+            <Link
+              href={`/inventory/slab/${nav.prevId}/view`}
+              aria-label="Previous slab"
+              className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/40 p-2.5 text-white backdrop-blur-sm transition-colors hover:bg-black/60 active:scale-95"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Link>
+          )}
+          {nav?.nextId && (
+            <Link
+              href={`/inventory/slab/${nav.nextId}/view`}
+              aria-label="Next slab"
+              className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/40 p-2.5 text-white backdrop-blur-sm transition-colors hover:bg-black/60 active:scale-95"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </Link>
+          )}
           {images.length > 0 ? (
             <button
               type="button"
@@ -172,9 +198,18 @@ export function SlabPublicView({ slab, images }: SlabPublicViewProps) {
                   <Layers className="h-3.5 w-3.5" />
                   Lot
                 </span>
-                <span className="font-mono text-sm font-semibold text-gray-900">
-                  {slab.lotNumber}
-                </span>
+                {slab.lotId ? (
+                  <Link
+                    href={`/inventory/lot/${slab.lotId}/view`}
+                    className="font-mono text-sm font-semibold text-gray-900 underline-offset-2 hover:underline"
+                  >
+                    {slab.lotNumber}
+                  </Link>
+                ) : (
+                  <span className="font-mono text-sm font-semibold text-gray-900">
+                    {slab.lotNumber}
+                  </span>
+                )}
               </div>
             )}
             {slab.warehouseName && (

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export type AuditLogEntry = {
   id: string;
@@ -68,4 +69,31 @@ export async function getAuditLogs(page = 0, options: GetAuditLogsOptions = {}):
     const message = err instanceof Error ? err.message : "Please try again.";
     return { entries: [], total: 0, error: `Unable to load audit log. ${message}` };
   }
+}
+
+// Used on the Users page (admin-gated) to show a per-user activity feed —
+// runs on the admin client so it isn't limited by the caller's own RLS access.
+export async function getAuditLogsForUser(userId: string, limit = 10): Promise<AuditLogEntry[]> {
+  const admin = createAdminClient();
+
+  const { data, error } = await admin
+    .from("audit_logs")
+    .select("id, user_id, user_email, action, target_type, target_id, target_label, diff, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) return [];
+
+  return (data ?? []).map((row) => ({
+    id: String(row.id ?? ""),
+    userId: row.user_id ? String(row.user_id) : null,
+    userEmail: row.user_email ? String(row.user_email) : null,
+    action: String(row.action ?? ""),
+    targetType: row.target_type ? String(row.target_type) : null,
+    targetId: row.target_id ? String(row.target_id) : null,
+    targetLabel: row.target_label ? String(row.target_label) : null,
+    diff: row.diff && typeof row.diff === "object" ? (row.diff as Record<string, unknown>) : null,
+    createdAt: String(row.created_at ?? ""),
+  }));
 }

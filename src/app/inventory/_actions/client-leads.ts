@@ -78,6 +78,40 @@ export async function deleteClientLead(
   return { success: true };
 }
 
+// ─── Bulk delete ──────────────────────────────────────────────────────────────
+export async function bulkDeleteClientLeads(
+  ids: string[],
+): Promise<{ success: boolean; error?: string }> {
+  if (ids.length === 0) return { success: true };
+  const supabase = await createClient();
+
+  const { error } = await supabase.from("client_leads").delete().in("id", ids);
+
+  if (error) return { success: false, error: error.message };
+
+  revalidatePath("/inventory/leads");
+  return { success: true };
+}
+
+// ─── Bulk set converted ───────────────────────────────────────────────────────
+export async function bulkSetLeadsConverted(
+  ids: string[],
+  converted: boolean,
+): Promise<{ success: boolean; error?: string }> {
+  if (ids.length === 0) return { success: true };
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("client_leads")
+    .update({ converted })
+    .in("id", ids);
+
+  if (error) return { success: false, error: error.message };
+
+  revalidatePath("/inventory/leads");
+  return { success: true };
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function nullIfEmpty(value: string | null | undefined): string | null {
   if (!value || value.trim() === "") return null;

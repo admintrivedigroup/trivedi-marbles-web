@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserProfile } from "@/app/inventory/_lib/user-profile";
 import { isValidRole, ALL_PERMISSIONS, type Permission, type Role } from "@/app/inventory/_lib/permissions";
 import { logAudit } from "@/app/inventory/_lib/audit";
+import { getAuditLogsForUser, type AuditLogEntry } from "@/app/inventory/_lib/audit-log";
 
 async function getActingUser() {
   try {
@@ -83,6 +84,13 @@ export async function inviteUser(formData: FormData): Promise<UserManagementResu
 
   revalidatePath("/inventory/users");
   return { error: null };
+}
+
+export async function getUserActivity(userId: string): Promise<AuditLogEntry[]> {
+  const authError = await requireManageUsers();
+  if (authError) return [];
+
+  return getAuditLogsForUser(userId, 10);
 }
 
 export async function updateUserRole(

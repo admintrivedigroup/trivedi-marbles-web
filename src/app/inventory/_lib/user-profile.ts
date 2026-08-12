@@ -27,6 +27,9 @@ export type ManagedUser = {
   permissions: ResolvedPermissions;
   warehouseIds: string[] | null;
   createdAt: string;
+  lastSignInAt: string | null;
+  invitePending: boolean;
+  openTaskCount: number;
 };
 
 export const getCurrentUserProfile = cache(async (): Promise<UserProfile | null> => {
@@ -75,7 +78,7 @@ export async function getAllManagedUsers(): Promise<ManagedUser[]> {
 
   const userIds = authUsers.users.map((u) => u.id);
 
-  const [profilesRes, permissionsRes, warehouseRes] = await Promise.all([
+  const [profilesRes, permissionsRes, warehouseRes, openTasksRes] = await Promise.all([
     admin
       .from("user_profiles")
       .select("user_id, role, display_name, created_at")
@@ -88,11 +91,18 @@ export async function getAllManagedUsers(): Promise<ManagedUser[]> {
       .from("user_warehouse_access")
       .select("user_id, warehouse_id")
       .in("user_id", userIds),
+    admin
+      .from("tasks")
+      .select("assigned_to")
+      .in("assigned_to", userIds)
+      .neq("status", "completed")
+      .neq("status", "draft"),
   ]);
 
   const profiles = profilesRes.data ?? [];
   const allPermissions = permissionsRes.data ?? [];
   const allWarehouseAccess = warehouseRes.data ?? [];
+  const openTasks = openTasksRes.data ?? [];
 
   return authUsers.users
     .map((u) => {
@@ -111,6 +121,9 @@ export async function getAllManagedUsers(): Promise<ManagedUser[]> {
           ? warehouseRows.map((r) => String(r.warehouse_id))
           : null,
         createdAt: profile?.created_at ?? u.created_at ?? "",
+        lastSignInAt: u.last_sign_in_at ?? null,
+        invitePending: !u.last_sign_in_at,
+        openTaskCount: openTasks.filter((t) => t.assigned_to === u.id).length,
       };
     });
 }

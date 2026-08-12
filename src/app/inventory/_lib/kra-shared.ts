@@ -1,5 +1,7 @@
 // Shared types and constants — safe to import in both server and client components.
 
+export type KraCalcType = "manual" | "tasks";
+
 export type KraColumn = {
   id: string;
   employee_id: string;
@@ -11,6 +13,9 @@ export type KraColumn = {
   approval_required: boolean;
   display_order: number;
   active: boolean;
+  calc_type: KraCalcType;
+  is_bonus: boolean;
+  is_compulsory: boolean;
   created_at: string;
   updated_at: string;
 };

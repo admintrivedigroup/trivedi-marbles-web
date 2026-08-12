@@ -23,6 +23,7 @@ export type Task = {
   created_by: string | null;
   start_date: string | null;
   due_date: string | null;
+  kra_column_id: string | null;
   created_at: string;
   updated_at: string;
 };

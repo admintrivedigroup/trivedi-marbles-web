@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   AlertCircle,
   Calendar,
+  CheckSquare,
   ChevronDown,
   ChevronUp,
   ClipboardCheck,
@@ -14,15 +15,20 @@ import {
   Loader2,
   Plus,
   Search,
+  Square,
+  Tag,
   Trash2,
   UserPlus,
   X,
+  XSquare,
 } from "lucide-react";
 import type { Task, TaskStatus, TaskPriority } from "@/app/inventory/_lib/tasks";
+import type { TaskCategoryOption } from "@/app/inventory/_lib/kra";
 import {
   createTask,
   updateTask,
   deleteTask,
+  deleteTasks,
   updateTaskProgress,
   type TaskFormData,
 } from "@/app/inventory/_actions/tasks";
@@ -66,6 +72,7 @@ const EMPTY_FORM: TaskFormData = {
   assigned_name: "",
   start_date: "",
   due_date: "",
+  kra_column_id: "",
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -144,16 +151,18 @@ function ProgressBar({ value, className }: { value: number; className?: string }
 // ─── Delete confirm ────────────────────────────────────────────────────────────
 
 function DeleteConfirm({
-  title, onConfirm, onCancel, loading,
+  title, message, heading = "Delete task?", onConfirm, onCancel, loading,
 }: {
-  title: string; onConfirm: () => void; onCancel: () => void; loading: boolean;
+  title?: string; message?: string; heading?: string; onConfirm: () => void; onCancel: () => void; loading: boolean;
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-        <h3 className="text-base font-semibold text-gray-900">Delete task?</h3>
+        <h3 className="text-base font-semibold text-gray-900">{heading}</h3>
         <p className="mt-2 text-sm text-gray-500">
-          <span className="font-medium text-gray-700">&ldquo;{title}&rdquo;</span> will be permanently removed.
+          {message ?? (
+            <><span className="font-medium text-gray-700">&ldquo;{title}&rdquo;</span> will be permanently removed.</>
+          )}
         </p>
         <div className="mt-5 flex gap-3">
           <button type="button" onClick={onCancel} disabled={loading}
@@ -174,9 +183,9 @@ function DeleteConfirm({
 // ─── Task form modal (two-panel layout) ───────────────────────────────────────
 
 function TaskFormModal({
-  task, users, onClose, onCreated,
+  task, users, taskCategories, onClose, onCreated,
 }: {
-  task: Task | null; users: AssignableUser[]; onClose: () => void; onCreated?: (task: Task) => void;
+  task: Task | null; users: AssignableUser[]; taskCategories: TaskCategoryOption[]; onClose: () => void; onCreated?: (task: Task) => void;
 }) {
   const isEdit = task !== null;
   const [form, setForm] = useState<TaskFormData>(
@@ -191,9 +200,16 @@ function TaskFormModal({
           assigned_name: task.assigned_name ?? "",
           start_date: task.start_date ? task.start_date.slice(0, 16) : "",
           due_date: task.due_date ? task.due_date.slice(0, 16) : "",
+          kra_column_id: task.kra_column_id ?? "",
         }
       : { ...EMPTY_FORM },
   );
+
+  const assigneeCategories = useMemo(
+    () => taskCategories.filter((c) => c.employee_id === form.assigned_to),
+    [taskCategories, form.assigned_to],
+  );
+  const selectedCategory = assigneeCategories.find((c) => c.id === form.kra_column_id);
 
   const [moreOpen, setMoreOpen] = useState(false);
   const [checklistItems, setChecklistItems] = useState<PendingChecklistItem[]>([]);
@@ -212,6 +228,7 @@ function TaskFormModal({
       ...prev,
       assigned_to: userId,
       assigned_name: user?.displayName ?? user?.email ?? "",
+      kra_column_id: userId === prev.assigned_to ? prev.kra_column_id : "",
     }));
   }
 
@@ -262,6 +279,7 @@ function TaskFormModal({
             assigned_name: finalForm.assigned_name || null,
             start_date: finalForm.start_date || null,
             due_date: finalForm.due_date || null,
+            kra_column_id: finalForm.kra_column_id || null,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
             created_by: null,
@@ -275,119 +293,94 @@ function TaskFormModal({
   }
 
   const assignedUser = users.find((u) => u.userId === form.assigned_to);
-  const inputCls = "w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white";
-  const labelCls = "block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1.5";
+  const underlineCls = "w-full border-0 border-b border-gray-200 bg-transparent px-0.5 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-0 transition-colors";
+  const labelCls = "block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1.5";
+  const sectionLabelCls = "text-[11px] font-bold uppercase tracking-widest text-blue-600 mb-3.5";
+
+  const PRIORITY_DOT: Record<TaskPriority, string> = {
+    low: "bg-gray-400", medium: "bg-orange-500", high: "bg-red-500",
+  };
+  const PRIORITY_TEXT: Record<TaskPriority, string> = {
+    low: "text-gray-700 border-gray-400", medium: "text-orange-700 border-orange-500", high: "text-red-700 border-red-500",
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="relative w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+      <div className="relative w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
 
-        {/* Modal header — gradient */}
-        <div className="shrink-0 bg-linear-to-r from-blue-50 to-indigo-50 border-b border-blue-100 px-6 py-4">
+        {/* Modal header — flat, hairline */}
+        <div className="shrink-0 border-b border-gray-100 px-6 py-4">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-blue-400">Task Desk</p>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-blue-600">Task Desk</p>
               <h2 className="mt-0.5 text-xl font-bold text-gray-900">{isEdit ? "Edit Task" : "Create Task"}</h2>
             </div>
             <button type="button" onClick={onClose}
-              className="rounded-full p-1.5 text-gray-400 hover:bg-white hover:text-gray-600 transition-colors">
+              className="rounded-full p-1.5 text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition-colors">
               <X className="h-5 w-5" />
             </button>
           </div>
         </div>
 
         {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+        <div className="flex-1 overflow-y-auto px-6 py-5">
 
-          {/* Two-column top section */}
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {/* Basics */}
+          <div className="pb-5">
+            <p className={sectionLabelCls}>Basics</p>
+            <label className={labelCls}>Task Title</label>
+            <input
+              type="text"
+              value={form.title}
+              onChange={(e) => set("title", e.target.value)}
+              placeholder="e.g. Follow up with client on quote"
+              className={underlineCls}
+            />
+            <div className="mt-4">
+              <label className={labelCls}>Description</label>
+              <textarea
+                value={form.description}
+                onChange={(e) => set("description", e.target.value)}
+                rows={2}
+                placeholder="Describe task"
+                className={cn(underlineCls, "resize-none")}
+              />
+            </div>
+          </div>
 
-            {/* Left: Task Basics */}
-            <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-4 space-y-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Task Basics</p>
-                <p className="text-xs text-gray-400 mt-0.5">Name the work and give it context.</p>
-              </div>
-              <div>
-                <label className={labelCls}>Task Title</label>
-                <input
-                  type="text"
-                  value={form.title}
-                  onChange={(e) => set("title", e.target.value)}
-                  placeholder="e.g. Create App UI"
-                  className={inputCls}
-                />
-              </div>
-              <div>
-                <label className={labelCls}>Description</label>
-                <textarea
-                  value={form.description}
-                  onChange={(e) => set("description", e.target.value)}
-                  rows={4}
-                  placeholder="Describe task"
-                  className={cn(inputCls, "resize-none")}
-                />
-              </div>
+          {/* Schedule & owner */}
+          <div className="border-t border-gray-100 py-5">
+            <p className={sectionLabelCls}>Schedule &amp; Owner</p>
+
+            <label className={labelCls}>Priority</label>
+            <div className="flex gap-5">
+              {(["low", "medium", "high"] as const).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => set("priority", p)}
+                  className={cn(
+                    "flex items-center gap-1.5 border-b-2 pb-1 text-xs font-semibold capitalize transition-colors",
+                    form.priority === p ? PRIORITY_TEXT[p] : "border-transparent text-gray-400 hover:text-gray-600",
+                  )}
+                >
+                  <span className={cn("h-1.5 w-1.5 rounded-full", form.priority === p ? PRIORITY_DOT[p] : "bg-gray-200")} />
+                  {p === "low" ? "Low" : p === "medium" ? "Medium" : "High"}
+                </button>
+              ))}
             </div>
 
-            {/* Right: Schedule & Owners */}
-            <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-4 space-y-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Schedule &amp; Owners</p>
-                  <p className="text-xs text-gray-400 mt-0.5">Balance priority, due date and who is driving.</p>
-                </div>
-                {assignedUser ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-blue-600 px-2.5 py-1 text-xs font-bold text-white">
-                    1 <span className="font-normal">MEMBER</span>
-                  </span>
-                ) : null}
-              </div>
-
-              <div>
-                <label className={labelCls}>Priority</label>
-                <div className="flex gap-2">
-                  {(["low", "medium", "high"] as const).map((p) => (
-                    <button
-                      key={p}
-                      type="button"
-                      onClick={() => set("priority", p)}
-                      className={cn(
-                        "flex-1 rounded-lg border-2 py-2 text-xs font-semibold capitalize transition-all",
-                        form.priority === p
-                          ? p === "low"
-                            ? "border-gray-400 bg-gray-100 text-gray-700"
-                            : p === "medium"
-                              ? "border-orange-400 bg-orange-50 text-orange-700"
-                              : "border-red-400 bg-red-50 text-red-700"
-                          : "border-transparent bg-gray-50 text-gray-400 hover:border-gray-200 hover:text-gray-600",
-                      )}
-                    >
-                      {p === "low" ? "Low" : p === "medium" ? "Medium" : "High"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
+            <div className="mt-4 grid grid-cols-2 gap-4">
               <div>
                 <label className={labelCls}>Due Date &amp; Time</label>
-                <input type="datetime-local" value={form.due_date} onChange={(e) => set("due_date", e.target.value)} className={inputCls} />
+                <input type="datetime-local" value={form.due_date} onChange={(e) => set("due_date", e.target.value)} className={underlineCls} />
               </div>
-
               <div>
                 <label className={labelCls}>Assign To</label>
-                {assignedUser ? (
-                  <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2.5 mb-2">
-                    <UserAvatar name={assignedUser.displayName} email={assignedUser.email} />
-                    <span className="text-sm font-medium text-gray-800">
-                      {assignedUser.displayName ?? assignedUser.email}
-                    </span>
-                  </div>
-                ) : null}
                 <select
                   value={form.assigned_to}
                   onChange={(e) => handleAssignee(e.target.value)}
-                  className={cn(inputCls, "text-blue-600 font-medium")}
+                  className={cn(underlineCls, "text-blue-600 font-medium")}
                 >
                   <option value="">— Select member —</option>
                   {users.map((u) => (
@@ -396,62 +389,100 @@ function TaskFormModal({
                     </option>
                   ))}
                 </select>
-                <p className="mt-1.5 text-xs text-gray-400">Assign a member to enable checklist tracking.</p>
               </div>
-
-              {/* Status — only shown when editing */}
-              {isEdit ? (
-                <div>
-                  <label className={labelCls}>Status</label>
-                  <select value={form.status} onChange={(e) => set("status", e.target.value as TaskStatus)} className={inputCls}>
-                    <option value="draft">Draft</option>
-                    <option value="pending">Pending</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="pending_approval">Pending Approval</option>
-                    <option value="completed">Completed</option>
-                  </select>
-                </div>
-              ) : null}
             </div>
+
+            {assignedUser ? (
+              <div className="mt-3 flex items-center gap-2.5">
+                <UserAvatar name={assignedUser.displayName} email={assignedUser.email} size="sm" />
+                <span className="text-xs text-gray-500">
+                  {assignedUser.displayName ?? assignedUser.email}
+                </span>
+              </div>
+            ) : null}
+
+            {form.assigned_to ? (
+              <div className="mt-4">
+                <label className={labelCls}>KRA Category</label>
+                <select
+                  value={form.kra_column_id}
+                  onChange={(e) => set("kra_column_id", e.target.value)}
+                  className={underlineCls}
+                >
+                  <option value="">— None —</option>
+                  {assigneeCategories.map((c) => (
+                    <option key={c.id} value={c.id}>{c.label} — {c.weightage}%</option>
+                  ))}
+                </select>
+                {assigneeCategories.length === 0 ? (
+                  <p className="mt-1.5 text-xs text-gray-400">
+                    This member has no task-category KRA columns set up yet.
+                  </p>
+                ) : selectedCategory ? (
+                  <p className="mt-1.5 text-xs text-gray-400">
+                    Carries <span className="font-semibold text-blue-600">{selectedCategory.weightage}%</span> weight in {assignedUser?.displayName ?? assignedUser?.email}&apos;s KRA score.
+                  </p>
+                ) : (
+                  <p className="mt-1.5 text-xs text-gray-400">
+                    Rolls this task&apos;s completion into the chosen KRA column&apos;s score.
+                  </p>
+                )}
+              </div>
+            ) : null}
+
+            {/* Status — only shown when editing */}
+            {isEdit ? (
+              <div className="mt-4">
+                <label className={labelCls}>Status</label>
+                <select value={form.status} onChange={(e) => set("status", e.target.value as TaskStatus)} className={underlineCls}>
+                  <option value="draft">Draft</option>
+                  <option value="pending">Pending</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="pending_approval">Pending Approval</option>
+                  <option value="completed">Completed</option>
+                </select>
+              </div>
+            ) : null}
           </div>
 
           {/* Checklist — always visible on create */}
           {!isEdit ? (
-            <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
+            <div className="border-t border-gray-100 py-5">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Checklist</p>
-                  <p className="text-xs text-gray-400 mt-0.5">Break the work into smaller action items.</p>
-                </div>
+                <p className={cn(sectionLabelCls, "mb-0")}>Checklist</p>
                 {checklistItems.length > 0 && (
-                  <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-600">
+                  <span className="text-xs font-semibold text-gray-400">
                     {checklistItems.length} item{checklistItems.length !== 1 ? "s" : ""}
                   </span>
                 )}
               </div>
 
-              {checklistItems.map((item) => (
-                <div key={item.tempId} className="flex items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
-                  <ClipboardCheck className="h-4 w-4 shrink-0 text-blue-400" />
-                  <span className="flex-1 text-sm text-gray-700 truncate">{item.title}</span>
-                  {item.assigned_name ? (
-                    <span className="text-xs text-gray-400 shrink-0">{item.assigned_name}</span>
-                  ) : null}
-                  <button type="button" onClick={() => removeChecklistItem(item.tempId)}
-                    className="shrink-0 text-gray-300 hover:text-red-500 transition-colors">
-                    <X className="h-3.5 w-3.5" />
-                  </button>
+              {checklistItems.length > 0 ? (
+                <div className="mt-3 space-y-2">
+                  {checklistItems.map((item) => (
+                    <div key={item.tempId} className="flex items-center gap-2 text-sm">
+                      <ClipboardCheck className="h-3.5 w-3.5 shrink-0 text-blue-400" />
+                      <span className="flex-1 text-gray-700 truncate">{item.title}</span>
+                      {item.assigned_name ? (
+                        <span className="text-xs text-gray-400 shrink-0">{item.assigned_name}</span>
+                      ) : null}
+                      <button type="button" onClick={() => removeChecklistItem(item.tempId)}
+                        className="shrink-0 text-gray-300 hover:text-red-500 transition-colors">
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              ) : null}
 
-              <div className="flex items-center gap-2">
+              <div className="mt-3 flex items-center gap-2">
                 <input
                   type="text"
                   value={checklistInput}
                   onChange={(e) => setChecklistInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addChecklistItem(); } }}
                   placeholder="Add a todo item…"
-                  className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
+                  className={cn(underlineCls, "flex-1")}
                 />
                 <select
                   value={checklistAssignee}
@@ -468,7 +499,7 @@ function TaskFormModal({
                 <button
                   type="button"
                   onClick={addChecklistItem}
-                  className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition-colors"
+                  className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-500 hover:border-blue-400 hover:text-blue-600 transition-colors"
                 >
                   <Plus className="h-3.5 w-3.5" /> Add
                 </button>
@@ -477,25 +508,25 @@ function TaskFormModal({
           ) : null}
 
           {/* Advanced options accordion — start date + progress (edit only) */}
-          <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+          <div className="border-t border-gray-100 py-3">
             <button
               type="button"
               onClick={() => setMoreOpen((o) => !o)}
-              className="flex w-full items-center justify-between px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+              className="flex w-full items-center gap-1.5 py-1.5 text-xs font-semibold text-gray-400 hover:text-gray-600 transition-colors"
             >
-              <span>Advanced options</span>
-              {moreOpen ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
+              {moreOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+              Advanced options
             </button>
 
             {moreOpen ? (
-              <div className="border-t border-gray-100 p-4 space-y-4">
+              <div className="mt-3 space-y-4">
                 <div>
                   <label className={labelCls}>Start Date &amp; Time</label>
                   <input
                     type="datetime-local"
                     value={form.start_date}
                     onChange={(e) => set("start_date", e.target.value)}
-                    className={inputCls}
+                    className={underlineCls}
                   />
                 </div>
                 {isEdit ? (
@@ -514,33 +545,28 @@ function TaskFormModal({
           </div>
 
           {error ? (
-            <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>
+            <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>
           ) : null}
         </div>
 
         {/* Footer */}
-        <div className="shrink-0 flex items-center justify-between border-t border-gray-200 bg-gray-50/50 px-6 py-4">
-          <p className="text-xs text-gray-400 hidden sm:block">
-            Double-check details, then publish the task for the team.
-          </p>
-          <div className="flex items-center gap-3 ml-auto">
-            <button type="button" onClick={onClose} disabled={isPending}
-              className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors">
-              Cancel
-            </button>
-            {!isEdit ? (
-              <button type="button" onClick={() => handleSubmit(true)} disabled={isPending}
-                className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-medium text-blue-700 hover:bg-blue-100 disabled:opacity-50 transition-colors flex items-center gap-2">
-                {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                Save as Draft
-              </button>
-            ) : null}
-            <button type="button" onClick={() => handleSubmit(false)} disabled={isPending}
-              className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center gap-2">
+        <div className="shrink-0 flex items-center justify-end gap-3 border-t border-gray-100 px-6 py-4">
+          <button type="button" onClick={onClose} disabled={isPending}
+            className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors">
+            Cancel
+          </button>
+          {!isEdit ? (
+            <button type="button" onClick={() => handleSubmit(true)} disabled={isPending}
+              className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-medium text-blue-700 hover:bg-blue-100 disabled:opacity-50 transition-colors flex items-center gap-2">
               {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              {isEdit ? "Save Changes" : "Create Task"}
+              Save as Draft
             </button>
-          </div>
+          ) : null}
+          <button type="button" onClick={() => handleSubmit(false)} disabled={isPending}
+            className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center gap-2">
+            {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            {isEdit ? "Save Changes" : "Create Task"}
+          </button>
         </div>
       </div>
     </div>
@@ -550,19 +576,24 @@ function TaskFormModal({
 // ─── Task card (grid) ─────────────────────────────────────────────────────────
 
 function TaskCard({
-  task, users, onEdit, onDelete, onProgressChange,
+  task, users, taskCategories, onEdit, onDelete, onProgressChange, selectMode = false, selected = false, onToggleSelect,
 }: {
   task: Task;
   users: AssignableUser[];
+  taskCategories: TaskCategoryOption[];
   onEdit: () => void;
   onDelete: () => void;
   onProgressChange: (id: string, progress: number) => void;
+  selectMode?: boolean;
+  selected?: boolean;
+  onToggleSelect?: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
   const [localProgress, setLocalProgress] = useState(task.progress);
   const status = STATUS_STYLES[task.status];
   const priority = PRIORITY_STYLES[task.priority];
   const assignee = users.find((u) => u.userId === task.assigned_to);
+  const category = taskCategories.find((c) => c.id === task.kra_column_id);
 
   function handleProgressCommit() {
     if (localProgress === task.progress) return;
@@ -576,9 +607,19 @@ function TaskCard({
 
   return (
     <div className={cn(
-      "flex flex-col rounded-2xl border bg-white p-4 shadow-sm hover:shadow-md transition-shadow group",
+      "relative flex flex-col rounded-2xl border bg-white p-4 shadow-sm hover:shadow-md transition-shadow group",
       overdue ? "border-red-200 bg-red-50/30" : "border-gray-200",
+      selected && "ring-2 ring-blue-400 border-blue-300",
     )}>
+      {selectMode ? (
+        <button
+          type="button"
+          onClick={onToggleSelect}
+          className="absolute right-3 top-3 z-10 rounded-md bg-white/90 p-0.5 text-gray-400 shadow-sm hover:text-blue-600 transition-colors"
+        >
+          {selected ? <CheckSquare className="h-5 w-5 text-blue-600" /> : <Square className="h-5 w-5" />}
+        </button>
+      ) : null}
       {/* Overdue banner */}
       {overdue ? (
         <div className="mb-3 flex items-center gap-1.5 rounded-lg bg-red-100 px-2.5 py-1.5 text-xs font-semibold text-red-700">
@@ -611,6 +652,12 @@ function TaskCard({
       </Link>
       {task.description ? (
         <p className="mt-1 text-xs text-gray-500 line-clamp-2">{task.description}</p>
+      ) : null}
+
+      {category ? (
+        <span className="mt-2 inline-flex w-fit items-center gap-1 rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-600">
+          <Tag className="h-3 w-3" />{category.label}
+        </span>
       ) : null}
 
       {/* Dates */}
@@ -672,20 +719,32 @@ function SortTh({ label, sortKey, current, dir, onSort }: {
 
 // ─── Task table row (list) ────────────────────────────────────────────────────
 
-function TaskRow({ task, index, users, isAdmin, onEdit, onDelete }: {
-  task: Task; index: number; users: AssignableUser[]; isAdmin: boolean; onEdit: () => void; onDelete: () => void;
+function TaskRow({
+  task, index, users, taskCategories, isAdmin, onEdit, onDelete, selectMode = false, selected = false, onToggleSelect,
+}: {
+  task: Task; index: number; users: AssignableUser[]; taskCategories: TaskCategoryOption[]; isAdmin: boolean; onEdit: () => void; onDelete: () => void;
+  selectMode?: boolean; selected?: boolean; onToggleSelect?: () => void;
 }) {
   const overdue = isOverdue(task.due_date, task.status);
   const status = STATUS_STYLES[task.status];
   const priority = PRIORITY_STYLES[task.priority];
   const assignee = users.find((u) => u.userId === task.assigned_to);
+  const category = taskCategories.find((c) => c.id === task.kra_column_id);
 
   return (
     <tr className={cn(
       "border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors",
       index % 2 === 0 ? "bg-white" : "bg-gray-50/40",
       overdue && "bg-red-50/40 hover:bg-red-50/60",
+      selected && "bg-blue-50/60 hover:bg-blue-50/60",
     )}>
+      {selectMode ? (
+        <td className="px-4 py-3">
+          <button type="button" onClick={onToggleSelect} className="text-gray-400 hover:text-blue-600 transition-colors">
+            {selected ? <CheckSquare className="h-4.5 w-4.5 text-blue-600" /> : <Square className="h-4.5 w-4.5" />}
+          </button>
+        </td>
+      ) : null}
       <td className="px-4 py-3 text-sm text-gray-500 tabular-nums">{index + 1}</td>
       <td className="px-4 py-3 min-w-55">
         <Link href={`/inventory/tasks/${task.id}`} className="block">
@@ -699,6 +758,13 @@ function TaskRow({ task, index, users, isAdmin, onEdit, onDelete }: {
       </td>
       <td className="px-4 py-3 whitespace-nowrap">
         <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold", priority.className)}>{priority.label}</span>
+      </td>
+      <td className="px-4 py-3 whitespace-nowrap">
+        {category ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-600">
+            <Tag className="h-3 w-3" />{category.label}
+          </span>
+        ) : <span className="text-gray-300 text-sm">—</span>}
       </td>
       <td className={cn("px-4 py-3 whitespace-nowrap text-sm", overdue ? "font-semibold text-red-600" : "text-gray-600")}>
         {overdue ? <span className="flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{formatDate(task.due_date)}</span> : formatDate(task.due_date)}
@@ -735,11 +801,12 @@ function TaskRow({ task, index, users, isAdmin, onEdit, onDelete }: {
 type TasksManagerProps = {
   initialTasks: Task[];
   users: AssignableUser[];
+  taskCategories: TaskCategoryOption[];
   currentUserId: string;
   currentUserRole: Role;
 };
 
-export function TasksManager({ initialTasks, users, currentUserId, currentUserRole }: TasksManagerProps) {
+export function TasksManager({ initialTasks, users, taskCategories, currentUserId, currentUserRole }: TasksManagerProps) {
   const isAdmin = currentUserRole === "admin" || currentUserRole === "superadmin";
 
   // Staff only see tasks assigned to them
@@ -760,6 +827,37 @@ export function TasksManager({ initialTasks, users, currentUserId, currentUserRo
   const [isDeleting, startDelete] = useTransition();
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 12;
+
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkConfirm, setBulkConfirm] = useState(false);
+  const [isBulkDeleting, startBulkDelete] = useTransition();
+
+  function toggleSelectMode() {
+    setSelectMode((v) => !v);
+    setSelectedIds(new Set());
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function handleBulkDelete() {
+    const ids = Array.from(selectedIds);
+    startBulkDelete(async () => {
+      const result = await deleteTasks(ids);
+      if (result.success) {
+        setTasks((prev) => prev.filter((t) => !selectedIds.has(t.id)));
+        setSelectedIds(new Set());
+        setSelectMode(false);
+      }
+      setBulkConfirm(false);
+    });
+  }
 
   function handleSort(key: SortKey) {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -877,7 +975,23 @@ export function TasksManager({ initialTasks, users, currentUserId, currentUserRo
           ))}
         </select>
 
-        <div className="ml-auto flex rounded-xl border border-gray-200 bg-white overflow-hidden">
+        {isAdmin ? (
+          <button
+            type="button"
+            onClick={toggleSelectMode}
+            className={cn(
+              "ml-auto inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition-colors",
+              selectMode
+                ? "border-blue-600 bg-blue-600 text-white hover:bg-blue-700"
+                : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50",
+            )}
+          >
+            {selectMode ? <XSquare className="h-4 w-4" /> : <CheckSquare className="h-4 w-4" />}
+            {selectMode ? "Cancel" : "Select"}
+          </button>
+        ) : null}
+
+        <div className={cn("flex rounded-xl border border-gray-200 bg-white overflow-hidden", !isAdmin && "ml-auto")}>
           <button type="button" onClick={() => setView("grid")}
             className={cn("p-2 transition-colors", view === "grid" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-50")}>
             <Grid className="h-4 w-4" />
@@ -888,6 +1002,40 @@ export function TasksManager({ initialTasks, users, currentUserId, currentUserRo
           </button>
         </div>
       </div>
+
+      {/* Bulk action bar */}
+      {selectMode ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+          <span className="text-sm font-medium text-blue-800">
+            {selectedIds.size} of {filtered.length} selected
+          </span>
+          <button
+            type="button"
+            onClick={() => setSelectedIds(new Set(filtered.map((t) => t.id)))}
+            className="text-sm font-medium text-blue-700 hover:underline"
+          >
+            Select all
+          </button>
+          {selectedIds.size > 0 ? (
+            <button
+              type="button"
+              onClick={() => setSelectedIds(new Set())}
+              className="text-sm font-medium text-blue-700 hover:underline"
+            >
+              Clear
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => setBulkConfirm(true)}
+            disabled={selectedIds.size === 0}
+            className="ml-auto inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete Selected
+          </button>
+        </div>
+      ) : null}
 
       {/* Empty state */}
       {filtered.length === 0 ? (
@@ -900,10 +1048,13 @@ export function TasksManager({ initialTasks, users, currentUserId, currentUserRo
       ) : view === "grid" ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {paginated.map((task) => (
-            <TaskCard key={task.id} task={task} users={users}
+            <TaskCard key={task.id} task={task} users={users} taskCategories={taskCategories}
               onEdit={() => setModalTask(task)}
               onDelete={() => setDeleteTarget(task)}
               onProgressChange={handleProgressChange}
+              selectMode={selectMode}
+              selected={selectedIds.has(task.id)}
+              onToggleSelect={() => toggleSelect(task.id)}
             />
           ))}
         </div>
@@ -912,10 +1063,12 @@ export function TasksManager({ initialTasks, users, currentUserId, currentUserRo
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
+                {selectMode ? <th className="px-4 py-3 w-10" /> : null}
                 <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500">S.NO</th>
                 <SortTh label="Name" sortKey="title" current={sortKey} dir={sortDir} onSort={handleSort} />
                 <SortTh label="Status" sortKey="status" current={sortKey} dir={sortDir} onSort={handleSort} />
                 <SortTh label="Priority" sortKey="priority" current={sortKey} dir={sortDir} onSort={handleSort} />
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Category</th>
                 <SortTh label="Due Date" sortKey="due_date" current={sortKey} dir={sortDir} onSort={handleSort} />
                 <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Assigned To</th>
                 <SortTh label="Start Date" sortKey="created_at" current={sortKey} dir={sortDir} onSort={handleSort} />
@@ -924,9 +1077,12 @@ export function TasksManager({ initialTasks, users, currentUserId, currentUserRo
             </thead>
             <tbody>
               {paginated.map((task, idx) => (
-                <TaskRow key={task.id} task={task} index={(page - 1) * PAGE_SIZE + idx} users={users} isAdmin={isAdmin}
+                <TaskRow key={task.id} task={task} index={(page - 1) * PAGE_SIZE + idx} users={users} taskCategories={taskCategories} isAdmin={isAdmin}
                   onEdit={() => setModalTask(task)}
                   onDelete={() => setDeleteTarget(task)}
+                  selectMode={selectMode}
+                  selected={selectedIds.has(task.id)}
+                  onToggleSelect={() => toggleSelect(task.id)}
                 />
               ))}
             </tbody>
@@ -992,6 +1148,7 @@ export function TasksManager({ initialTasks, users, currentUserId, currentUserRo
         <TaskFormModal
           task={modalTask === "new" ? null : modalTask}
           users={users}
+          taskCategories={taskCategories}
           onClose={() => setModalTask(null)}
           onCreated={(newTask) => setTasks((prev) => [newTask, ...prev])}
         />
@@ -1004,6 +1161,17 @@ export function TasksManager({ initialTasks, users, currentUserId, currentUserRo
           onConfirm={handleDeleteConfirm}
           onCancel={() => setDeleteTarget(null)}
           loading={isDeleting}
+        />
+      ) : null}
+
+      {/* Bulk delete confirm */}
+      {bulkConfirm ? (
+        <DeleteConfirm
+          heading={`Delete ${selectedIds.size} task${selectedIds.size !== 1 ? "s" : ""}?`}
+          message={`${selectedIds.size} task${selectedIds.size !== 1 ? "s" : ""} will be permanently removed.`}
+          onConfirm={handleBulkDelete}
+          onCancel={() => setBulkConfirm(false)}
+          loading={isBulkDeleting}
         />
       ) : null}
     </div>

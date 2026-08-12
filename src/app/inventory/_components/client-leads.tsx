@@ -19,6 +19,8 @@ import {
   createClientLead,
   updateClientLead,
   deleteClientLead,
+  bulkDeleteClientLeads,
+  bulkSetLeadsConverted,
   toggleLeadConverted,
   type ClientLeadFormData,
 } from "@/app/inventory/_actions/client-leads";
@@ -119,6 +121,52 @@ function DeleteConfirm({
         <h3 className="text-base font-semibold text-gray-900">Delete lead?</h3>
         <p className="mt-2 text-sm text-gray-500">
           <span className="font-medium text-gray-700">{name}</span> will be permanently removed.
+        </p>
+        <div className="mt-5 flex gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={loading}
+            className="flex-1 rounded-xl border border-gray-200 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={loading}
+            className="flex-1 rounded-xl bg-red-600 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Bulk delete confirm dialog ───────────────────────────────────────────────
+
+function BulkDeleteConfirm({
+  count,
+  onConfirm,
+  onCancel,
+  loading,
+}: {
+  count: number;
+  onConfirm: () => void;
+  onCancel: () => void;
+  loading: boolean;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+        <h3 className="text-base font-semibold text-gray-900">
+          Delete {count} lead{count !== 1 ? "s" : ""}?
+        </h3>
+        <p className="mt-2 text-sm text-gray-500">
+          Selected leads will be permanently removed.
         </p>
         <div className="mt-5 flex gap-3">
           <button
@@ -550,6 +598,13 @@ export function ClientLeads({ initialLeads }: ClientLeadsProps) {
   const [isDeleting, startDelete] = useTransition();
   const [togglePendingId, setTogglePendingId] = useState<string | null>(null);
   const [filterConverted, setFilterConverted] = useState<"all" | "yes" | "no">("all");
+  const [filterProjectType, setFilterProjectType] = useState<string>("all");
+  const [visitDateFrom, setVisitDateFrom] = useState("");
+  const [visitDateTo, setVisitDateTo] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [isBulkDeleting, startBulkDelete] = useTransition();
+  const [isBulkConverting, startBulkConvert] = useTransition();
 
   // Re-sync leads after server mutations (revalidatePath triggers re-render from parent)
   // The parent is a Server Component so it will refetch; here we just update local state
@@ -564,6 +619,14 @@ export function ClientLeads({ initialLeads }: ClientLeadsProps) {
     }
   }
 
+  const projectTypes = useMemo(() => {
+    const set = new Set<string>();
+    leads.forEach((l) => {
+      if (l.project_type && l.project_type.trim()) set.add(l.project_type.trim());
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [leads]);
+
   const filtered = useMemo(() => {
     let list = leads;
 
@@ -571,6 +634,18 @@ export function ClientLeads({ initialLeads }: ClientLeadsProps) {
       list = list.filter((l) =>
         filterConverted === "yes" ? l.converted : !l.converted,
       );
+    }
+
+    if (filterProjectType !== "all") {
+      list = list.filter((l) => l.project_type === filterProjectType);
+    }
+
+    if (visitDateFrom) {
+      list = list.filter((l) => l.first_visit_date && l.first_visit_date >= visitDateFrom);
+    }
+
+    if (visitDateTo) {
+      list = list.filter((l) => l.first_visit_date && l.first_visit_date <= visitDateTo);
     }
 
     if (search.trim()) {
@@ -601,7 +676,16 @@ export function ClientLeads({ initialLeads }: ClientLeadsProps) {
     });
 
     return list;
-  }, [leads, search, filterConverted, sortKey, sortDir]);
+  }, [
+    leads,
+    search,
+    filterConverted,
+    filterProjectType,
+    visitDateFrom,
+    visitDateTo,
+    sortKey,
+    sortDir,
+  ]);
 
   async function handleToggleConverted(lead: ClientLead) {
     setTogglePendingId(lead.id);
@@ -637,6 +721,63 @@ export function ClientLeads({ initialLeads }: ClientLeadsProps) {
     // The parent Server Component will re-render from revalidatePath
     // but since this is fully client-side state for now, we rely on it.
     // In practice Next.js router refresh fires automatically via revalidatePath.
+  }
+
+  function toggleSelectOne(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  const allFilteredSelected =
+    filtered.length > 0 && filtered.every((l) => selectedIds.has(l.id));
+  const someFilteredSelected = filtered.some((l) => selectedIds.has(l.id));
+
+  function toggleSelectAll() {
+    setSelectedIds((prev) => {
+      if (allFilteredSelected) {
+        const next = new Set(prev);
+        filtered.forEach((l) => next.delete(l.id));
+        return next;
+      }
+      const next = new Set(prev);
+      filtered.forEach((l) => next.add(l.id));
+      return next;
+    });
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set());
+  }
+
+  function handleBulkDeleteConfirm() {
+    const ids = Array.from(selectedIds);
+    startBulkDelete(async () => {
+      const result = await bulkDeleteClientLeads(ids);
+      if (result.success) {
+        setLeads((prev) => prev.filter((l) => !selectedIds.has(l.id)));
+        clearSelection();
+      }
+      setBulkDeleteConfirm(false);
+    });
+  }
+
+  function handleBulkSetConverted(converted: boolean) {
+    const ids = Array.from(selectedIds);
+    startBulkConvert(async () => {
+      const result = await bulkSetLeadsConverted(ids, converted);
+      if (result.success) {
+        setLeads((prev) =>
+          prev.map((l) => (selectedIds.has(l.id) ? { ...l, converted } : l)),
+        );
+      }
+    });
   }
 
   return (
@@ -688,10 +829,96 @@ export function ClientLeads({ initialLeads }: ClientLeadsProps) {
             </button>
           ))}
         </div>
+        <select
+          value={filterProjectType}
+          onChange={(e) => setFilterProjectType(e.target.value)}
+          className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-100"
+        >
+          <option value="all">All Project Types</option>
+          {projectTypes.map((pt) => (
+            <option key={pt} value={pt}>
+              {pt}
+            </option>
+          ))}
+        </select>
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-gray-500">Visit:</label>
+          <input
+            type="date"
+            value={visitDateFrom}
+            onChange={(e) => setVisitDateFrom(e.target.value)}
+            className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-100"
+          />
+          <span className="text-sm text-gray-400">to</span>
+          <input
+            type="date"
+            value={visitDateTo}
+            onChange={(e) => setVisitDateTo(e.target.value)}
+            className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-100"
+          />
+          {visitDateFrom || visitDateTo ? (
+            <button
+              type="button"
+              onClick={() => {
+                setVisitDateFrom("");
+                setVisitDateTo("");
+              }}
+              className="text-sm text-gray-400 hover:text-gray-600"
+              title="Clear date range"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          ) : null}
+        </div>
         {filtered.length !== leads.length ? (
           <span className="text-sm text-gray-500">{filtered.length} shown</span>
         ) : null}
       </div>
+
+      {/* Bulk action bar */}
+      {selectedIds.size > 0 ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5">
+          <span className="text-sm font-medium text-gray-700">
+            {selectedIds.size} selected
+          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={isBulkConverting}
+              onClick={() => handleBulkSetConverted(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+            >
+              <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+              Mark Converted
+            </button>
+            <button
+              type="button"
+              disabled={isBulkConverting}
+              onClick={() => handleBulkSetConverted(false)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+            >
+              <XCircle className="h-3.5 w-3.5 text-orange-500" />
+              Mark Not Converted
+            </button>
+            <button
+              type="button"
+              onClick={() => setBulkDeleteConfirm(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete Selected
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={clearSelection}
+            className="ml-auto inline-flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-700"
+          >
+            <X className="h-3.5 w-3.5" />
+            Clear selection
+          </button>
+        </div>
+      ) : null}
 
       {/* Table */}
       <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white">
@@ -708,6 +935,21 @@ export function ClientLeads({ initialLeads }: ClientLeadsProps) {
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
+                <th className="w-10 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    aria-label="Select all leads"
+                    checked={allFilteredSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = !allFilteredSelected && someFilteredSelected;
+                    }}
+                    onChange={toggleSelectAll}
+                    className="h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-400"
+                  />
+                </th>
+                <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  S. No
+                </th>
                 {TABLE_COLS.map((col) => (
                   <th
                     key={col.key}
@@ -736,10 +978,26 @@ export function ClientLeads({ initialLeads }: ClientLeadsProps) {
                 <tr
                   key={lead.id}
                   className={cn(
-                    "border-b border-gray-100 last:border-0 transition-colors hover:bg-gray-50",
-                    idx % 2 === 0 ? "bg-white" : "bg-gray-50/40",
+                    "border-b border-gray-100 last:border-0 transition-colors",
+                    selectedIds.has(lead.id)
+                      ? "bg-blue-100"
+                      : idx % 2 === 0
+                        ? "bg-white hover:bg-gray-50"
+                        : "bg-gray-50/40 hover:bg-gray-50",
                   )}
                 >
+                  <td className="w-10 px-4 py-3">
+                    <input
+                      type="checkbox"
+                      aria-label={`Select ${lead.client_name}`}
+                      checked={selectedIds.has(lead.id)}
+                      onChange={() => toggleSelectOne(lead.id)}
+                      className="h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-400"
+                    />
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
+                    {idx + 1}
+                  </td>
                   {TABLE_COLS.map((col) => (
                     <td
                       key={col.key}
@@ -801,6 +1059,16 @@ export function ClientLeads({ initialLeads }: ClientLeadsProps) {
         <LeadFormDrawer
           lead={drawerLead === "new" ? null : drawerLead}
           onClose={handleDrawerClose}
+        />
+      ) : null}
+
+      {/* Bulk delete confirm */}
+      {bulkDeleteConfirm ? (
+        <BulkDeleteConfirm
+          count={selectedIds.size}
+          onConfirm={handleBulkDeleteConfirm}
+          onCancel={() => setBulkDeleteConfirm(false)}
+          loading={isBulkDeleting}
         />
       ) : null}
 

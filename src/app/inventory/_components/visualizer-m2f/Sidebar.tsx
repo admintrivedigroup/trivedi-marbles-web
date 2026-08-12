@@ -6,6 +6,17 @@ import { fetchTextureBase64 } from "@/lib/visualizerM2F/actions/fetchTextureBase
 import { formatSlabDimensions } from "@/lib/visualizerM2F/types";
 import type { SlabTexture, PipelineSegment } from "@/lib/visualizerM2F/types";
 import { SurfaceSelector } from "@/app/inventory/_components/visualizer-m2f/SurfaceSelector";
+import { compressImage } from "@/lib/cloudinary/compress";
+import { uploadToCloudinary } from "@/lib/cloudinary/upload";
+
+function readAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error("Could not read file."));
+    reader.readAsDataURL(file);
+  });
+}
 
 type Props = {
   segments: PipelineSegment[];
@@ -40,11 +51,49 @@ export function Sidebar({
   const [search,  setSearch]  = useState("");
   const [favOnly, setFavOnly] = useState(false);
   const [view,    setView]    = useState<"list" | "grid">("list");
+  const [uploading,   setUploading]   = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     void getSlabTextures().then((s) => { setSlabs(s); setLoading(false); });
   }, []);
+
+  async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setUploadError("Please select an image file.");
+      return;
+    }
+
+    setUploadError(null);
+    setUploading(true);
+    try {
+      const compressed = await compressImage(file);
+      const [base64, { secureUrl }] = await Promise.all([
+        readAsDataUrl(compressed),
+        uploadToCloudinary(compressed),
+      ]);
+      const slab: SlabTexture = {
+        id: `upload-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        slabCode: null,
+        marbleName: file.name.replace(/\.[^.]+$/, "") || "Custom upload",
+        lotNumber: null,
+        thumbnailUrl: secureUrl,
+        length: null,
+        width: null,
+      };
+      setSlabs((prev) => [slab, ...prev]);
+      onSelectSlab(slab, base64);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Upload failed. Please try again.");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -108,6 +157,39 @@ export function Sidebar({
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5"><path d="M4 6h16M7 12h10M10 18h4" /></svg>
           )}
         </button>
+      </div>
+
+      <div className="px-3 pb-2.5">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => void handleFileSelected(e)}
+        />
+        <button
+          type="button"
+          disabled={uploading}
+          onClick={() => fileInputRef.current?.click()}
+          className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-stone-300 bg-white px-2.5 py-2 text-[11.5px] font-semibold text-stone-600 hover:border-stone-400 hover:text-stone-800 disabled:cursor-wait disabled:opacity-60"
+        >
+          {uploading ? (
+            <>
+              <div className="h-3 w-3 animate-spin rounded-full border-2 border-stone-400 border-t-transparent" />
+              Uploading…
+            </>
+          ) : (
+            <>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5 shrink-0">
+                <path d="M12 16V4M12 4l-4 4M12 4l4 4" /><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3" />
+              </svg>
+              Upload your own slab
+            </>
+          )}
+        </button>
+        {uploadError && (
+          <p className="mt-1.5 text-[10.5px] text-red-600">{uploadError}</p>
+        )}
       </div>
 
       <div ref={listRef} className="flex-1 overflow-y-auto px-2.5 pb-2">

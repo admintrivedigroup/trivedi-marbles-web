@@ -8,8 +8,11 @@ import {
   ChevronDown,
   ChevronUp,
   Loader2,
+  Lock,
   Pencil,
   Plus,
+  RefreshCw,
+  Sparkles,
   Trash2,
   TrendingUp,
   Trophy,
@@ -19,7 +22,7 @@ import {
   Clock,
   AlertCircle,
 } from "lucide-react";
-import type { KraColumn, KraEntry } from "@/app/inventory/_lib/kra-shared";
+import type { KraColumn, KraEntry, KraCalcType } from "@/app/inventory/_lib/kra-shared";
 import { FISCAL_MONTHS } from "@/app/inventory/_lib/kra-shared";
 import {
   upsertKraEntry,
@@ -34,10 +37,12 @@ import { cn } from "@/lib/utils";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type KraUser = { userId: string; email: string; displayName: string | null };
+export type ComputedTaskScore = { points: number; reversePoints: number };
 
 type KraManagerProps = {
   columns: KraColumn[];
   entries: KraEntry[];
+  computedTaskScores: Record<string, ComputedTaskScore>;
   users: KraUser[];
   isAdmin: boolean;
   selectedEmployeeId: string;
@@ -279,6 +284,7 @@ function EditableCell({
 const EMPTY_COL: KraColumnFormData = {
   label: "", weightage: 40, target: "100", source: "",
   frequency: "MONTHLY", approval_required: true, active: true,
+  calc_type: "manual", is_bonus: false, is_compulsory: false,
 };
 
 function ColumnFormModal({
@@ -343,12 +349,27 @@ function ColumnFormModal({
               <option value="ANNUALLY">Annually</option>
             </select>
           </div>
-          <div className="flex gap-6 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+          <div>
+            <label className={lbl}>Scoring Type</label>
+            <select value={form.calc_type} onChange={(e) => set("calc_type", e.target.value as KraCalcType)} className={inp}>
+              <option value="manual">Manual Entry</option>
+              <option value="tasks">Task Category (auto-scored from Tasks)</option>
+            </select>
+            <p className="mt-1.5 text-xs text-gray-400">
+              {form.calc_type === "tasks"
+                ? "Points = % of this category's tasks completed each month. Reverse Points is the complement, both derived automatically."
+                : "Points and Reverse Points are entered by hand each month."}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-6 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
             <label className="flex cursor-pointer items-center gap-2.5">
               <input type="checkbox" checked={form.approval_required}
+                disabled={form.calc_type === "tasks"}
                 onChange={(e) => set("approval_required", e.target.checked)}
-                className="h-4 w-4 rounded accent-blue-600" />
-              <span className="text-sm font-medium text-gray-700">Approval Required</span>
+                className="h-4 w-4 rounded accent-blue-600 disabled:opacity-40" />
+              <span className={cn("text-sm font-medium", form.calc_type === "tasks" ? "text-gray-400" : "text-gray-700")}>
+                Approval Required
+              </span>
             </label>
             <label className="flex cursor-pointer items-center gap-2.5">
               <input type="checkbox" checked={form.active}
@@ -356,7 +377,28 @@ function ColumnFormModal({
                 className="h-4 w-4 rounded accent-emerald-600" />
               <span className="text-sm font-medium text-gray-700">Active</span>
             </label>
+            <label className="flex cursor-pointer items-center gap-2.5">
+              <input type="checkbox" checked={form.is_bonus}
+                onChange={(e) => set("is_bonus", e.target.checked)}
+                className="h-4 w-4 rounded accent-violet-600" />
+              <span className="text-sm font-medium text-gray-700">Bonus (outside the 100% cap)</span>
+            </label>
+            <label className="flex cursor-pointer items-center gap-2.5">
+              <input type="checkbox" checked={form.is_compulsory}
+                onChange={(e) => set("is_compulsory", e.target.checked)}
+                className="h-4 w-4 rounded accent-amber-600" />
+              <span className="text-sm font-medium text-gray-700">Compulsory (can&apos;t be deleted)</span>
+            </label>
           </div>
+          {form.is_bonus ? (
+            <div className="flex items-start gap-2 rounded-xl bg-violet-50 px-4 py-3">
+              <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-violet-500" />
+              <p className="text-xs text-violet-700">
+                Bonus columns (e.g. &ldquo;Over &amp; Beyond&rdquo;) don&apos;t count toward the 100% weightage
+                total — their score adds directly on top of it.
+              </p>
+            </div>
+          ) : null}
           {error ? (
             <div className="flex items-start gap-2 rounded-xl bg-red-50 px-4 py-3">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
@@ -477,6 +519,21 @@ function ColumnCard({
               Approval
             </span>
           )}
+          {col.calc_type === "tasks" && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-600">
+              <RefreshCw className="h-2.5 w-2.5" />Task Category
+            </span>
+          )}
+          {col.is_bonus && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-violet-700">
+              <Sparkles className="h-2.5 w-2.5" />Bonus
+            </span>
+          )}
+          {col.is_compulsory && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700">
+              <Lock className="h-2.5 w-2.5" />Compulsory
+            </span>
+          )}
         </div>
         <div className="flex shrink-0 items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button type="button" disabled={idx === 0 || isMoving} onClick={() => onMove("up")}
@@ -491,8 +548,9 @@ function ColumnCard({
             className="rounded-lg p-1.5 text-gray-400 hover:bg-blue-50 hover:text-blue-600 transition-colors">
             <Pencil className="h-3.5 w-3.5" />
           </button>
-          <button type="button" onClick={onDelete}
-            className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors">
+          <button type="button" onClick={onDelete} disabled={col.is_compulsory}
+            title={col.is_compulsory ? "Compulsory column cannot be deleted" : undefined}
+            className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-gray-400 transition-colors">
             <Trash2 className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -537,6 +595,7 @@ function ColumnCard({
 export function KraManager({
   columns: initColumns,
   entries: initEntries,
+  computedTaskScores,
   users,
   isAdmin,
   selectedEmployeeId,
@@ -553,6 +612,7 @@ export function KraManager({
   const [colModal,        setColModal]        = useState<KraColumn | "new" | null>(null);
   const [colModalError,   setColModalError]   = useState<string | null>(null);
   const [deleteTarget,    setDeleteTarget]    = useState<KraColumn | null>(null);
+  const [deleteError,     setDeleteError]     = useState<string | null>(null);
   const [isColSaving,     startColSave]       = useTransition();
   const [isDeleting,      startDelete]        = useTransition();
   const [isMoving,        startMove]          = useTransition();
@@ -581,16 +641,27 @@ export function KraManager({
     return m;
   }, [entries]);
 
+  // Task Category columns are always computed live from `tasks` — never from
+  // stored kra_entries — so the score can never go stale.
+  function hasDataFor(col: KraColumn, fmNum: number): boolean {
+    if (col.calc_type === "tasks") return `${col.id}-${fmNum}` in computedTaskScores;
+    return entryMap.has(`${col.id}-${fmNum}`);
+  }
+
   const colScore = useMemo(() => {
     const r: Record<string, number[]> = {};
     for (const col of activeColumns) {
       r[col.id] = FISCAL_MONTHS.map((fm) => {
+        if (col.calc_type === "tasks") {
+          const cs = computedTaskScores[`${col.id}-${fm.num}`];
+          return (cs?.points ?? 0) * (col.weightage / 100);
+        }
         const e = entryMap.get(`${col.id}-${fm.num}`);
         return (e?.points ?? 0) * (col.weightage / 100);
       });
     }
     return r;
-  }, [activeColumns, entryMap]);
+  }, [activeColumns, entryMap, computedTaskScores]);
 
   const monthlyTotals = useMemo(
     () => FISCAL_MONTHS.map((_, i) =>
@@ -603,10 +674,15 @@ export function KraManager({
   const averageScore = annualScore / 12;
 
   const maxMonthlyScore = useMemo(
-    () => activeColumns.reduce((s, c) => s + c.weightage, 0),
+    () => activeColumns.filter((c) => !c.is_bonus).reduce((s, c) => s + c.weightage, 0),
     [activeColumns],
   );
   const maxAnnualScore = maxMonthlyScore * 12;
+
+  const bonusWeightage = useMemo(
+    () => activeColumns.filter((c) => c.is_bonus).reduce((s, c) => s + c.weightage, 0),
+    [activeColumns],
+  );
 
   const topMonth = useMemo(() => {
     let best = { idx: 0, score: -Infinity };
@@ -615,7 +691,7 @@ export function KraManager({
   }, [monthlyTotals]);
 
   const totalActiveWeightage = useMemo(
-    () => activeColumns.reduce((s, c) => s + c.weightage, 0),
+    () => activeColumns.filter((c) => !c.is_bonus).reduce((s, c) => s + c.weightage, 0),
     [activeColumns],
   );
 
@@ -625,14 +701,14 @@ export function KraManager({
   // Determine the "phase" of a specific fiscal month for coloring
   function getMonthPhase(fmNum: number): "past-empty" | "past-data" | "current" | "future" {
     if (fyPhase === "past") {
-      const hasData = activeColumns.some((c) => entryMap.has(`${c.id}-${fmNum}`));
+      const hasData = activeColumns.some((c) => hasDataFor(c, fmNum));
       return hasData ? "past-data" : "past-empty";
     }
     if (fyPhase === "future") return "future";
     // current FY
     if (fmNum === currentFiscalMonth) return "current";
     if (currentFiscalMonth !== null && fmNum < currentFiscalMonth) {
-      const hasData = activeColumns.some((c) => entryMap.has(`${c.id}-${fmNum}`));
+      const hasData = activeColumns.some((c) => hasDataFor(c, fmNum));
       return hasData ? "past-data" : "past-empty";
     }
     return "future";
@@ -698,8 +774,10 @@ export function KraManager({
   function handleDelete() {
     if (!deleteTarget) return;
     const id = deleteTarget.id;
+    setDeleteError(null);
     startDelete(async () => {
-      await deleteKraColumn(id);
+      const res = await deleteKraColumn(id);
+      if (!res.success) { setDeleteError(res.error); return; }
       setColumns((prev) => prev.filter((c) => c.id !== id));
       setEntries((prev) => prev.filter((e) => e.column_id !== id));
       setDeleteTarget(null);
@@ -869,7 +947,7 @@ export function KraManager({
           <div>
             <h2 className="text-lg font-bold text-gray-900">Monthly Performance Matrix</h2>
             <p className="mt-0.5 text-xs text-gray-400">
-              Click a month header to expand / collapse · Click a cell to edit
+              Click a month header to expand / collapse · Click a cell to edit · <RefreshCw className="inline h-3 w-3 -mt-0.5" /> marks values auto-synced live from Tasks
             </p>
           </div>
           {annualScore > 0 && (
@@ -1017,9 +1095,15 @@ export function KraManager({
                             {activeColumns.map((col) => {
                               const entry  = entryMap.get(`${col.id}-${fm.num}`);
                               const saving = savingCells.has(`${col.id}-${fm.num}-reverse_points`);
+                              const isTaskCol = col.calc_type === "tasks";
+                              const taskScore = isTaskCol ? computedTaskScores[`${col.id}-${fm.num}`] : undefined;
                               return (
                                 <td key={col.id} className="px-4 py-2.5 text-center">
-                                  {col.approval_required ? (
+                                  {isTaskCol ? (
+                                    <span className={cn("tabular-nums", taskScore ? "text-gray-800" : "text-gray-300")}>
+                                      {taskScore ? fmt(taskScore.reversePoints) : "—"}
+                                    </span>
+                                  ) : col.approval_required ? (
                                     <EditableCell
                                       value={entry?.reverse_points ?? null}
                                       hasEntry={!!entry}
@@ -1043,6 +1127,23 @@ export function KraManager({
                               <span className="text-[11px] font-semibold text-blue-600">Points</span>
                             </td>
                             {activeColumns.map((col) => {
+                              if (col.calc_type === "tasks") {
+                                const taskScore = computedTaskScores[`${col.id}-${fm.num}`];
+                                return (
+                                  <td key={col.id} className="px-4 py-2.5 text-center">
+                                    <span
+                                      title="Auto-synced live from Tasks"
+                                      className={cn(
+                                        "inline-flex items-center gap-1 tabular-nums",
+                                        taskScore ? "text-gray-800" : "text-gray-300",
+                                      )}
+                                    >
+                                      {taskScore ? fmt(taskScore.points) : "—"}
+                                      <RefreshCw className="h-2.5 w-2.5 text-blue-300" />
+                                    </span>
+                                  </td>
+                                );
+                              }
                               const entry  = entryMap.get(`${col.id}-${fm.num}`);
                               const saving = savingCells.has(`${col.id}-${fm.num}-points`);
                               return (
@@ -1081,10 +1182,9 @@ export function KraManager({
                             </td>
                             {activeColumns.map((col) => {
                               const score  = colScore[col.id]?.[monthIdx] ?? 0;
-                              const entry  = entryMap.get(`${col.id}-${fm.num}`);
                               return (
                                 <td key={col.id} className="px-4 py-3 text-center">
-                                  {entry ? (
+                                  {hasDataFor(col, fm.num) ? (
                                     <span className={cn("text-sm", scoreTextClass(score, col.weightage))}>
                                       {fmt(score)}
                                     </span>
@@ -1194,6 +1294,15 @@ export function KraManager({
                 <p className="mt-0.5 text-2xl font-extrabold text-gray-900">{Math.max(0, 100 - totalActiveWeightage)}%</p>
               </div>
             </div>
+            {bonusWeightage > 0 && (
+              <div className="flex items-center gap-3 rounded-2xl border border-violet-100 bg-violet-50 px-5 py-4 shadow-sm">
+                <Sparkles className="h-5 w-5 text-violet-500" />
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-violet-400">Bonus (outside cap)</p>
+                  <p className="mt-0.5 text-2xl font-extrabold text-violet-700">{bonusWeightage}%</p>
+                </div>
+              </div>
+            )}
             <div className={cn(
               "flex items-center gap-2.5 rounded-2xl border px-5 py-4",
               totalActiveWeightage <= 100
@@ -1245,6 +1354,7 @@ export function KraManager({
             label: colModal.label, weightage: colModal.weightage, target: colModal.target,
             source: colModal.source, frequency: colModal.frequency,
             approval_required: colModal.approval_required, active: colModal.active,
+            calc_type: colModal.calc_type, is_bonus: colModal.is_bonus, is_compulsory: colModal.is_compulsory,
           }}
           onClose={() => setColModal(null)}
           onSave={handleColSave}
@@ -1273,9 +1383,12 @@ export function KraManager({
                 <span className="font-semibold text-gray-900">&ldquo;{deleteTarget.label}&rdquo;</span>{" "}
                 and all its entry data will be permanently deleted.
               </p>
+              {deleteError ? (
+                <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs text-red-600">{deleteError}</p>
+              ) : null}
             </div>
             <div className="flex gap-3 border-t border-gray-100 bg-gray-50 px-6 py-4">
-              <button type="button" onClick={() => setDeleteTarget(null)} disabled={isDeleting}
+              <button type="button" onClick={() => { setDeleteTarget(null); setDeleteError(null); }} disabled={isDeleting}
                 className="flex-1 rounded-xl border border-gray-200 bg-white py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors">
                 Cancel
               </button>

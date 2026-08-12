@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { Menu, X } from "lucide-react";
+import { Lock, Menu, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -158,6 +158,15 @@ export default function Navbar() {
               </Link>
             );
           })}
+          <Link
+            href="/inventory/login"
+            className={cn(
+              "flex items-center gap-1.5 rounded-full border border-current/30 px-3 py-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] transition-colors hover:border-secondary hover:text-secondary 2xl:text-sm",
+            )}
+          >
+            <Lock className="h-3.5 w-3.5" />
+            Employee Login
+          </Link>
         </div>
 
         <button
@@ -230,6 +239,13 @@ export default function Navbar() {
                   </Link>
                 );
               })}
+              <Link
+                href="/inventory/login"
+                className="flex items-center gap-2 text-lg transition-colors hover:text-secondary"
+              >
+                <Lock className="h-5 w-5" />
+                Employee Login
+              </Link>
             </div>
           </motion.div>
         )}

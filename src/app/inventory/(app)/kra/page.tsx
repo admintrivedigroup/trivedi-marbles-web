@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { KraManager } from "@/app/inventory/_components/kra-manager";
-import { getKraColumns, getKraEntries, getFinancialYears } from "@/app/inventory/_lib/kra";
+import { getKraColumns, getKraEntries, getFinancialYears, getComputedTaskScores } from "@/app/inventory/_lib/kra";
 import { getAllManagedUsers, getCurrentUserProfile } from "@/app/inventory/_lib/user-profile";
 
 export const metadata = {
@@ -37,9 +37,10 @@ export default async function KraPage({ searchParams }: KraPageProps) {
     displayName: u.displayName,
   }));
 
-  const [columns, entries] = await Promise.all([
+  const [columns, entries, computedTaskScores] = await Promise.all([
     getKraColumns(selectedEmployeeId),
     getKraEntries(selectedEmployeeId, selectedYear),
+    getComputedTaskScores(selectedEmployeeId, selectedYear),
   ]);
 
   return (
@@ -47,6 +48,7 @@ export default async function KraPage({ searchParams }: KraPageProps) {
       key={`${selectedEmployeeId}-${selectedYear}`}
       columns={columns}
       entries={entries}
+      computedTaskScores={computedTaskScores}
       users={isAdmin ? assignableUsers : assignableUsers.filter((u) => u.userId === profile.userId)}
       isAdmin={isAdmin}
       selectedEmployeeId={selectedEmployeeId}
