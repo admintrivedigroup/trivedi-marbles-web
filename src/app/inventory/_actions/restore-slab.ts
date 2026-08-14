@@ -4,12 +4,16 @@ import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/app/inventory/_lib/audit";
+import { requirePermission } from "@/app/inventory/_lib/action-auth";
 
 export type RestoreSlabResult = {
   error: string | null;
 };
 
 export async function restoreSlab(slabId: string): Promise<RestoreSlabResult> {
+  const auth = await requirePermission("delete_stock");
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
   const {
     data: { user },

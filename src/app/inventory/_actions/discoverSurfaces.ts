@@ -1,5 +1,7 @@
 "use server";
 
+import { requireUser } from "@/app/inventory/_lib/action-auth";
+
 // SAM-2 version must match the one in visualize.ts
 const SAM_VERSION =
   "cbd95fb76192174268b6b303aeeb7a736e8dab0cbc38177f09db79b2299da30b";
@@ -109,6 +111,9 @@ async function fetchMask(predId: string, token: string): Promise<string | null> 
 }
 
 export async function discoverSurfaces(formData: FormData): Promise<DiscoveryResult> {
+  const auth = await requireUser();
+  if (!auth.ok) return { masks: [], error: auth.error };
+
   const photo         = formData.get("photo") as File | null;
   const naturalWidth  = Number(formData.get("naturalWidth"))  || 1024;
   const naturalHeight = Number(formData.get("naturalHeight")) || 768;

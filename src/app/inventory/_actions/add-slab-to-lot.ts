@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/app/inventory/_lib/audit";
+import { requirePermission } from "@/app/inventory/_lib/action-auth";
 
 export type AddSlabToLotResult = {
   error: string | null;
@@ -14,6 +15,9 @@ export async function addSlabToLot(
   lotId: string,
   formData: FormData,
 ): Promise<AddSlabToLotResult> {
+  const auth = await requirePermission("add_stock");
+  if (!auth.ok) return { error: auth.error, slabId: null };
+
   const slabCode = String(formData.get("slabCode") ?? "").trim();
   const lengthInput = String(formData.get("length") ?? "").trim();
   const widthInput = String(formData.get("width") ?? "").trim();

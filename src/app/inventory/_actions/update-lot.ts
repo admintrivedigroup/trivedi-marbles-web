@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/app/inventory/_lib/audit";
+import { requirePermission } from "@/app/inventory/_lib/action-auth";
 
 export type UpdateLotResult = {
   error: string | null;
@@ -26,6 +27,9 @@ export async function updateLot(
   lotId: string,
   formData: FormData,
 ): Promise<UpdateLotResult> {
+  const auth = await requirePermission("edit_stock");
+  if (!auth.ok) return { error: auth.error };
+
   const lotNumber = String(formData.get("lotNumber") ?? "").trim();
   const marbleName = String(formData.get("marbleName") ?? "").trim();
   const categoryId = String(formData.get("categoryId") ?? "").trim();

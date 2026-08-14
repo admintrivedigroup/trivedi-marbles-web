@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
+import { requirePermission } from "@/app/inventory/_lib/action-auth";
 
 export type ToggleLotWebsiteResult = {
   error: string | null;
@@ -13,6 +14,9 @@ export async function toggleLotWebsite(
   lotId: string,
   currentValue: boolean,
 ): Promise<ToggleLotWebsiteResult> {
+  const auth = await requirePermission("edit_stock");
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
   const {
     data: { user },

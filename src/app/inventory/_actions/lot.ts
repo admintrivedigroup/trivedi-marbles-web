@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import type { SaveLotResult } from "@/app/inventory/_actions/stock-state";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/app/inventory/_lib/audit";
+import { requirePermission } from "@/app/inventory/_lib/action-auth";
 import {
   parseRequiredPositiveNumber,
   parseOptionalNonNegativeNumber,
@@ -24,6 +25,9 @@ function normalizeForeignKey(value: string) {
 }
 
 export async function saveLot(formData: FormData): Promise<SaveLotResult> {
+  const auth = await requirePermission("add_stock");
+  if (!auth.ok) return { lotId: null, message: auth.error, slabCount: 0, slabIds: [], status: "error" };
+
   const lotNumber = String(formData.get("lotNumber") ?? "").trim();
   const marbleName = String(formData.get("marbleName") ?? "").trim();
   const categoryId = String(formData.get("categoryId") ?? "").trim();

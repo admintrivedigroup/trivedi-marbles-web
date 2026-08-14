@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/app/inventory/_lib/audit";
+import { requirePermission } from "@/app/inventory/_lib/action-auth";
 
 export type SaveMovementResult = {
   error: string | null;
@@ -24,6 +25,9 @@ export async function saveMovement(
   if (!toWarehouseId) {
     return { error: "Please select a destination warehouse.", status: "error" };
   }
+
+  const auth = await requirePermission("stock_movement");
+  if (!auth.ok) return { error: auth.error, status: "error" };
 
   const supabase = await createClient();
   const {
@@ -129,6 +133,9 @@ export async function saveBatchMovement(
   if (!toWarehouseId) {
     return { error: "Please select a destination warehouse.", status: "error", transferred: 0 };
   }
+
+  const auth = await requirePermission("stock_movement");
+  if (!auth.ok) return { error: auth.error, status: "error", transferred: 0 };
 
   const supabase = await createClient();
   const {
@@ -248,6 +255,9 @@ export async function createTransferRequest(
   if (!toWarehouseId) {
     return { error: "Please select a destination warehouse.", status: "error", transferred: 0 };
   }
+
+  const auth = await requirePermission("stock_movement");
+  if (!auth.ok) return { error: auth.error, status: "error", transferred: 0 };
 
   const supabase = await createClient();
 
@@ -377,6 +387,9 @@ export async function receiveTransfer(
     return { error: "Missing transfer ID.", status: "error" };
   }
 
+  const auth = await requirePermission("stock_movement");
+  if (!auth.ok) return { error: auth.error, status: "error" };
+
   let itemData: Record<string, { rackNumber: string; notes: string }> = {};
   try {
     if (itemDataRaw) itemData = JSON.parse(itemDataRaw);
@@ -505,6 +518,9 @@ export async function cancelTransfer(
   if (!transferId) {
     return { error: "Missing transfer ID.", status: "error" };
   }
+
+  const auth = await requirePermission("stock_movement");
+  if (!auth.ok) return { error: auth.error, status: "error" };
 
   const supabase = await createClient();
   const {

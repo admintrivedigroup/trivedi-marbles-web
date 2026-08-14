@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/app/inventory/_lib/audit";
+import { requirePermission } from "@/app/inventory/_lib/action-auth";
 import { SLAB_STATUS } from "@/app/inventory/_lib/slab-status";
 import type { ReservationData } from "@/app/inventory/_actions/update-slab-status";
 
@@ -30,6 +31,9 @@ export async function updateLotSlabsStatus(
   action: LotBulkAction,
   reservationData?: ReservationData | null,
 ): Promise<UpdateLotStatusResult> {
+  const auth = await requirePermission("edit_stock");
+  if (!auth.ok) return { error: auth.error, updatedCount: 0 };
+
   const supabase = await createClient();
 
   const {

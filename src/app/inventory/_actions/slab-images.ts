@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/app/inventory/_lib/audit";
+import { requirePermission } from "@/app/inventory/_lib/action-auth";
 
 export type SlabImageInput = {
   imageUrl: string;
@@ -23,6 +24,9 @@ export async function saveSlabImages(
   images: SlabImageInput[],
 ): Promise<SaveSlabImagesResult> {
   if (images.length === 0) return { error: null, savedCount: 0 };
+
+  const auth = await requirePermission("edit_stock");
+  if (!auth.ok) return { error: auth.error, savedCount: 0 };
 
   try {
     const supabase = await createClient();
@@ -92,6 +96,9 @@ export async function deleteSlabImage(
   publicId: string,
   slabId: string,
 ): Promise<DeleteSlabImageResult> {
+  const auth = await requirePermission("edit_stock");
+  if (!auth.ok) return { error: auth.error };
+
   try {
     const supabase = await createClient();
     const {

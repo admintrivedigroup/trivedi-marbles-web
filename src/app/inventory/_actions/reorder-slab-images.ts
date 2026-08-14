@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { requirePermission } from "@/app/inventory/_lib/action-auth";
 
 export type ReorderSlabImagesResult = {
   error: string | null;
@@ -10,14 +11,10 @@ export async function reorderSlabImages(
   slabId: string,
   orderedImageIds: string[],
 ): Promise<ReorderSlabImagesResult> {
+  const auth = await requirePermission("edit_stock");
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
-
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) return { error: "Please sign in again." };
 
   const updates = orderedImageIds.map((id, index) => ({
     id,

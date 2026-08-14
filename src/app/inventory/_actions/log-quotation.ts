@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/app/inventory/_lib/audit";
+import { requirePermission } from "@/app/inventory/_lib/action-auth";
 
 export type LogQuotationParams = {
   action: "quotation.pdf_downloaded" | "quotation.whatsapp_shared";
@@ -15,6 +16,9 @@ export type LogQuotationParams = {
 };
 
 export async function logQuotation(params: LogQuotationParams): Promise<void> {
+  const auth = await requirePermission("quotations");
+  if (!auth.ok) return;
+
   const supabase = await createClient();
   const {
     data: { user },

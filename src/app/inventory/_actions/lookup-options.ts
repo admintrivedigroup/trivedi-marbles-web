@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import type { StockLookupOption } from "@/app/inventory/_lib/stock";
 import { createClient } from "@/lib/supabase/server";
+import { requirePermission } from "@/app/inventory/_lib/action-auth";
 
 export type LookupTableName =
   | "marble_categories"
@@ -25,6 +26,9 @@ export async function addLookupOption(
   if (!trimmedName) {
     return { error: "Name is required.", option: null };
   }
+
+  const auth = await requirePermission("settings");
+  if (!auth.ok) return { error: auth.error, option: null };
 
   const supabase = await createClient();
 
@@ -50,6 +54,9 @@ export async function deleteLookupOption(
   tableName: LookupTableName,
   id: string,
 ): Promise<{ error: string | null }> {
+  const auth = await requirePermission("settings");
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   const numericId = /^-?\d+$/.test(id) ? Number(id) : id;

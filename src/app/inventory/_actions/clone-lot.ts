@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/app/inventory/_lib/audit";
+import { requirePermission } from "@/app/inventory/_lib/action-auth";
 
 export type CloneLotResult = {
   error: string | null;
@@ -14,6 +15,9 @@ export async function cloneLot(
   sourceLotId: string,
   newLotNumber: string,
 ): Promise<CloneLotResult> {
+  const auth = await requirePermission("add_stock");
+  if (!auth.ok) return { error: auth.error, newLotId: null };
+
   const trimmed = newLotNumber.trim();
   if (!trimmed) return { error: "New lot number is required.", newLotId: null };
 

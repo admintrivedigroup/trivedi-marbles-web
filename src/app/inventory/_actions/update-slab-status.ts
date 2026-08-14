@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/app/inventory/_lib/audit";
+import { requirePermission } from "@/app/inventory/_lib/action-auth";
 import { SLAB_STATUS } from "@/app/inventory/_lib/slab-status";
 
 // Subset of SLAB_STATUS values that can be set manually via this action.
@@ -24,6 +25,9 @@ export async function updateSlabStatus(
   statusName: SlabStatusName,
   reservationData?: ReservationData | null,
 ): Promise<UpdateSlabStatusResult> {
+  const auth = await requirePermission("edit_stock");
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   const {

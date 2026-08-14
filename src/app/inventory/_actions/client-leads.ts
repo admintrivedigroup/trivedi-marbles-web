@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { requirePermission } from "@/app/inventory/_lib/action-auth";
 import type { ClientLead } from "@/app/inventory/_lib/client-leads";
 
 export type ClientLeadFormData = Omit<ClientLead, "id" | "created_at" | "updated_at">;
@@ -14,6 +15,9 @@ export type ClientLeadActionResult =
 export async function createClientLead(
   data: ClientLeadFormData,
 ): Promise<ClientLeadActionResult> {
+  const auth = await requirePermission("client_leads");
+  if (!auth.ok) return { success: false, error: auth.error };
+
   const supabase = await createClient();
 
   const { data: row, error } = await supabase
@@ -33,6 +37,9 @@ export async function updateClientLead(
   id: string,
   data: ClientLeadFormData,
 ): Promise<ClientLeadActionResult> {
+  const auth = await requirePermission("client_leads");
+  if (!auth.ok) return { success: false, error: auth.error };
+
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -51,6 +58,9 @@ export async function toggleLeadConverted(
   id: string,
   converted: boolean,
 ): Promise<{ success: boolean; error?: string }> {
+  const auth = await requirePermission("client_leads");
+  if (!auth.ok) return { success: false, error: auth.error };
+
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -68,6 +78,9 @@ export async function toggleLeadConverted(
 export async function deleteClientLead(
   id: string,
 ): Promise<{ success: boolean; error?: string }> {
+  const auth = await requirePermission("client_leads");
+  if (!auth.ok) return { success: false, error: auth.error };
+
   const supabase = await createClient();
 
   const { error } = await supabase.from("client_leads").delete().eq("id", id);
@@ -83,6 +96,10 @@ export async function bulkDeleteClientLeads(
   ids: string[],
 ): Promise<{ success: boolean; error?: string }> {
   if (ids.length === 0) return { success: true };
+
+  const auth = await requirePermission("client_leads");
+  if (!auth.ok) return { success: false, error: auth.error };
+
   const supabase = await createClient();
 
   const { error } = await supabase.from("client_leads").delete().in("id", ids);
@@ -99,6 +116,10 @@ export async function bulkSetLeadsConverted(
   converted: boolean,
 ): Promise<{ success: boolean; error?: string }> {
   if (ids.length === 0) return { success: true };
+
+  const auth = await requirePermission("client_leads");
+  if (!auth.ok) return { success: false, error: auth.error };
+
   const supabase = await createClient();
 
   const { error } = await supabase

@@ -5,10 +5,14 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { cleanupCloudinaryImages } from "@/app/inventory/_actions/slab-images";
 import { logAudit } from "@/app/inventory/_lib/audit";
+import { requirePermission } from "@/app/inventory/_lib/action-auth";
 
 export type PermanentDeleteResult = { error: string | null };
 
 export async function permanentDeleteSlab(slabId: string): Promise<PermanentDeleteResult> {
+  const auth = await requirePermission("delete_stock");
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -54,6 +58,9 @@ export async function permanentDeleteSlab(slabId: string): Promise<PermanentDele
 }
 
 export async function permanentDeleteLot(lotId: string): Promise<PermanentDeleteResult> {
+  const auth = await requirePermission("delete_stock");
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
   const {
     data: { user },

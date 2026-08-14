@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/app/inventory/_lib/audit";
+import { requirePermission } from "@/app/inventory/_lib/action-auth";
 
 export type BatchUpdateSlabPriceResult = {
   error: string | null;
@@ -17,6 +18,9 @@ export async function batchUpdateSlabPrice(
     dealerPrice: number | null;
   },
 ): Promise<BatchUpdateSlabPriceResult> {
+  const auth = await requirePermission("edit_stock");
+  if (!auth.ok) return { error: auth.error };
+
   if (slabIds.length === 0) return { error: "No slabs selected." };
 
   const { sellingPrice, dealerPrice } = prices;
