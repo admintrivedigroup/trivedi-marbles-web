@@ -21,7 +21,7 @@ const COPY: Record<EmailOtpType, { title: string; description: string; action: s
     title: "Reset Your Password",
     description: "Confirm this was you to continue resetting your password.",
     action: "Continue",
-    nextPath: "/inventory/reset-password",
+    nextPath: "/inventory/reset-password?type=recovery",
   },
   signup: {
     title: "Confirm Your Email",

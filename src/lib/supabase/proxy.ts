@@ -75,7 +75,10 @@ export async function updateSession(request: NextRequest) {
   const { data, error } = await supabase.auth.getClaims();
 
   const pathname = request.nextUrl.pathname;
-  const isAuthenticated = !error && Boolean(data?.claims?.sub);
+  const amr = data?.claims?.amr as { method: string }[] | undefined;
+  const isRecoverySession = amr?.[amr.length - 1]?.method === "recovery";
+  const isAuthenticated =
+    !error && Boolean(data?.claims?.sub) && !isRecoverySession;
   const isInventoryRootRoute = pathname === "/inventory";
   const publicInventoryRoutes = new Set([
     "/inventory/login",

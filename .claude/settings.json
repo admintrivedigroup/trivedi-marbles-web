@@ -91,7 +91,8 @@
       "Bash(grep -aoE \"toml:\\\\\"[a-z_]+\\\\\"\" \"/c/Users/ladha/AppData/Local/npm-cache/_npx/aa8e5c70f9d8d161/node_modules/@supabase/cli-windows-x64/bin/supabase.exe\" 2>/dev/null | sort -u | grep -iE \"invite|recovery|confirm|magic|change|reauth\")",
       "Bash(grep -aoE \"\\\\\"\\(invite|recovery|confirmation|magic_link|magiclink|email_change|reauthentication\\)\\\\\"\" \"/c/Users/ladha/AppData/Local/npm-cache/_npx/aa8e5c70f9d8d161/node_modules/@supabase/cli-windows-x64/bin/supabase.exe\" 2>/dev/null | sort -u)",
       "WebFetch(domain:supabase.com)",
-      "WebFetch(domain:api.supabase.com)"
+      "WebFetch(domain:api.supabase.com)",
+      "Bash(xargs grep -l \"exchangeCodeForSession\\\\|code_verifier\\\\|detectSessionInUrl\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\ladha\\AppData\\Local\\Temp\\claude\\c--Users-ladha-Desktop-trivedi-marbles\\19d4f574-d73e-4c4d-a67f-4e65879212d6\\scratchpad",
