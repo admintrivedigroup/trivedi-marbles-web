@@ -30,6 +30,8 @@ export default async function InventoryAppLayout({
     <LookupOptionsProvider initialOptions={options}>
       <InventoryShell
         userEmail={claims.email ?? null}
+        displayName={profile?.displayName ?? null}
+        avatarUrl={profile?.avatarUrl ?? null}
         role={profile?.role ?? "staff"}
         permissions={profile?.permissions ?? null}
       >

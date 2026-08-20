@@ -2,11 +2,18 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { Bell, LoaderCircle, Lock } from "lucide-react";
+import { useRef, useState, useTransition } from "react";
+import { Bell, Camera, LoaderCircle, Lock, UserRound } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/app/inventory/_components/ui/avatar";
 import { createClient } from "@/lib/supabase/client";
+import { compressImage } from "@/lib/cloudinary/compress";
+import { uploadToCloudinary, withCloudinaryThumbnail } from "@/lib/cloudinary/upload";
+import { updateOwnProfile } from "@/app/inventory/_actions/profile";
+import { useLookupOptions } from "@/app/inventory/_components/lookup-options-context";
+import { ROLE_BADGE } from "@/app/inventory/_components/inventory-shell";
+import type { UserProfile } from "@/app/inventory/_lib/user-profile";
 
 function Toggle({
   checked,
@@ -72,7 +79,181 @@ function getChangePasswordErrorMessage(error: { code?: string; message?: string 
   }
 }
 
-export function InventorySettings() {
+function formatDate(iso: string | null) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("en-IN", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function ProfileSection({ profile }: { profile: UserProfile | null }) {
+  const { options } = useLookupOptions();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [displayName, setDisplayName] = useState(profile?.displayName ?? "");
+  const [avatarUrl, setAvatarUrl] = useState(profile?.avatarUrl ?? "");
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const [feedback, setFeedback] = useState<FeedbackState>(null);
+
+  const badge = profile ? ROLE_BADGE[profile.role] : null;
+  const warehouseNames = profile?.warehouseIds
+    ? options.warehouses
+        .filter((w) => profile.warehouseIds!.includes(w.id))
+        .map((w) => w.name)
+    : null;
+  const isDirty =
+    displayName !== (profile?.displayName ?? "") ||
+    avatarUrl !== (profile?.avatarUrl ?? "");
+
+  async function handleAvatarFile(file: File) {
+    setFeedback(null);
+    setIsUploadingAvatar(true);
+    try {
+      const compressed = await compressImage(file);
+      const { secureUrl } = await uploadToCloudinary(compressed);
+      setAvatarUrl(secureUrl);
+    } catch {
+      setFeedback({ message: "Avatar upload failed. Please try again.", type: "error" });
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  }
+
+  function handleSave(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setFeedback(null);
+    const formData = new FormData();
+    formData.set("displayName", displayName);
+    formData.set("avatarUrl", avatarUrl);
+
+    startTransition(async () => {
+      const res = await updateOwnProfile(formData);
+      if (res.error) {
+        setFeedback({ message: res.error, type: "error" });
+      } else {
+        setFeedback({ message: "Profile updated.", type: "success" });
+      }
+    });
+  }
+
+  return (
+    <section className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:rounded-2xl md:p-8">
+      <div className="mb-4 flex items-center gap-3 md:mb-6">
+        <UserRound className="h-5 w-5 text-gray-700 md:h-6 md:w-6" />
+        <h2 className="text-lg font-bold text-gray-900 md:text-xl">Profile</h2>
+      </div>
+
+      <form onSubmit={handleSave} className="space-y-4 md:space-y-6">
+        <div className="flex flex-col items-center gap-4 sm:flex-row">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploadingAvatar}
+            className="group relative shrink-0"
+          >
+            <Avatar className="size-20 border border-gray-200">
+              <AvatarImage
+                src={avatarUrl ? withCloudinaryThumbnail(avatarUrl) : undefined}
+                alt=""
+              />
+              <AvatarFallback className="bg-gray-100 text-xl font-semibold text-gray-500">
+                {(displayName || profile?.email || "?").trim().charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <span className="absolute inset-0 flex items-center justify-center rounded-full text-white opacity-0 transition-opacity group-hover:bg-black/40 group-hover:opacity-100">
+              {isUploadingAvatar ? (
+                <LoaderCircle className="h-5 w-5 animate-spin" />
+              ) : (
+                <Camera className="h-5 w-5" />
+              )}
+            </span>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void handleAvatarFile(file);
+              }}
+            />
+          </button>
+
+          <div className="flex-1 space-y-1 text-center sm:text-left">
+            <p className="font-medium text-gray-900">{profile?.email ?? "—"}</p>
+            <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+              {badge ? (
+                <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${badge.className}`}>
+                  {badge.label}
+                </span>
+              ) : null}
+              <span className="text-xs text-gray-500">
+                {warehouseNames === null
+                  ? "All warehouses"
+                  : warehouseNames.length > 0
+                    ? warehouseNames.join(", ")
+                    : "No warehouse access"}
+              </span>
+            </div>
+            <p className="text-xs text-gray-400">
+              Joined {formatDate(profile?.createdAt ?? null)} · Last active{" "}
+              {formatDate(profile?.lastSeenAt ?? null)}
+            </p>
+          </div>
+        </div>
+
+        <div className="max-w-sm">
+          <label
+            htmlFor="display-name"
+            className="mb-2 block text-sm font-medium text-gray-700"
+          >
+            Display Name
+          </label>
+          <Input
+            id="display-name"
+            value={displayName}
+            onChange={(event) => setDisplayName(event.target.value)}
+            placeholder="Your name"
+            className="w-full rounded-xl border border-gray-200 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800"
+          />
+        </div>
+
+        {feedback ? (
+          <div
+            className={`rounded-xl border px-4 py-3 text-sm ${
+              feedback.type === "error"
+                ? "border-red-200 bg-red-50 text-red-700"
+                : "border-emerald-200 bg-emerald-50 text-emerald-700"
+            }`}
+          >
+            {feedback.message}
+          </div>
+        ) : null}
+
+        <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+          <button
+            type="submit"
+            disabled={isPending || isUploadingAvatar || !isDirty}
+            className="flex items-center justify-center gap-2 rounded-xl bg-gray-900 px-6 py-3 font-medium text-white transition-all hover:scale-[1.02] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:scale-100"
+          >
+            {isPending ? (
+              <>
+                <LoaderCircle className="h-5 w-5 animate-spin" />
+                Saving
+              </>
+            ) : (
+              "Save Profile"
+            )}
+          </button>
+        </div>
+      </form>
+    </section>
+  );
+}
+
+export function InventorySettings({ profile }: { profile: UserProfile | null }) {
   const router = useRouter();
   const [supabase] = useState(() => createClient());
   const [notifications, setNotifications] = useState(true);
@@ -206,6 +387,8 @@ export function InventorySettings() {
       </div>
 
       <div className="max-w-4xl space-y-4 md:space-y-6">
+        <ProfileSection profile={profile} />
+
         <section className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:rounded-2xl md:p-8">
           <div className="mb-4 flex items-center gap-3 md:mb-6">
             <Lock className="h-5 w-5 text-gray-700 md:h-6 md:w-6" />

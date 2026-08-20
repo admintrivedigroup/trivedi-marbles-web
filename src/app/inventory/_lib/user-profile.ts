@@ -13,16 +13,21 @@ import {
 
 export type UserProfile = {
   userId: string;
+  email: string | null;
   role: Role;
   displayName: string | null;
+  avatarUrl: string | null;
   permissions: ResolvedPermissions;
   warehouseIds: string[] | null;
+  createdAt: string | null;
+  lastSeenAt: string | null;
 };
 
 export type ManagedUser = {
   userId: string;
   email: string;
   displayName: string | null;
+  avatarUrl: string | null;
   role: Role;
   permissions: ResolvedPermissions;
   warehouseIds: string[] | null;
@@ -42,7 +47,7 @@ export const getCurrentUserProfile = cache(async (): Promise<UserProfile | null>
   const [profileRes, permissionsRes, warehouseRes] = await Promise.all([
     supabase
       .from("user_profiles")
-      .select("role, display_name")
+      .select("role, display_name, avatar_url, created_at, last_seen_at")
       .eq("user_id", user.id)
       .maybeSingle(),
     supabase
@@ -62,12 +67,16 @@ export const getCurrentUserProfile = cache(async (): Promise<UserProfile | null>
 
   return {
     userId: user.id,
+    email: user.email ?? null,
     role,
     displayName: profileRes.data?.display_name ?? null,
+    avatarUrl: profileRes.data?.avatar_url ?? null,
     permissions: resolvePermissions(role, overrides),
     warehouseIds: warehouseRows.length > 0
       ? warehouseRows.map((r) => String(r.warehouse_id))
       : null,
+    createdAt: profileRes.data?.created_at ?? null,
+    lastSeenAt: profileRes.data?.last_seen_at ?? null,
   };
 });
 
@@ -82,7 +91,7 @@ export async function getAllManagedUsers(): Promise<ManagedUser[]> {
   const [profilesRes, permissionsRes, warehouseRes, openTasksRes] = await Promise.all([
     admin
       .from("user_profiles")
-      .select("user_id, role, display_name, created_at, last_seen_at")
+      .select("user_id, role, display_name, avatar_url, created_at, last_seen_at")
       .in("user_id", userIds),
     admin
       .from("user_permissions")
@@ -116,6 +125,7 @@ export async function getAllManagedUsers(): Promise<ManagedUser[]> {
         userId: u.id,
         email: u.email ?? "",
         displayName: profile?.display_name ?? null,
+        avatarUrl: profile?.avatar_url ?? null,
         role,
         permissions: resolvePermissions(role, overrides),
         warehouseIds: warehouseRows.length > 0

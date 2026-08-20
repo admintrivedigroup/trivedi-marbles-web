@@ -27,6 +27,8 @@ import {
   updateUserRole,
   updateUserWarehouseAccess,
 } from "@/app/inventory/_actions/user-management";
+import { Avatar, AvatarFallback, AvatarImage } from "@/app/inventory/_components/ui/avatar";
+import { withCloudinaryThumbnail } from "@/lib/cloudinary/upload";
 import {
   ALL_PERMISSIONS,
   PERMISSION_LABELS,
@@ -190,9 +192,14 @@ function UserCard({
     <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
       {/* Header row */}
       <div className="flex items-center gap-4 p-4">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100 text-sm font-bold text-gray-600">
-          {(user.displayName ?? user.email).charAt(0).toUpperCase()}
-        </div>
+        <Avatar className="h-10 w-10 shrink-0 border border-gray-100">
+          {user.avatarUrl ? (
+            <AvatarImage src={withCloudinaryThumbnail(user.avatarUrl)} alt="" />
+          ) : null}
+          <AvatarFallback className="bg-gray-100 text-sm font-bold text-gray-600">
+            {(user.displayName ?? user.email).charAt(0).toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">

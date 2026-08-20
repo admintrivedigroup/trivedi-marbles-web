@@ -32,6 +32,8 @@ import dynamic from "next/dynamic";
 import { logout } from "@/app/inventory/_actions/auth";
 import { pingActivity } from "@/app/inventory/_actions/activity";
 import { cn } from "@/lib/utils";
+import { withCloudinaryThumbnail } from "@/lib/cloudinary/upload";
+import { Avatar, AvatarFallback, AvatarImage } from "@/app/inventory/_components/ui/avatar";
 
 const QrScanner = dynamic(
   () => import("@/app/inventory/_components/qr-scanner").then((m) => ({ default: m.QrScanner })),
@@ -42,6 +44,8 @@ import type { ResolvedPermissions, Role } from "@/app/inventory/_lib/permissions
 type InventoryShellProps = {
   children: ReactNode;
   userEmail: string | null;
+  displayName: string | null;
+  avatarUrl: string | null;
   role: Role;
   permissions: ResolvedPermissions | null;
 };
@@ -157,7 +161,7 @@ const navigationItems: NavigationItem[] = [
   },
 ];
 
-const ROLE_BADGE: Record<Role, { label: string; className: string }> = {
+export const ROLE_BADGE: Record<Role, { label: string; className: string }> = {
   superadmin: { label: "Super Admin", className: "bg-purple-100 text-purple-700" },
   admin: { label: "Admin", className: "bg-blue-100 text-blue-700" },
   staff: { label: "Staff", className: "bg-gray-100 text-gray-600" },
@@ -166,6 +170,8 @@ const ROLE_BADGE: Record<Role, { label: string; className: string }> = {
 export function InventoryShell({
   children,
   userEmail,
+  displayName,
+  avatarUrl,
   role,
   permissions,
 }: InventoryShellProps) {
@@ -275,19 +281,36 @@ export function InventoryShell({
         </nav>
 
         <div className="border-t border-gray-200 p-4">
-          <div className="mb-3 px-4">
-            {userEmail ? (
-              <p className="truncate text-xs text-gray-400">{userEmail}</p>
-            ) : null}
-            <span
-              className={cn(
-                "mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-medium",
-                badge.className,
-              )}
-            >
-              {badge.label}
-            </span>
-          </div>
+          <Link
+            href="/inventory/settings"
+            onClick={() => setIsSidebarOpen(false)}
+            className="mb-3 flex items-center gap-3 rounded-xl px-4 py-2 transition-colors hover:bg-gray-100"
+          >
+            <Avatar className="h-9 w-9 shrink-0 border border-gray-200">
+              {avatarUrl ? (
+                <AvatarImage src={withCloudinaryThumbnail(avatarUrl)} alt="" />
+              ) : null}
+              <AvatarFallback className="bg-gray-100 text-sm font-semibold text-gray-600">
+                {(displayName || userEmail || "?").trim().charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-gray-900">
+                {displayName || userEmail || "Account"}
+              </p>
+              {userEmail ? (
+                <p className="truncate text-xs text-gray-400">{userEmail}</p>
+              ) : null}
+              <span
+                className={cn(
+                  "mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-medium",
+                  badge.className,
+                )}
+              >
+                {badge.label}
+              </span>
+            </div>
+          </Link>
 <form action={logout}>
             <button
               type="submit"
