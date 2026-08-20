@@ -99,7 +99,9 @@
       "Bash(npm ci *)",
       "Bash(grep -in \"postgres://\\\\|postgresql://\\\\|DB_URL\\\\|pooler\" .env.local)",
       "Bash(xargs grep -l \"user_profiles\")",
-      "Bash(echo \"ESLINT_EXIT:$?\")"
+      "Bash(echo \"ESLINT_EXIT:$?\")",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/@supabase/supabase-js/package.json'\\).version\\)\")",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/@supabase/auth-js/package.json'\\).version\\)\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\ladha\\AppData\\Local\\Temp\\claude\\c--Users-ladha-Desktop-trivedi-marbles\\19d4f574-d73e-4c4d-a67f-4e65879212d6\\scratchpad",

@@ -339,6 +339,36 @@ export function InventorySettings({ profile }: { profile: UserProfile | null }) 
     setUpdatingPassword(true);
     setPasswordFeedback(null);
 
+    // Supabase only enforces `current_password` server-side when the
+    // project has GOTRUE_SECURITY_UPDATE_PASSWORD_REQUIRE_CURRENT_PASSWORD
+    // enabled — otherwise updateUser() happily changes the password on the
+    // strength of the active session alone. Verify it ourselves first so a
+    // wrong current password is always rejected regardless of that setting.
+    if (!requiresVerificationCode) {
+      if (!profile?.email) {
+        setUpdatingPassword(false);
+        setPasswordFeedback({
+          message: "Unable to verify your account email. Please refresh and try again.",
+          type: "error",
+        });
+        return;
+      }
+
+      const { error: verifyError } = await supabase.auth.signInWithPassword({
+        email: profile.email,
+        password: currentPassword,
+      });
+
+      if (verifyError) {
+        setUpdatingPassword(false);
+        setPasswordFeedback({
+          message: "The current password is incorrect.",
+          type: "error",
+        });
+        return;
+      }
+    }
+
     const { error } = await supabase.auth.updateUser({
       current_password: currentPassword,
       password: newPassword,
