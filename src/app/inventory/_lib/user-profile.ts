@@ -21,6 +21,8 @@ export type UserProfile = {
   warehouseIds: string[] | null;
   createdAt: string | null;
   lastSeenAt: string | null;
+  lowStockAlertsEnabled: boolean;
+  darkModeEnabled: boolean;
 };
 
 export type ManagedUser = {
@@ -47,7 +49,7 @@ export const getCurrentUserProfile = cache(async (): Promise<UserProfile | null>
   const [profileRes, permissionsRes, warehouseRes] = await Promise.all([
     supabase
       .from("user_profiles")
-      .select("role, display_name, avatar_url, created_at, last_seen_at")
+      .select("role, display_name, avatar_url, created_at, last_seen_at, low_stock_alerts_enabled, dark_mode_enabled")
       .eq("user_id", user.id)
       .maybeSingle(),
     supabase
@@ -77,6 +79,8 @@ export const getCurrentUserProfile = cache(async (): Promise<UserProfile | null>
       : null,
     createdAt: profileRes.data?.created_at ?? null,
     lastSeenAt: profileRes.data?.last_seen_at ?? null,
+    lowStockAlertsEnabled: profileRes.data?.low_stock_alerts_enabled ?? true,
+    darkModeEnabled: profileRes.data?.dark_mode_enabled ?? false,
   };
 });
 

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/app/inventory/_lib/audit";
 import { requirePermission } from "@/app/inventory/_lib/action-auth";
+import { notifyLowStockForSlabIds } from "@/app/inventory/_lib/low-stock";
 
 export type DeleteSlabResult = {
   error: string | null;
@@ -61,6 +62,8 @@ export async function deleteSlab(slabId: string): Promise<DeleteSlabResult> {
       lotId,
     },
   }).catch(() => {});
+
+  notifyLowStockForSlabIds([slabId]).catch(() => {});
 
   revalidatePath("/inventory/list");
   revalidatePath("/inventory/dashboard");

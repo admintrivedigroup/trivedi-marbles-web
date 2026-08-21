@@ -57,11 +57,11 @@ export function formatSize(length: number | null, width: number | null): string 
 
 export function getStatusColor(status: string | null): string {
   switch (status) {
-    case "Available":  return "bg-green-100 text-green-700";
-    case "Reserved":   return "bg-orange-100 text-orange-700";
-    case "Sold":       return "bg-gray-100 text-gray-600";
-    case "In Transit": return "bg-blue-100 text-blue-700";
-    default:           return "bg-gray-100 text-gray-600";
+    case "Available":  return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
+    case "Reserved":   return "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300";
+    case "Sold":       return "bg-muted text-muted-foreground";
+    case "In Transit": return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300";
+    default:           return "bg-muted text-muted-foreground";
   }
 }
 

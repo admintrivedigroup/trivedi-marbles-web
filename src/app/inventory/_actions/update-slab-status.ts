@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/app/inventory/_lib/audit";
 import { requirePermission } from "@/app/inventory/_lib/action-auth";
 import { SLAB_STATUS } from "@/app/inventory/_lib/slab-status";
+import { notifyLowStockForSlabIds } from "@/app/inventory/_lib/low-stock";
 
 // Subset of SLAB_STATUS values that can be set manually via this action.
 // "In Transit" is excluded — that status is managed by the transfer workflow.
@@ -100,6 +101,10 @@ export async function updateSlabStatus(
         : {}),
     },
   }).catch(() => {});
+
+  if (statusName === SLAB_STATUS.RESERVED || statusName === SLAB_STATUS.SOLD) {
+    notifyLowStockForSlabIds([slabId]).catch(() => {});
+  }
 
   revalidatePath(`/inventory/slab/${slabId}`);
   revalidatePath("/inventory/list");

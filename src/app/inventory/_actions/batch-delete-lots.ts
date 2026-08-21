@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/app/inventory/_lib/audit";
 import { requirePermission } from "@/app/inventory/_lib/action-auth";
+import { notifyLowStockForLotIds } from "@/app/inventory/_lib/low-stock";
 
 export type BatchDeleteLotsResult = {
   error: string | null;
@@ -53,6 +54,8 @@ export async function batchDeleteLots(
     targetLabel: `${lotIds.length} lots`,
     diff: { lotCount: lotIds.length },
   }).catch(() => {});
+
+  notifyLowStockForLotIds(lotIds).catch(() => {});
 
   revalidatePath("/inventory/list");
   revalidatePath("/inventory/dashboard");

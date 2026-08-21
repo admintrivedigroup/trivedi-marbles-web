@@ -1,0 +1,2 @@
+ALTER TABLE user_profiles
+  ADD COLUMN IF NOT EXISTS dark_mode_enabled BOOLEAN NOT NULL DEFAULT FALSE;

@@ -15,10 +15,12 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  Moon,
   Package,
   Plus,
   ScanLine,
   Settings,
+  Sun,
   Target,
   UserSearch,
   Users,
@@ -34,6 +36,8 @@ import { pingActivity } from "@/app/inventory/_actions/activity";
 import { cn } from "@/lib/utils";
 import { withCloudinaryThumbnail } from "@/lib/cloudinary/upload";
 import { Avatar, AvatarFallback, AvatarImage } from "@/app/inventory/_components/ui/avatar";
+import { NotificationBell } from "@/app/inventory/_components/notification-bell";
+import { useInventoryTheme } from "@/app/inventory/_components/theme-provider";
 
 const QrScanner = dynamic(
   () => import("@/app/inventory/_components/qr-scanner").then((m) => ({ default: m.QrScanner })),
@@ -162,10 +166,30 @@ const navigationItems: NavigationItem[] = [
 ];
 
 export const ROLE_BADGE: Record<Role, { label: string; className: string }> = {
-  superadmin: { label: "Super Admin", className: "bg-purple-100 text-purple-700" },
-  admin: { label: "Admin", className: "bg-blue-100 text-blue-700" },
-  staff: { label: "Staff", className: "bg-gray-100 text-gray-600" },
+  superadmin: {
+    label: "Super Admin",
+    className: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
+  },
+  admin: {
+    label: "Admin",
+    className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+  },
+  staff: { label: "Staff", className: "bg-muted text-muted-foreground" },
 };
+
+function ThemeToggleButton() {
+  const { isDark, toggleDark } = useInventoryTheme();
+  return (
+    <button
+      type="button"
+      onClick={toggleDark}
+      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+    >
+      {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+    </button>
+  );
+}
 
 export function InventoryShell({
   children,
@@ -204,7 +228,7 @@ export function InventoryShell({
   return (
     <>
     {showScanner ? <QrScanner onClose={() => setShowScanner(false)} /> : null}
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-background">
       {isSidebarOpen ? (
         <button
           type="button"
@@ -216,11 +240,11 @@ export function InventoryShell({
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex h-screen w-64 flex-col border-r border-gray-200 bg-white transition-transform duration-300 lg:sticky lg:top-0 lg:shrink-0",
+          "fixed inset-y-0 left-0 z-50 flex h-screen w-64 flex-col border-r border-border bg-card transition-transform duration-300 lg:sticky lg:top-0 lg:shrink-0",
           isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         )}
       >
-        <div className="border-b border-gray-200 p-6">
+        <div className="border-b border-border p-6">
           <div className="flex items-center justify-between">
             <Link href="/inventory/dashboard" className="flex items-center gap-2">
               <Image
@@ -230,7 +254,7 @@ export function InventoryShell({
                 height={48}
                 className="h-9 w-9 shrink-0 object-contain"
               />
-              <span className="h-7 w-px shrink-0 bg-gray-300" aria-hidden="true" />
+              <span className="h-7 w-px shrink-0 bg-border" aria-hidden="true" />
               <Image
                 src="/images/TRIVEDI MARBLES PVT.LTD.webp"
                 alt="Trivedi Marbles Pvt. Ltd. logo"
@@ -238,17 +262,18 @@ export function InventoryShell({
                 height={36}
                 className="h-9 w-auto shrink-0 object-contain"
               />
-              <div>
-                <p className="text-xs text-gray-500">Marble Inventory</p>
-              </div>
             </Link>
-            <button
-              type="button"
-              onClick={() => setIsSidebarOpen(false)}
-              className="rounded-lg p-2 transition-colors hover:bg-gray-100 lg:hidden"
-            >
-              <X className="h-5 w-5 text-gray-600" />
-            </button>
+            <div className="flex items-center gap-1">
+              <ThemeToggleButton />
+              <NotificationBell align="left" />
+              <button
+                type="button"
+                onClick={() => setIsSidebarOpen(false)}
+                className="rounded-lg p-2 transition-colors hover:bg-muted lg:hidden"
+              >
+                <X className="h-5 w-5 text-muted-foreground" />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -269,8 +294,8 @@ export function InventoryShell({
                 className={cn(
                   "flex items-center gap-3 rounded-xl px-4 py-3 transition-all",
                   isActive
-                    ? "bg-gray-900 shadow-lg text-white! [&_span]:text-white! [&_svg]:text-white!"
-                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900",
+                    ? "bg-primary shadow-lg text-primary-foreground! [&_span]:text-primary-foreground! [&_svg]:text-primary-foreground!"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
               >
                 <Icon className="h-5 w-5" />
@@ -280,26 +305,26 @@ export function InventoryShell({
           })}
         </nav>
 
-        <div className="border-t border-gray-200 p-4">
+        <div className="border-t border-border p-4">
           <Link
             href="/inventory/settings"
             onClick={() => setIsSidebarOpen(false)}
-            className="mb-3 flex items-center gap-3 rounded-xl px-4 py-2 transition-colors hover:bg-gray-100"
+            className="mb-3 flex items-center gap-3 rounded-xl px-4 py-2 transition-colors hover:bg-muted"
           >
-            <Avatar className="h-9 w-9 shrink-0 border border-gray-200">
+            <Avatar className="h-9 w-9 shrink-0 border border-border">
               {avatarUrl ? (
                 <AvatarImage src={withCloudinaryThumbnail(avatarUrl)} alt="" />
               ) : null}
-              <AvatarFallback className="bg-gray-100 text-sm font-semibold text-gray-600">
+              <AvatarFallback className="bg-muted text-sm font-semibold text-muted-foreground">
                 {(displayName || userEmail || "?").trim().charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-gray-900">
+              <p className="truncate text-sm font-medium text-foreground">
                 {displayName || userEmail || "Account"}
               </p>
               {userEmail ? (
-                <p className="truncate text-xs text-gray-400">{userEmail}</p>
+                <p className="truncate text-xs text-muted-foreground">{userEmail}</p>
               ) : null}
               <span
                 className={cn(
@@ -314,7 +339,7 @@ export function InventoryShell({
 <form action={logout}>
             <button
               type="submit"
-              className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-gray-600 transition-all hover:bg-red-50 hover:text-red-600"
+              className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-muted-foreground transition-all hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30 dark:hover:text-red-400"
             >
               <LogOut className="h-5 w-5" />
               <span className="font-medium">Logout</span>
@@ -323,16 +348,16 @@ export function InventoryShell({
         </div>
       </aside>
 
-      <main className="min-w-0 flex-1 overflow-x-hidden bg-gray-50">
-        <div className="sticky top-0 z-30 max-lg:flex items-center gap-3 border-b border-gray-200 bg-white px-4 py-3 lg:hidden">
+      <main className="min-w-0 flex-1 overflow-x-hidden bg-background">
+        <div className="sticky top-0 z-30 max-lg:flex items-center gap-3 border-b border-border bg-card px-4 py-3 lg:hidden">
           <button
             type="button"
             onClick={() => setIsSidebarOpen(true)}
-            className="rounded-lg p-2 transition-colors hover:bg-gray-100"
+            className="rounded-lg p-2 transition-colors hover:bg-muted"
           >
-            <Menu className="h-6 w-6 text-gray-900" />
+            <Menu className="h-6 w-6 text-foreground" />
           </button>
-          <div className="flex flex-1 items-center gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
             <Image
               src="/images/vijay-trivedi-logo.webp"
               alt="Vijay Trivedi Group logo"
@@ -340,7 +365,7 @@ export function InventoryShell({
               height={40}
               className="h-8 w-8 shrink-0 object-contain"
             />
-            <span className="h-6 w-px shrink-0 bg-gray-300" aria-hidden="true" />
+            <span className="h-6 w-px shrink-0 bg-border" aria-hidden="true" />
             <Image
               src="/images/TRIVEDI MARBLES PVT.LTD.webp"
               alt="Trivedi Marbles Pvt. Ltd. logo"
@@ -348,15 +373,17 @@ export function InventoryShell({
               height={32}
               className="h-8 w-auto shrink-0 object-contain"
             />
-            <span className="font-bold text-gray-900">Marble Inventory</span>
+            <span className="truncate font-bold text-foreground">Marble Inventory</span>
           </div>
+          <ThemeToggleButton />
+          <NotificationBell />
           <button
             type="button"
             onClick={() => setShowScanner(true)}
             aria-label="Scan QR code"
-            className="rounded-lg p-2 transition-colors hover:bg-gray-100"
+            className="rounded-lg p-2 transition-colors hover:bg-muted"
           >
-            <ScanLine className="h-6 w-6 text-gray-900" />
+            <ScanLine className="h-6 w-6 text-foreground" />
           </button>
         </div>
 

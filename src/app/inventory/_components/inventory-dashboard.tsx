@@ -35,19 +35,19 @@ import {
 import type { DashboardStats } from "@/app/inventory/_lib/dashboard";
 import type { UserProfile } from "@/app/inventory/_lib/user-profile";
 
-const chartColors = ["#1f2937", "#4b5563", "#6b7280", "#9ca3af", "#d1d5db"];
+const chartColors = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"];
 
 const warehouseTones = [
-  "bg-green-50 text-green-600",
-  "bg-violet-50 text-violet-600",
-  "bg-sky-50 text-sky-600",
-  "bg-rose-50 text-rose-600",
+  "bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-300",
+  "bg-violet-50 text-violet-600 dark:bg-violet-900/30 dark:text-violet-300",
+  "bg-sky-50 text-sky-600 dark:bg-sky-900/30 dark:text-sky-300",
+  "bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-300",
 ];
 
 const ROLE_BADGE = {
-  superadmin: { label: "Super Admin", className: "bg-purple-100 text-purple-700" },
-  admin: { label: "Admin", className: "bg-blue-100 text-blue-700" },
-  staff: { label: "Staff", className: "bg-gray-100 text-gray-600" },
+  superadmin: { label: "Super Admin", className: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" },
+  admin: { label: "Admin", className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" },
+  staff: { label: "Staff", className: "bg-muted text-muted-foreground" },
 } as const;
 
 // ─── Shared primitives ────────────────────────────────────────────────────────
@@ -64,14 +64,14 @@ function StatCard({
   value: string;
 }) {
   return (
-    <article className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:rounded-2xl md:p-6">
+    <article className="rounded-xl border border-border bg-card p-4 shadow-sm md:rounded-2xl md:p-6">
       <div className="flex flex-col items-start gap-3 md:flex-row md:items-center md:gap-4">
         <div className={`flex h-10 w-10 items-center justify-center rounded-lg md:h-12 md:w-12 md:rounded-xl ${tone}`}>
           <Icon className="h-5 w-5 md:h-6 md:w-6" />
         </div>
         <div>
-          <p className="text-xs text-gray-500 md:text-sm">{label}</p>
-          <p className="text-xl font-bold text-gray-900 md:text-2xl">{value}</p>
+          <p className="text-xs text-muted-foreground md:text-sm">{label}</p>
+          <p className="text-xl font-bold text-foreground md:text-2xl">{value}</p>
         </div>
       </div>
     </article>
@@ -80,7 +80,7 @@ function StatCard({
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="mb-4 text-base font-bold text-gray-900 md:text-lg">{children}</h3>
+    <h3 className="mb-4 text-base font-bold text-foreground md:text-lg">{children}</h3>
   );
 }
 
@@ -90,21 +90,21 @@ function IncomingTransfersCard({ count }: { count: number }) {
   return (
     <Link href="/inventory/movement" className="block">
       <article
-        className={`h-full rounded-xl border bg-white p-4 shadow-sm transition-colors md:rounded-2xl md:p-6 ${
-          count > 0 ? "border-sky-200 hover:border-sky-400" : "border-gray-100 hover:border-gray-300"
+        className={`h-full rounded-xl border bg-card p-4 shadow-sm transition-colors md:rounded-2xl md:p-6 ${
+          count > 0 ? "border-sky-200 hover:border-sky-400 dark:border-sky-800 dark:hover:border-sky-600" : "border-border hover:border-border"
         }`}
       >
         <div className="flex flex-col items-start gap-3 md:flex-row md:items-center md:gap-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-50 text-sky-600 md:h-12 md:w-12 md:rounded-xl">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-50 text-sky-600 dark:bg-sky-900/30 dark:text-sky-300 md:h-12 md:w-12 md:rounded-xl">
             <Truck className="h-5 w-5 md:h-6 md:w-6" />
           </div>
           <div>
-            <p className="text-xs text-gray-500 md:text-sm">Incoming</p>
-            <p className="text-xl font-bold text-gray-900 md:text-2xl">{count}</p>
+            <p className="text-xs text-muted-foreground md:text-sm">Incoming</p>
+            <p className="text-xl font-bold text-foreground md:text-2xl">{count}</p>
           </div>
         </div>
         {count > 0 && (
-          <p className="mt-3 text-xs font-medium text-sky-600">Tap to receive →</p>
+          <p className="mt-3 text-xs font-medium text-sky-600 dark:text-sky-400">Tap to receive →</p>
         )}
       </article>
     </Link>
@@ -117,26 +117,26 @@ function ExpiringTodayCard({
   slabs: DashboardStats["expiringTodaySlabs"];
 }) {
   return (
-    <article className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:rounded-2xl md:p-6">
+    <article className="rounded-xl border border-border bg-card p-4 shadow-sm md:rounded-2xl md:p-6">
       <SectionHeading>Reservations Expiring Today</SectionHeading>
       {slabs.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
           <CheckCircle className="h-8 w-8 text-emerald-400" />
-          <p className="text-sm text-gray-500">No reservations expiring today</p>
+          <p className="text-sm text-muted-foreground">No reservations expiring today</p>
         </div>
       ) : (
         <div className="space-y-3">
           {slabs.map((slab) => (
-            <div key={slab.id} className="flex items-start gap-3 rounded-xl bg-amber-50 p-3">
-              <Clock className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+            <div key={slab.id} className="flex items-start gap-3 rounded-xl bg-amber-50 p-3 dark:bg-amber-950/30">
+              <Clock className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-gray-900">
+                <p className="truncate text-sm font-medium text-foreground">
                   {slab.marbleName ?? "Unknown"} · {slab.slabCode ?? "—"}
                 </p>
                 {slab.reservedFor && (
-                  <p className="text-xs text-gray-500">For: {slab.reservedFor}</p>
+                  <p className="text-xs text-muted-foreground">For: {slab.reservedFor}</p>
                 )}
-                <p className="mt-0.5 text-xs font-medium text-amber-700">
+                <p className="mt-0.5 text-xs font-medium text-amber-700 dark:text-amber-400">
                   Expires{" "}
                   {new Date(slab.reservedUntil).toLocaleTimeString("en-IN", {
                     hour: "2-digit",
@@ -166,36 +166,36 @@ function LeadConversionCard({
   const rate = totalLeads > 0 ? Math.round((convertedLeads / totalLeads) * 100) : 0;
 
   return (
-    <article className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:rounded-2xl md:p-6">
+    <article className="rounded-xl border border-border bg-card p-4 shadow-sm md:rounded-2xl md:p-6">
       <div className="mb-4 flex items-center justify-between">
         <SectionHeading>Lead Pipeline</SectionHeading>
         <Link
           href="/inventory/leads"
-          className="-mt-4 text-xs text-gray-400 hover:text-gray-600"
+          className="-mt-4 text-xs text-muted-foreground hover:text-foreground"
         >
           View all →
         </Link>
       </div>
       <div className="mb-4 grid grid-cols-3 gap-2">
-        <div className="rounded-lg bg-gray-50 p-3 text-center">
-          <p className="text-xl font-bold text-gray-900">{totalLeads}</p>
-          <p className="mt-0.5 text-xs text-gray-500">Total</p>
+        <div className="rounded-lg bg-muted p-3 text-center">
+          <p className="text-xl font-bold text-foreground">{totalLeads}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">Total</p>
         </div>
-        <div className="rounded-lg bg-emerald-50 p-3 text-center">
-          <p className="text-xl font-bold text-emerald-700">{convertedLeads}</p>
-          <p className="mt-0.5 text-xs text-emerald-600">Converted</p>
+        <div className="rounded-lg bg-emerald-50 p-3 text-center dark:bg-emerald-950/30">
+          <p className="text-xl font-bold text-emerald-700 dark:text-emerald-400">{convertedLeads}</p>
+          <p className="mt-0.5 text-xs text-emerald-600 dark:text-emerald-400">Converted</p>
         </div>
-        <div className="rounded-lg bg-blue-50 p-3 text-center">
-          <p className="text-xl font-bold text-blue-700">{newLeadsThisWeek}</p>
-          <p className="mt-0.5 text-xs text-blue-600">New this week</p>
+        <div className="rounded-lg bg-blue-50 p-3 text-center dark:bg-blue-950/30">
+          <p className="text-xl font-bold text-blue-700 dark:text-blue-400">{newLeadsThisWeek}</p>
+          <p className="mt-0.5 text-xs text-blue-600 dark:text-blue-400">New this week</p>
         </div>
       </div>
       <div>
-        <div className="mb-1.5 flex justify-between text-xs text-gray-500">
+        <div className="mb-1.5 flex justify-between text-xs text-muted-foreground">
           <span>Conversion rate</span>
-          <span className="font-semibold text-gray-800">{rate}%</span>
+          <span className="font-semibold text-foreground">{rate}%</span>
         </div>
-        <div className="h-2 overflow-hidden rounded-full bg-gray-100">
+        <div className="h-2 overflow-hidden rounded-full bg-muted">
           <div
             className="h-full rounded-full bg-emerald-500 transition-all duration-500"
             style={{ width: `${rate}%` }}
@@ -214,36 +214,36 @@ function StaffActivityCard({
   const maxCount = staffActivityToday[0]?.actionCount ?? 1;
 
   return (
-    <article className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:rounded-2xl md:p-6">
+    <article className="rounded-xl border border-border bg-card p-4 shadow-sm md:rounded-2xl md:p-6">
       <div className="mb-4 flex items-center justify-between">
         <SectionHeading>Today's Activity</SectionHeading>
         <Link
           href="/inventory/audit"
-          className="-mt-4 text-xs text-gray-400 hover:text-gray-600"
+          className="-mt-4 text-xs text-muted-foreground hover:text-foreground"
         >
           Full log →
         </Link>
       </div>
       {staffActivityToday.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
-          <Users className="h-8 w-8 text-gray-200" />
-          <p className="text-sm text-gray-400">No activity logged today</p>
+          <Users className="h-8 w-8 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">No activity logged today</p>
         </div>
       ) : (
         <div className="space-y-4">
           {staffActivityToday.map(({ email, actionCount }, i) => (
             <div key={email} className="flex items-center gap-3">
-              <span className="w-4 shrink-0 text-xs text-gray-400">{i + 1}</span>
+              <span className="w-4 shrink-0 text-xs text-muted-foreground">{i + 1}</span>
               <div className="min-w-0 flex-1">
                 <div className="mb-1 flex items-center justify-between gap-2">
-                  <p className="truncate text-xs text-gray-700">{email}</p>
-                  <p className="shrink-0 text-xs font-semibold text-gray-900">
+                  <p className="truncate text-xs text-muted-foreground">{email}</p>
+                  <p className="shrink-0 text-xs font-semibold text-foreground">
                     {actionCount}
                   </p>
                 </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-gray-100">
+                <div className="h-1.5 overflow-hidden rounded-full bg-muted">
                   <div
-                    className="h-full rounded-full bg-gray-800 transition-all duration-500"
+                    className="h-full rounded-full bg-primary transition-all duration-500"
                     style={{ width: `${Math.round((actionCount / maxCount) * 100)}%` }}
                   />
                 </div>
@@ -272,25 +272,25 @@ function InventoryAgeCard({
   ];
 
   return (
-    <article className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:rounded-2xl md:p-6">
+    <article className="rounded-xl border border-border bg-card p-4 shadow-sm md:rounded-2xl md:p-6">
       <SectionHeading>Inventory Age</SectionHeading>
       <div className="space-y-4">
         {inventoryAgeBuckets.map(({ label, count }, i) => (
           <div key={label} className="flex items-center gap-3">
-            <span className="w-14 shrink-0 text-xs text-gray-500">{label}</span>
-            <div className="flex-1 overflow-hidden rounded-full bg-gray-100 h-2">
+            <span className="w-14 shrink-0 text-xs text-muted-foreground">{label}</span>
+            <div className="flex-1 overflow-hidden rounded-full bg-muted h-2">
               <div
                 className={`h-full rounded-full transition-all duration-500 ${bucketColors[i]}`}
                 style={{ width: `${Math.round((count / maxCount) * 100)}%` }}
               />
             </div>
-            <span className="w-8 shrink-0 text-right text-xs font-semibold text-gray-700">
+            <span className="w-8 shrink-0 text-right text-xs font-semibold text-muted-foreground">
               {count}
             </span>
           </div>
         ))}
       </div>
-      <p className="mt-4 text-xs text-gray-400">Active slabs by days since added</p>
+      <p className="mt-4 text-xs text-muted-foreground">Active slabs by days since added</p>
     </article>
   );
 }
@@ -305,44 +305,44 @@ function SoldQualityCard({
   dataQualityIssues: number;
 }) {
   return (
-    <article className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:rounded-2xl md:p-6">
+    <article className="rounded-xl border border-border bg-card p-4 shadow-sm md:rounded-2xl md:p-6">
       <SectionHeading>Stock Intelligence</SectionHeading>
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-3 border-b border-gray-100 pb-4">
-          <div className="rounded-lg bg-gray-50 p-3">
-            <p className="text-xs text-gray-500">Lots sold</p>
-            <p className="mt-1 text-xl font-bold text-gray-900">
+        <div className="grid grid-cols-2 gap-3 border-b border-border pb-4">
+          <div className="rounded-lg bg-muted p-3">
+            <p className="text-xs text-muted-foreground">Lots sold</p>
+            <p className="mt-1 text-xl font-bold text-foreground">
               {soldLotsCount.toLocaleString("en-IN")}
             </p>
           </div>
-          <div className="rounded-lg bg-gray-50 p-3">
-            <p className="text-xs text-gray-500">Sqft sold</p>
-            <p className="mt-1 text-xl font-bold text-gray-900">
+          <div className="rounded-lg bg-muted p-3">
+            <p className="text-xs text-muted-foreground">Sqft sold</p>
+            <p className="mt-1 text-xl font-bold text-foreground">
               {soldSqft.toLocaleString("en-IN")}
             </p>
           </div>
         </div>
         <div
           className={`flex items-start gap-3 rounded-xl p-3 ${
-            dataQualityIssues > 0 ? "bg-amber-50" : "bg-emerald-50"
+            dataQualityIssues > 0 ? "bg-amber-50 dark:bg-amber-950/30" : "bg-emerald-50 dark:bg-emerald-950/30"
           }`}
         >
           {dataQualityIssues > 0 ? (
             <>
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
               <div>
-                <p className="text-sm font-medium text-gray-900">
+                <p className="text-sm font-medium text-foreground">
                   {dataQualityIssues} slab{dataQualityIssues === 1 ? "" : "s"} missing prices
                 </p>
-                <p className="mt-0.5 text-xs text-gray-500">
+                <p className="mt-0.5 text-xs text-muted-foreground">
                   Incomplete data may affect quotations
                 </p>
               </div>
             </>
           ) : (
             <>
-              <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-              <p className="text-sm text-gray-700">All active slabs have pricing data</p>
+              <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <p className="text-sm text-muted-foreground">All active slabs have pricing data</p>
             </>
           )}
         </div>
@@ -357,32 +357,32 @@ function UserAuditFeedCard({
   recentAuditActivity: NonNullable<DashboardStats["recentAuditActivity"]>;
 }) {
   return (
-    <article className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:rounded-2xl md:p-6">
+    <article className="rounded-xl border border-border bg-card p-4 shadow-sm md:rounded-2xl md:p-6">
       <div className="mb-4 flex items-center justify-between">
         <SectionHeading>User Activity</SectionHeading>
         <Link
           href="/inventory/audit"
-          className="-mt-4 text-xs text-gray-400 hover:text-gray-600"
+          className="-mt-4 text-xs text-muted-foreground hover:text-foreground"
         >
           Full log →
         </Link>
       </div>
       {recentAuditActivity.length === 0 ? (
-        <p className="py-6 text-center text-sm text-gray-400">No activity yet</p>
+        <p className="py-6 text-center text-sm text-muted-foreground">No activity yet</p>
       ) : (
         <div className="space-y-4">
           {recentAuditActivity.map((entry) => (
             <div
               key={entry.id}
-              className="flex items-start gap-3 border-b border-gray-100 pb-4 last:border-0 last:pb-0"
+              className="flex items-start gap-3 border-b border-border pb-4 last:border-0 last:pb-0"
             >
-              <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-gray-900" />
+              <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-primary" />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm text-gray-900">
+                <p className="truncate text-sm text-foreground">
                   {actionLabel(entry.action)}
                   {entry.targetLabel ? ` · ${entry.targetLabel}` : ""}
                 </p>
-                <p className="mt-0.5 truncate text-xs text-gray-400">
+                <p className="mt-0.5 truncate text-xs text-muted-foreground">
                   {entry.userEmail ?? "Unknown"} · {entry.time}
                 </p>
               </div>
@@ -402,21 +402,21 @@ function RecentActivityCard({
   activity: DashboardStats["recentActivity"];
 }) {
   return (
-    <article className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:rounded-2xl md:p-6">
+    <article className="rounded-xl border border-border bg-card p-4 shadow-sm md:rounded-2xl md:p-6">
       <SectionHeading>Recent Activity</SectionHeading>
       {activity.length === 0 ? (
-        <p className="py-6 text-center text-sm text-gray-400">No activity yet</p>
+        <p className="py-6 text-center text-sm text-muted-foreground">No activity yet</p>
       ) : (
         <div className="space-y-4">
           {activity.map((item) => (
             <div
               key={item.id}
-              className="flex items-start gap-3 border-b border-gray-100 pb-4 last:border-0 last:pb-0"
+              className="flex items-start gap-3 border-b border-border pb-4 last:border-0 last:pb-0"
             >
-              <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-gray-900" />
+              <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-primary" />
               <div className="flex-1">
-                <p className="text-sm text-gray-900">{item.text}</p>
-                <p className="mt-1 text-xs text-gray-500">{item.time}</p>
+                <p className="text-sm text-foreground">{item.text}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{item.time}</p>
               </div>
             </div>
           ))}
@@ -428,26 +428,26 @@ function RecentActivityCard({
 
 function AlertsCard({ alerts }: { alerts: DashboardStats["alerts"] }) {
   return (
-    <article className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:rounded-2xl md:p-6">
+    <article className="rounded-xl border border-border bg-card p-4 shadow-sm md:rounded-2xl md:p-6">
       <SectionHeading>Alerts</SectionHeading>
       {alerts.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
           <CheckCircle className="h-8 w-8 text-emerald-400" />
-          <p className="text-sm text-gray-500">All clear — no alerts</p>
+          <p className="text-sm text-muted-foreground">All clear — no alerts</p>
         </div>
       ) : (
         <div className="space-y-3">
           {alerts.map((alert) => {
             const toneClass =
               alert.severity === "high"
-                ? "bg-red-50 text-red-600"
+                ? "bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400"
                 : alert.severity === "medium"
-                  ? "bg-orange-50 text-orange-600"
-                  : "bg-blue-50 text-blue-600";
+                  ? "bg-orange-50 text-orange-600 dark:bg-orange-950/30 dark:text-orange-400"
+                  : "bg-blue-50 text-blue-600 dark:bg-blue-950/30 dark:text-blue-400";
             return (
               <div key={alert.id} className={`flex items-start gap-3 rounded-xl p-4 ${toneClass}`}>
                 <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
-                <p className="text-sm text-gray-900">{alert.text}</p>
+                <p className="text-sm text-foreground">{alert.text}</p>
               </div>
             );
           })}
@@ -478,21 +478,21 @@ function StockValueCard({
   const stockValue = priceBasis === "dealer" ? stockValueByDealer : stockValueBySelling;
 
   return (
-    <article className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:rounded-2xl md:p-6">
+    <article className="rounded-xl border border-border bg-card p-4 shadow-sm md:rounded-2xl md:p-6">
       <div className="flex flex-col items-start gap-3 md:flex-row md:items-center md:gap-4">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 md:h-12 md:w-12 md:rounded-xl">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300 md:h-12 md:w-12 md:rounded-xl">
           <span className="text-3xl font-bold md:text-4xl">₹</span>
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-xs text-gray-500 md:text-sm">Stock Value</p>
-          <p className="text-xl font-bold text-gray-900 md:text-2xl">{formatStockValue(stockValue)}</p>
+          <p className="text-xs text-muted-foreground md:text-sm">Stock Value</p>
+          <p className="text-xl font-bold text-foreground md:text-2xl">{formatStockValue(stockValue)}</p>
         </div>
       </div>
-      <div className="mt-3 border-t border-gray-100 pt-3">
+      <div className="mt-3 border-t border-border pt-3">
         <select
           value={priceBasis}
           onChange={(e) => setPriceBasis(e.target.value as PriceBasis)}
-          className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-600 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800"
+          className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs text-muted-foreground focus:border-transparent focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <option value="selling">by Selling Price</option>
           <option value="dealer">by Dealer Price</option>
@@ -515,10 +515,10 @@ function TaskSummaryCard({
   const hasOverdue = taskSummary.overdue > 0;
 
   return (
-    <article className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:rounded-2xl md:p-6">
+    <article className="rounded-xl border border-border bg-card p-4 shadow-sm md:rounded-2xl md:p-6">
       <div className="mb-4 flex items-center justify-between">
         <SectionHeading>{isStaff ? "My Tasks" : "Task Overview"}</SectionHeading>
-        <Link href="/inventory/tasks" className="-mt-4 text-xs text-gray-400 hover:text-gray-600">
+        <Link href="/inventory/tasks" className="-mt-4 text-xs text-muted-foreground hover:text-foreground">
           View all →
         </Link>
       </div>
@@ -526,39 +526,39 @@ function TaskSummaryCard({
       {taskSummary.total === 0 && !hasPending ? (
         <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
           <CheckCircle className="h-7 w-7 text-emerald-400" />
-          <p className="text-sm text-gray-500">No active tasks</p>
+          <p className="text-sm text-muted-foreground">No active tasks</p>
         </div>
       ) : (
         <div className="space-y-4">
           <div className="grid grid-cols-4 gap-2">
-            <div className="rounded-lg bg-gray-50 p-3 text-center">
-              <p className="text-xl font-bold text-gray-900">{taskSummary.total}</p>
-              <p className="mt-0.5 text-xs text-gray-500">Active</p>
+            <div className="rounded-lg bg-muted p-3 text-center">
+              <p className="text-xl font-bold text-foreground">{taskSummary.total}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">Active</p>
             </div>
-            <div className="rounded-lg bg-blue-50 p-3 text-center">
-              <p className="text-xl font-bold text-blue-700">{taskSummary.inProgress}</p>
-              <p className="mt-0.5 text-xs text-blue-600">In Progress</p>
+            <div className="rounded-lg bg-blue-50 p-3 text-center dark:bg-blue-950/30">
+              <p className="text-xl font-bold text-blue-700 dark:text-blue-400">{taskSummary.inProgress}</p>
+              <p className="mt-0.5 text-xs text-blue-600 dark:text-blue-400">In Progress</p>
             </div>
-            <div className={cn("rounded-lg p-3 text-center", hasPending ? "bg-purple-50" : "bg-gray-50")}>
-              <p className={cn("text-xl font-bold", hasPending ? "text-purple-700" : "text-gray-400")}>
+            <div className={cn("rounded-lg p-3 text-center", hasPending ? "bg-purple-50 dark:bg-purple-950/30" : "bg-muted")}>
+              <p className={cn("text-xl font-bold", hasPending ? "text-purple-700 dark:text-purple-400" : "text-muted-foreground")}>
                 {taskSummary.pendingApproval}
               </p>
-              <p className={cn("mt-0.5 text-xs leading-tight", hasPending ? "text-purple-600" : "text-gray-400")}>
+              <p className={cn("mt-0.5 text-xs leading-tight", hasPending ? "text-purple-600 dark:text-purple-400" : "text-muted-foreground")}>
                 {isStaff ? "In Review" : "Need Approval"}
               </p>
             </div>
-            <div className={cn("rounded-lg p-3 text-center", hasOverdue ? "bg-red-50" : "bg-gray-50")}>
-              <p className={cn("text-xl font-bold", hasOverdue ? "text-red-600" : "text-gray-400")}>
+            <div className={cn("rounded-lg p-3 text-center", hasOverdue ? "bg-red-50 dark:bg-red-950/30" : "bg-muted")}>
+              <p className={cn("text-xl font-bold", hasOverdue ? "text-red-600 dark:text-red-400" : "text-muted-foreground")}>
                 {taskSummary.overdue}
               </p>
-              <p className={cn("mt-0.5 text-xs", hasOverdue ? "text-red-500" : "text-gray-400")}>Overdue</p>
+              <p className={cn("mt-0.5 text-xs", hasOverdue ? "text-red-500 dark:text-red-400" : "text-muted-foreground")}>Overdue</p>
             </div>
           </div>
 
           {hasPending && (
-            <div className="flex items-start gap-2 rounded-xl border border-purple-200 bg-purple-50 px-3 py-2.5">
-              <ClipboardList className="mt-0.5 h-4 w-4 shrink-0 text-purple-500" />
-              <p className="text-xs text-purple-700">
+            <div className="flex items-start gap-2 rounded-xl border border-purple-200 bg-purple-50 px-3 py-2.5 dark:border-purple-800 dark:bg-purple-950/30">
+              <ClipboardList className="mt-0.5 h-4 w-4 shrink-0 text-purple-500 dark:text-purple-400" />
+              <p className="text-xs text-purple-700 dark:text-purple-400">
                 {isStaff
                   ? `${taskSummary.pendingApproval} task${taskSummary.pendingApproval === 1 ? "" : "s"} awaiting admin review`
                   : `${taskSummary.pendingApproval} task${taskSummary.pendingApproval === 1 ? "" : "s"} need${taskSummary.pendingApproval === 1 ? "s" : ""} your approval`}
@@ -601,10 +601,10 @@ export function InventoryDashboard({
       {/* Greeting */}
       <section className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 md:text-3xl">
+          <h2 className="text-2xl font-bold text-foreground md:text-3xl">
             {greeting}{profile?.displayName ? `, ${profile.displayName}` : ""}
           </h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-muted-foreground">
             {isStaff
               ? "Here's your warehouse status for today."
               : isAdmin
@@ -622,14 +622,14 @@ export function InventoryDashboard({
         <section className="flex flex-wrap gap-3">
           <Link
             href="/inventory/movement"
-            className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+            className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
           >
             <ArrowLeftRight className="h-4 w-4" />
             Start Movement
           </Link>
           <Link
             href="/inventory/quotations"
-            className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+            className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
           >
             <FileText className="h-4 w-4" />
             New Quotation
@@ -640,9 +640,9 @@ export function InventoryDashboard({
       {/* Admin: pending transfers banner */}
       {isAdminOrAbove && (stats.pendingTransfersCount ?? 0) > 0 && (
         <Link href="/inventory/movement" className="block">
-          <div className="flex items-center gap-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 transition-colors hover:border-sky-400">
-            <Truck className="h-4 w-4 shrink-0 text-sky-600" />
-            <p className="text-sm text-sky-800">
+          <div className="flex items-center gap-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 transition-colors hover:border-sky-400 dark:border-sky-800 dark:bg-sky-950/30 dark:hover:border-sky-600">
+            <Truck className="h-4 w-4 shrink-0 text-sky-600 dark:text-sky-400" />
+            <p className="text-sm text-sky-800 dark:text-sky-300">
               <span className="font-semibold">{stats.pendingTransfersCount}</span> transfer
               {stats.pendingTransfersCount === 1 ? "" : "s"} currently in transit →
             </p>
@@ -656,13 +656,13 @@ export function InventoryDashboard({
           icon={Layers}
           label="Total Lots"
           value={String(stats.totalLots)}
-          tone="bg-gray-100 text-gray-700"
+          tone="bg-muted text-muted-foreground"
         />
         <StatCard
           icon={TrendingUp}
           label="Total Sqft"
           value={stats.totalSqft.toLocaleString("en-IN")}
-          tone="bg-blue-50 text-blue-600"
+          tone="bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300"
         />
         {stats.warehouseCounts.map(({ name, count }, i) => (
           <StatCard
@@ -677,14 +677,14 @@ export function InventoryDashboard({
           icon={Clock}
           label="Reserved"
           value={String(stats.reservedCount)}
-          tone="bg-orange-50 text-orange-600"
+          tone="bg-orange-50 text-orange-600 dark:bg-orange-900/30 dark:text-orange-300"
         />
         {isAdminOrAbove && (
           <StatCard
             icon={UserCheck}
             label="Leads"
             value={String(stats.totalLeads ?? 0)}
-            tone="bg-purple-50 text-purple-600"
+            tone="bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-300"
           />
         )}
         {isStaff ? (
@@ -700,10 +700,10 @@ export function InventoryDashboard({
       {/* Charts — admin / superadmin only */}
       {isAdminOrAbove && (
         <section className="grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-2">
-          <article className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:rounded-2xl md:p-6">
+          <article className="rounded-xl border border-border bg-card p-4 shadow-sm md:rounded-2xl md:p-6">
             <SectionHeading>Stock by Location</SectionHeading>
             {locationData.length === 0 ? (
-              <p className="py-16 text-center text-sm text-gray-400">No data yet</p>
+              <p className="py-16 text-center text-sm text-muted-foreground">No data yet</p>
             ) : (
               <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
@@ -726,18 +726,18 @@ export function InventoryDashboard({
             )}
           </article>
 
-          <article className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:rounded-2xl md:p-6">
+          <article className="rounded-xl border border-border bg-card p-4 shadow-sm md:rounded-2xl md:p-6">
             <SectionHeading>Stock by Marble Type</SectionHeading>
             {stats.typeData.length === 0 ? (
-              <p className="py-16 text-center text-sm text-gray-400">No data yet</p>
+              <p className="py-16 text-center text-sm text-muted-foreground">No data yet</p>
             ) : (
               <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={stats.typeData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="name" stroke="#9ca3af" tickLine={false} axisLine={false} />
-                  <YAxis stroke="#9ca3af" tickLine={false} axisLine={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis dataKey="name" stroke="var(--muted-foreground)" tickLine={false} axisLine={false} />
+                  <YAxis stroke="var(--muted-foreground)" tickLine={false} axisLine={false} />
                   <Tooltip />
-                  <Bar dataKey="count" fill="#1f2937" radius={[8, 8, 0, 0]} />
+                  <Bar dataKey="count" fill="var(--foreground)" radius={[8, 8, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}

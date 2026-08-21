@@ -86,8 +86,8 @@ function SlabThumbnail({ imageUrl }: { imageUrl: string | null }) {
     );
   }
   return (
-    <div className="flex aspect-4/3 w-full items-center justify-center bg-gray-100">
-      <Package className="h-10 w-10 text-gray-300" />
+    <div className="flex aspect-4/3 w-full items-center justify-center bg-muted">
+      <Package className="h-10 w-10 text-muted-foreground" />
     </div>
   );
 }
@@ -109,14 +109,14 @@ function StatusTab({
       onClick={onClick}
       className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
         active
-          ? "bg-gray-900 text-white"
-          : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+          ? "bg-primary text-primary-foreground"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground"
       }`}
     >
       {label}
       <span
         className={`rounded-full px-1.5 py-0.5 text-xs font-semibold ${
-          active ? "bg-white/20 text-white" : "bg-gray-200 text-gray-600"
+          active ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground"
         }`}
       >
         {count}
@@ -136,10 +136,10 @@ function InfoRow({
 }) {
   return (
     <div className="flex items-start gap-2.5">
-      <span className="mt-0.5 shrink-0 text-gray-400">{icon}</span>
+      <span className="mt-0.5 shrink-0 text-muted-foreground">{icon}</span>
       <div>
-        <p className="text-xs text-gray-500">{label}</p>
-        <p className="text-sm font-medium text-gray-900">{value}</p>
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="text-sm font-medium text-foreground">{value}</p>
       </div>
     </div>
   );
@@ -155,9 +155,9 @@ function StatBox({
   colorClass?: string;
 }) {
   return (
-    <div className="rounded-xl bg-gray-50 px-3 py-2">
-      <p className="text-[11px] leading-tight text-gray-500">{label}</p>
-      <p className={`mt-0.5 text-lg font-bold ${colorClass ?? "text-gray-900"}`}>
+    <div className="rounded-xl bg-muted px-3 py-2">
+      <p className="text-[11px] leading-tight text-muted-foreground">{label}</p>
+      <p className={`mt-0.5 text-lg font-bold ${colorClass ?? "text-foreground"}`}>
         {value}
       </p>
     </div>
@@ -448,7 +448,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
       <div className="mb-6">
         <Link
           href="/inventory/list"
-          className="inline-flex items-center gap-1.5 text-sm text-gray-500 transition-colors hover:text-gray-900"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Inventory
@@ -460,27 +460,27 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-mono text-2xl font-bold text-gray-900 md:text-3xl">
+              <span className="font-mono text-2xl font-bold text-foreground md:text-3xl">
                 {lot.lotNumber ?? "—"}
               </span>
               {lot.categoryName ? (
-                <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
+                <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
                   {lot.categoryName}
                 </span>
               ) : null}
               {thickness ? (
-                <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
+                <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
                   {thickness}
                 </span>
               ) : null}
             </div>
-            <p className="mt-1 text-lg font-semibold text-gray-700">
+            <p className="mt-1 text-lg font-semibold text-muted-foreground">
               {lot.marbleName ?? "—"}
             </p>
           </div>
           <Link
             href={`/inventory/lot/${lot.id}/edit`}
-            className="shrink-0 rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100"
+            className="shrink-0 rounded-xl border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
           >
             Edit Lot
           </Link>
@@ -488,7 +488,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
       </div>
 
       {actionError ? (
-        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">
           {actionError}
         </div>
       ) : null}
@@ -514,14 +514,14 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
             </div>
             {isSelectMode ? (
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500">
+                <span className="text-sm text-muted-foreground">
                   {selectedIds.size} selected
                 </span>
                 {visibleSlabs.length > 0 && (
                   <button
                     type="button"
                     onClick={selectAllVisible}
-                    className="text-sm text-gray-700 underline hover:text-gray-900"
+                    className="text-sm text-muted-foreground underline hover:text-foreground"
                   >
                     Select all {visibleSlabs.length}
                   </button>
@@ -529,7 +529,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
                 <button
                   type="button"
                   onClick={toggleSelectMode}
-                  className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-50"
+                  className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
                 >
                   Done
                 </button>
@@ -538,7 +538,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
               <button
                 type="button"
                 onClick={toggleSelectMode}
-                className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
+                className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
                 Select
               </button>
@@ -546,9 +546,9 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
           </div>
 
           {visibleSlabs.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 rounded-2xl border border-gray-100 bg-white py-16 text-center shadow-sm">
-              <Package className="h-10 w-10 text-gray-200" />
-              <p className="text-sm text-gray-400">
+            <div className="flex flex-col items-center gap-3 rounded-2xl border border-border bg-card py-16 text-center shadow-sm">
+              <Package className="h-10 w-10 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">
                 No {statusFilter !== "All" ? statusFilter.toLowerCase() : ""}{" "}
                 slabs in this lot
               </p>
@@ -566,10 +566,10 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
                 return (
                   <div
                     key={slab.id}
-                    className={`overflow-hidden rounded-xl border bg-white shadow-sm transition-all ${
+                    className={`overflow-hidden rounded-xl border bg-card shadow-sm transition-all ${
                       isSelected
-                        ? "border-gray-900 ring-2 ring-gray-900/20"
-                        : "border-gray-100 hover:shadow-md"
+                        ? "border-primary ring-2 ring-primary/20"
+                        : "border-border hover:shadow-md"
                     }`}
                   >
                     {/* Clickable area: photo + info */}
@@ -599,7 +599,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
                         {/* Info */}
                         <div className="px-3 pt-3 pb-2">
                           <div className="mb-1.5 flex items-start justify-between gap-1">
-                            <span className="font-mono text-sm font-bold text-gray-900 leading-tight">
+                            <span className="font-mono text-sm font-bold text-foreground leading-tight">
                               {slab.slabCode ?? "—"}
                             </span>
                             <span
@@ -609,12 +609,12 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
                             </span>
                           </div>
                           {size ? (
-                            <p className="text-xs text-gray-500">
-                              {size} &middot; {fmtNum(slab.sqft)} sqft <span className="font-light text-gray-400">(estimate)</span>
+                            <p className="text-xs text-muted-foreground">
+                              {size} &middot; {fmtNum(slab.sqft)} sqft <span className="font-light text-muted-foreground">(estimate)</span>
                             </p>
                           ) : null}
                           {(slab.warehouseName || slab.rackNumber) ? (
-                            <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-400">
+                            <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
                               <MapPin className="h-3 w-3 shrink-0" />
                               {[slab.warehouseName, slab.rackNumber]
                                 .filter(Boolean)
@@ -624,15 +624,15 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
                           {isReserved && (
                             <div className="mt-1 space-y-0.5">
                               {(isExpired || isExpiringSoon) && (
-                                <span className={`inline-block rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${isExpired ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-600"}`}>
+                                <span className={`inline-block rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${isExpired ? "bg-red-100 text-red-600 dark:bg-red-950/30 dark:text-red-400" : "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"}`}>
                                   {isExpired ? "Expired" : "Expiring soon"}
                                 </span>
                               )}
                               {slab.reservedFor && (
-                                <p className={`truncate text-xs font-medium ${isExpired ? "text-red-500" : "text-orange-600"}`}>
+                                <p className={`truncate text-xs font-medium ${isExpired ? "text-red-500 dark:text-red-400" : "text-orange-600 dark:text-orange-400"}`}>
                                   {slab.reservedFor}
                                   {slab.reservedUntil ? (
-                                    <span className={`ml-1 font-normal ${isExpired ? "text-red-400" : "text-orange-400"}`}>
+                                    <span className={`ml-1 font-normal ${isExpired ? "text-red-400 dark:text-red-300" : "text-orange-400 dark:text-orange-300"}`}>
                                       · until {fmtDate(slab.reservedUntil)}
                                     </span>
                                   ) : null}
@@ -645,8 +645,8 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
                     </div>
 
                     {/* Footer: price + actions */}
-                    <div className="flex items-center justify-between border-t border-gray-100 px-3 py-2">
-                      <span className="text-sm font-semibold text-gray-900">
+                    <div className="flex items-center justify-between border-t border-border px-3 py-2">
+                      <span className="text-sm font-semibold text-foreground">
                         {fmtCurrency(slab.sellingPrice)}
                       </span>
                       <div className="flex items-center gap-0.5">
@@ -656,7 +656,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
                             title="Unreserve"
                             disabled={isPending}
                             onClick={() => requestStatusChange(slab.id, slab.slabCode, "Available")}
-                            className="rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-30"
+                            className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-30"
                           >
                             <X className="h-3.5 w-3.5" />
                           </button>
@@ -666,7 +666,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
                             title="Reserve"
                             disabled={isPending || isSold}
                             onClick={() => { setActionError(null); setPendingReserveSlab({ slabId: slab.id, slabCode: slab.slabCode }); }}
-                            className="rounded-lg p-1.5 text-orange-500 transition-colors hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-30"
+                            className="rounded-lg p-1.5 text-orange-500 transition-colors hover:bg-orange-50 dark:hover:bg-orange-950/30 disabled:cursor-not-allowed disabled:opacity-30"
                           >
                             <Clock className="h-3.5 w-3.5" />
                           </button>
@@ -678,14 +678,14 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
                           onClick={() =>
                             requestStatusChange(slab.id, slab.slabCode, "Sold")
                           }
-                          className="rounded-lg p-1.5 text-green-600 transition-colors hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-30"
+                          className="rounded-lg p-1.5 text-green-600 dark:text-green-400 transition-colors hover:bg-green-50 dark:hover:bg-green-950/30 disabled:cursor-not-allowed disabled:opacity-30"
                         >
                           <DollarSign className="h-3.5 w-3.5" />
                         </button>
                         <Link
                           href={`/inventory/edit/${slab.id}`}
                           title="Edit"
-                          className="rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-gray-100"
+                          className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted"
                         >
                           <Edit className="h-3.5 w-3.5" />
                         </Link>
@@ -696,7 +696,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
                           onClick={() =>
                             setPendingSlabDelete({ slabId: slab.id, slabCode: slab.slabCode })
                           }
-                          className="rounded-lg p-1.5 text-red-400 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-30"
+                          className="rounded-lg p-1.5 text-red-400 transition-colors hover:bg-red-50 dark:hover:bg-red-950/30 disabled:cursor-not-allowed disabled:opacity-30"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -712,8 +712,8 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
         {/* ── Right: Lot summary ── */}
         <div className="space-y-3 lg:col-span-1 lg:space-y-4">
           {/* Lot info */}
-          <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
+          <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
               Lot Summary
             </h2>
             <div className="grid grid-cols-2 gap-2">
@@ -722,16 +722,16 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
               <StatBox
                 label="Available"
                 value={counts.Available}
-                colorClass="text-green-600"
+                colorClass="text-green-600 dark:text-green-400"
               />
               <StatBox
                 label="Reserved"
                 value={counts.Reserved}
-                colorClass="text-orange-500"
+                colorClass="text-orange-500 dark:text-orange-400"
               />
             </div>
 
-            <div className="mt-4 space-y-3 border-t border-gray-100 pt-4">
+            <div className="mt-4 space-y-3 border-t border-border pt-4">
               {lot.warehouseName ? (
                 <InfoRow
                   icon={<MapPin className="h-4 w-4" />}
@@ -757,9 +757,9 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
           </div>
 
           {/* Pricing */}
-          <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+          <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 Pricing
               </h2>
               <select
@@ -767,34 +767,34 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
                 onChange={(e) =>
                   setPriceBasis(e.target.value as "selling" | "dealer")
                 }
-                className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs text-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-800"
+                className="rounded-lg border border-border bg-input px-2 py-1 text-xs text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="selling">Sell Price</option>
                 <option value="dealer">Dealer Price</option>
               </select>
             </div>
-            <p className="text-3xl font-bold text-gray-900">
+            <p className="text-3xl font-bold text-foreground">
               {fmtCurrency(selectedLotPrice)}
             </p>
-            <p className="mt-0.5 text-xs text-gray-400">per sqft <span className="font-light text-gray-300">(estimate)</span></p>
+            <p className="mt-0.5 text-xs text-muted-foreground">per sqft <span className="font-light text-muted-foreground">(estimate)</span></p>
 
             {totalValue !== null ? (
-              <div className="mt-3 rounded-xl bg-gray-50 px-3 py-2.5">
-                <p className="text-xs text-gray-500">Total Lot Value</p>
-                <p className="mt-0.5 text-lg font-bold text-gray-900">
+              <div className="mt-3 rounded-xl bg-muted px-3 py-2.5">
+                <p className="text-xs text-muted-foreground">Total Lot Value</p>
+                <p className="mt-0.5 text-lg font-bold text-foreground">
                   {fmtCurrency(totalValue)}
                 </p>
               </div>
             ) : null}
 
-            <div className="mt-3 grid grid-cols-2 gap-1.5 border-t border-gray-100 pt-3">
+            <div className="mt-3 grid grid-cols-2 gap-1.5 border-t border-border pt-3">
               {[
                 { label: "Sell", value: lot.sellingPrice },
                 { label: "Dealer", value: lot.dealerPrice },
               ].map(({ label, value }) => (
                 <div key={label} className="text-center">
-                  <p className="text-[11px] text-gray-400">{label}</p>
-                  <p className="mt-0.5 truncate text-xs font-semibold text-gray-800">
+                  <p className="text-[11px] text-muted-foreground">{label}</p>
+                  <p className="mt-0.5 truncate text-xs font-semibold text-foreground">
                     {fmtCurrency(value)}
                   </p>
                 </div>
@@ -804,8 +804,8 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
 
           {/* Purchase info */}
           {(lot.invoiceNumber || purchaseDate) ? (
-            <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
+            <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 Purchase Info
               </h2>
               <div className="space-y-3">
@@ -829,19 +829,19 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
 
           {/* Notes */}
           {lot.notes ? (
-            <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-              <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
+            <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+              <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 Notes
               </h2>
-              <p className="text-sm leading-relaxed text-gray-600">
+              <p className="text-sm leading-relaxed text-muted-foreground">
                 {lot.notes}
               </p>
             </div>
           ) : null}
 
           {/* Website Visibility */}
-          <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
+          <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
               Website
             </h2>
             <button
@@ -850,8 +850,8 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
               onClick={handleToggleWebsite}
               className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                 showOnWebsite
-                  ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                  : "border-gray-200 bg-gray-50 text-gray-500 hover:bg-gray-100"
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-400 dark:hover:bg-emerald-900/40"
+                  : "border-border bg-muted text-muted-foreground hover:bg-muted"
               }`}
             >
               <span className="flex items-center gap-2">
@@ -864,17 +864,17 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
               </span>
               <span
                 className={`h-5 w-9 rounded-full transition-colors ${
-                  showOnWebsite ? "bg-emerald-500" : "bg-gray-300"
+                  showOnWebsite ? "bg-emerald-500" : "bg-border"
                 }`}
               >
                 <span
-                  className={`block h-5 w-5 translate-y-0 rounded-full bg-white shadow-sm ring-1 ring-gray-200 transition-transform ${
+                  className={`block h-5 w-5 translate-y-0 rounded-full bg-card shadow-sm ring-1 ring-border transition-transform ${
                     showOnWebsite ? "translate-x-4" : "translate-x-0"
                   }`}
                 />
               </span>
             </button>
-            <p className="mt-2 text-xs text-gray-400">
+            <p className="mt-2 text-xs text-muted-foreground">
               {showOnWebsite
                 ? "This lot is visible on the public collection page."
                 : "Toggle to show this lot on the public collection page."}
@@ -885,7 +885,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
           <div className="space-y-2">
             <Link
               href={`/inventory/lot/${lot.id}/add-slab`}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-gray-900 bg-white px-4 py-3 text-sm font-semibold text-gray-900 transition-all hover:bg-gray-900 hover:text-white"
+              className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-primary bg-background px-4 py-3 text-sm font-semibold text-foreground transition-all hover:bg-primary hover:text-primary-foreground"
             >
               <Plus className="h-4 w-4" />
               Add Slab
@@ -906,7 +906,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
                 type="button"
                 disabled={isPending}
                 onClick={() => { setActionError(null); setActiveModal("bulk-unreserve"); }}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-gray-500 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-secondary px-4 py-3 text-sm font-semibold text-secondary-foreground transition-colors hover:bg-secondary/80 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <X className="h-4 w-4" />
                 Unreserve Lot ({counts.Reserved} reserved)
@@ -928,7 +928,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
                 type="button"
                 disabled={isPending}
                 onClick={() => { setActionError(null); setActiveModal("bulk-unsell"); }}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-gray-500 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-secondary px-4 py-3 text-sm font-semibold text-secondary-foreground transition-colors hover:bg-secondary/80 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <X className="h-4 w-4" />
                 Mark Lot as Available ({counts.Sold} sold)
@@ -939,7 +939,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
               type="button"
               disabled={isPending}
               onClick={() => { setCloneLotNumber(""); setActionError(null); setActiveModal("clone-lot"); }}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-border px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Copy className="h-4 w-4" />
               Clone Lot
@@ -947,7 +947,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
 
             <Link
               href={`/inventory/quotations?lotId=${lot.id}`}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-border px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
             >
               <FileText className="h-4 w-4" />
               Create Quotation
@@ -958,10 +958,10 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
               rel="noopener noreferrer"
               aria-disabled={counts.Available === 0}
               onClick={counts.Available === 0 ? (e) => e.preventDefault() : undefined}
-              className={`flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium transition-colors ${
+              className={`flex w-full items-center justify-center gap-2 rounded-xl border border-border px-4 py-3 text-sm font-medium transition-colors ${
                 counts.Available === 0
-                  ? "cursor-not-allowed text-gray-300"
-                  : "text-gray-700 hover:bg-gray-50"
+                  ? "cursor-not-allowed text-muted-foreground"
+                  : "text-muted-foreground hover:bg-muted"
               }`}
             >
               <Printer className="h-4 w-4" />
@@ -971,7 +971,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
               type="button"
               onClick={() => setActiveModal("delete-lot")}
               disabled={isPending}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 px-4 py-3 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 px-4 py-3 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/30 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Trash2 className="h-4 w-4" />
               Delete Lot
@@ -982,9 +982,9 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
 
       {/* Floating selection action bar */}
       {isSelectMode && selectedIds.size > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-gray-200 bg-white px-4 py-3 shadow-lg">
+        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card px-4 py-3 shadow-lg">
           <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3">
-            <span className="text-sm font-medium text-gray-700">
+            <span className="text-sm font-medium text-muted-foreground">
               {selectedIds.size} slab{selectedIds.size !== 1 ? "s" : ""} selected
             </span>
             <div className="flex flex-wrap gap-2">
@@ -1015,7 +1015,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
                   type="button"
                   disabled={isPending}
                   onClick={() => { setActionError(null); setActiveModal("selection-unreserve"); }}
-                  className="flex items-center gap-1.5 rounded-lg bg-gray-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-700 disabled:opacity-50"
+                  className="flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-2 text-sm font-semibold text-secondary-foreground transition-colors hover:bg-secondary/80 disabled:opacity-50"
                 >
                   <X className="h-3.5 w-3.5" />
                   Unreserve ({selectionReservedIds.length})
@@ -1026,7 +1026,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
                   type="button"
                   disabled={isPending}
                   onClick={() => { setActionError(null); setActiveModal("selection-unsell"); }}
-                  className="flex items-center gap-1.5 rounded-lg bg-gray-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-700 disabled:opacity-50"
+                  className="flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-2 text-sm font-semibold text-secondary-foreground transition-colors hover:bg-secondary/80 disabled:opacity-50"
                 >
                   <X className="h-3.5 w-3.5" />
                   Mark Available ({selectionSoldIds.length})
@@ -1053,7 +1053,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
               <button
                 type="button"
                 onClick={() => setSelectedIds(new Set())}
-                className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
+                className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
               >
                 Clear
               </button>
@@ -1197,12 +1197,12 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
       {/* Clone Lot dialog */}
       {activeModal === "clone-lot" && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-            <h3 className="mb-1 text-base font-bold text-gray-900">Clone Lot</h3>
-            <p className="mb-4 text-sm text-gray-500">
+          <div className="w-full max-w-sm rounded-2xl bg-card p-6 shadow-xl">
+            <h3 className="mb-1 text-base font-bold text-foreground">Clone Lot</h3>
+            <p className="mb-4 text-sm text-muted-foreground">
               Creates a new lot with the same marble, dimensions, and prices. All slabs are cloned as Available.
             </p>
-            <label htmlFor="clone-lot-number" className="mb-1.5 block text-sm font-medium text-gray-700">
+            <label htmlFor="clone-lot-number" className="mb-1.5 block text-sm font-medium text-muted-foreground">
               New Lot Number
             </label>
             <input
@@ -1212,14 +1212,14 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
               onChange={(e) => setCloneLotNumber(e.target.value)}
               placeholder={`${lot.lotNumber ?? "LOT001"}-COPY`}
               autoFocus
-              className="mb-4 w-full rounded-xl border border-gray-200 px-4 py-3 font-mono text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800"
+              className="mb-4 w-full rounded-xl border border-border px-4 py-3 font-mono text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-ring"
               onKeyDown={(e) => { if (e.key === "Enter") confirmCloneLot(); if (e.key === "Escape") setActiveModal(null); }}
             />
             <div className="flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setActiveModal(null)}
-                className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
+                className="rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
               >
                 Cancel
               </button>
@@ -1227,7 +1227,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
                 type="button"
                 disabled={isPending || !cloneLotNumber.trim()}
                 onClick={confirmCloneLot}
-                className="flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Copy className="h-4 w-4" />
                 Clone
@@ -1240,9 +1240,9 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
       {/* Price update dialog */}
       {activeModal === "selection-price" && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-            <h3 className="mb-1 text-base font-bold text-gray-900">Update Prices</h3>
-            <p className="mb-4 text-sm text-gray-500">
+          <div className="w-full max-w-sm rounded-2xl bg-card p-6 shadow-xl">
+            <h3 className="mb-1 text-base font-bold text-foreground">Update Prices</h3>
+            <p className="mb-4 text-sm text-muted-foreground">
               Override prices for {selectedIds.size} selected slab{selectedIds.size !== 1 ? "s" : ""}. Leave a field blank to keep the existing value.
             </p>
             <div className="space-y-3 mb-5">
@@ -1253,9 +1253,9 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
                 ] as const
               ).map(({ id, label, key }) => (
                 <div key={key}>
-                  <label htmlFor={id} className="mb-1 block text-sm font-medium text-gray-700">{label}</label>
+                  <label htmlFor={id} className="mb-1 block text-sm font-medium text-muted-foreground">{label}</label>
                   <div className="relative">
-                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-500">₹</span>
+                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">₹</span>
                     <input
                       id={id}
                       type="number"
@@ -1264,7 +1264,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
                       placeholder="(unchanged)"
                       value={priceFormValues[key]}
                       onChange={(e) => setPriceFormValues((prev) => ({ ...prev, [key]: e.target.value }))}
-                      className="w-full rounded-xl border border-gray-200 py-3 pl-8 pr-4 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800"
+                      className="w-full rounded-xl border border-border py-3 pl-8 pr-4 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-ring"
                     />
                   </div>
                 </div>
@@ -1274,7 +1274,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
               <button
                 type="button"
                 onClick={() => setActiveModal(null)}
-                className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
+                className="rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
               >
                 Cancel
               </button>

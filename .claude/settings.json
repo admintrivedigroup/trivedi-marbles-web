@@ -101,7 +101,17 @@
       "Bash(xargs grep -l \"user_profiles\")",
       "Bash(echo \"ESLINT_EXIT:$?\")",
       "Bash(node -e \"console.log\\(require\\('./node_modules/@supabase/supabase-js/package.json'\\).version\\)\")",
-      "Bash(node -e \"console.log\\(require\\('./node_modules/@supabase/auth-js/package.json'\\).version\\)\")"
+      "Bash(node -e \"console.log\\(require\\('./node_modules/@supabase/auth-js/package.json'\\).version\\)\")",
+      "Bash(echo \"---exit: $?---\")",
+      "Bash(git diff *)",
+      "Bash(chromium-cli --session darkmode)",
+      "Bash(npx --yes playwright --version)",
+      "Bash(npx playwright *)",
+      "Bash(node \"C:/Users/ladha/AppData/Local/Temp/claude/c--Users-ladha-Desktop-trivedi-marbles/1413ae0d-fe1d-491f-b448-ba4f8d640c15/scratchpad/shot.mjs\")",
+      "Bash(cp \"C:/Users/ladha/AppData/Local/Temp/claude/c--Users-ladha-Desktop-trivedi-marbles/1413ae0d-fe1d-491f-b448-ba4f8d640c15/scratchpad/shot.mjs\" ./__darkmode_shot.mjs)",
+      "Bash(node ./__darkmode_shot.mjs)",
+      "Bash(npx --yes playwright --help)",
+      "Bash(npx --yes playwright screenshot --viewport-size=1280,900 --wait-for-timeout=3000 http://localhost:3000/inventory/dashboard \"C:/Users/ladha/AppData/Local/Temp/claude/c--Users-ladha-Desktop-trivedi-marbles/1413ae0d-fe1d-491f-b448-ba4f8d640c15/scratchpad/shot.png\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\ladha\\AppData\\Local\\Temp\\claude\\c--Users-ladha-Desktop-trivedi-marbles\\19d4f574-d73e-4c4d-a67f-4e65879212d6\\scratchpad",

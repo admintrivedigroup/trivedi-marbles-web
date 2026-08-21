@@ -65,8 +65,8 @@ function SlabThumbnail({ imageUrl, className }: { imageUrl: string | null; class
     );
   }
   return (
-    <div className={`flex shrink-0 items-center justify-center rounded-lg bg-gray-100 shadow-sm ${className}`}>
-      <Package className="h-6 w-6 text-gray-400" />
+    <div className={`flex shrink-0 items-center justify-center rounded-lg bg-muted shadow-sm ${className}`}>
+      <Package className="h-6 w-6 text-muted-foreground" />
     </div>
   );
 }
@@ -166,7 +166,7 @@ function SlabQuickActions({
           title="Mark as Sold"
           disabled={isPending}
           onClick={(e) => { e.stopPropagation(); change("Sold"); }}
-          className="rounded-lg p-2 text-green-600 transition-colors hover:bg-green-50 disabled:opacity-30"
+          className="rounded-lg p-2 text-green-600 transition-colors hover:bg-green-50 disabled:opacity-30 dark:text-green-400 dark:hover:bg-green-950/30"
         >
           <DollarSign className="h-4 w-4" />
         </button>
@@ -177,7 +177,7 @@ function SlabQuickActions({
           title={statusName === "Reserved" ? "Release reservation" : "Mark as Available"}
           disabled={isPending}
           onClick={(e) => { e.stopPropagation(); change("Available"); }}
-          className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 disabled:opacity-30"
+          className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted disabled:opacity-30"
         >
           <X className="h-4 w-4" />
         </button>
@@ -205,7 +205,7 @@ function PaginationControls({
 
   return (
     <div className="mt-4 flex flex-col items-center gap-3 md:mt-6">
-      <p className="text-sm text-gray-500">
+      <p className="text-sm text-muted-foreground">
         Showing lots {from}–{to} of {totalLots}
       </p>
       <div className="flex items-center gap-1">
@@ -213,7 +213,7 @@ function PaginationControls({
           type="button"
           onClick={() => onPageChange(page - 1)}
           disabled={page === 1}
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
           aria-label="Previous page"
         >
           <ChevronLeft className="h-4 w-4" />
@@ -221,7 +221,7 @@ function PaginationControls({
 
         {pageNumbers.map((p, i) =>
           p === "..." ? (
-            <span key={`ellipsis-${i}`} className="flex h-9 w-9 items-center justify-center text-sm text-gray-400">
+            <span key={`ellipsis-${i}`} className="flex h-9 w-9 items-center justify-center text-sm text-muted-foreground">
               …
             </span>
           ) : (
@@ -231,8 +231,8 @@ function PaginationControls({
               onClick={() => onPageChange(p)}
               className={`flex h-9 w-9 items-center justify-center rounded-lg text-sm font-medium transition-colors ${
                 p === page
-                  ? "bg-gray-900 text-white"
-                  : "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                  ? "bg-primary text-primary-foreground"
+                  : "border border-border bg-card text-muted-foreground hover:bg-muted"
               }`}
             >
               {p}
@@ -244,7 +244,7 @@ function PaginationControls({
           type="button"
           onClick={() => onPageChange(page + 1)}
           disabled={page === totalPages}
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
           aria-label="Next page"
         >
           <ChevronRight className="h-4 w-4" />
@@ -379,10 +379,10 @@ export function InventoryList({ error, slabs, canAddStock, inTransitSlabIds = ne
     <div className="p-4 md:p-8">
       <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center md:mb-8">
         <div>
-          <h1 className="mb-2 text-2xl font-bold text-gray-900 md:text-3xl">
+          <h1 className="mb-2 text-2xl font-bold text-foreground md:text-3xl">
             Inventory
           </h1>
-          <p className="text-gray-500">
+          <p className="text-muted-foreground">
             {totalLots} {totalLots === 1 ? "lot" : "lots"} &middot;{" "}
             {totalSlabs} slabs
           </p>
@@ -390,12 +390,12 @@ export function InventoryList({ error, slabs, canAddStock, inTransitSlabIds = ne
         <div className="flex items-center gap-2">
           {isSelectMode ? (
             <>
-              <span className="text-sm text-gray-500">{selectedCount} selected</span>
+              <span className="text-sm text-muted-foreground">{selectedCount} selected</span>
               {selectableLots.length > 0 && (
                 <button
                   type="button"
                   onClick={selectAllOnPage}
-                  className="text-sm text-gray-700 underline hover:text-gray-900"
+                  className="text-sm text-muted-foreground underline hover:text-foreground"
                 >
                   Select all {selectableLots.length}
                 </button>
@@ -403,7 +403,7 @@ export function InventoryList({ error, slabs, canAddStock, inTransitSlabIds = ne
               <button
                 type="button"
                 onClick={toggleSelectMode}
-                className="rounded-xl border border-gray-200 px-4 py-3 font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                className="rounded-xl border border-border px-4 py-3 font-medium text-muted-foreground transition-colors hover:bg-muted"
               >
                 Done
               </button>
@@ -413,13 +413,13 @@ export function InventoryList({ error, slabs, canAddStock, inTransitSlabIds = ne
               <button
                 type="button"
                 onClick={toggleSelectMode}
-                className="rounded-xl border border-gray-200 px-4 py-3 font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
+                className="rounded-xl border border-border px-4 py-3 font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
                 Select
               </button>
               <a
                 href={exportHref}
-                className="flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-3 font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                className="flex items-center gap-2 rounded-xl border border-border px-4 py-3 font-medium text-muted-foreground transition-colors hover:bg-muted"
                 title="Export current filters to Excel (.xlsx)"
               >
                 <Download className="h-4 w-4" />
@@ -428,7 +428,7 @@ export function InventoryList({ error, slabs, canAddStock, inTransitSlabIds = ne
               {canAddStock && (
                 <Link
                   href="/inventory/add"
-                  className="flex items-center justify-center gap-2 rounded-xl bg-gray-900 px-6 py-3 font-medium text-white! transition-all hover:scale-[1.02] hover:shadow-lg hover:text-white! [&_svg]:text-white!"
+                  className="flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 font-medium text-primary-foreground! transition-all hover:scale-[1.02] hover:shadow-lg hover:text-primary-foreground! [&_svg]:text-primary-foreground!"
                 >
                   <Package className="h-5 w-5" />
                   Add New Lot
@@ -440,21 +440,21 @@ export function InventoryList({ error, slabs, canAddStock, inTransitSlabIds = ne
       </div>
 
       {actionError ? (
-        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 md:mb-6">
+        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 md:mb-6 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">
           {actionError}
         </div>
       ) : null}
 
       {error ? (
-        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 md:mb-6">
+        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 md:mb-6 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">
           {error}
         </div>
       ) : null}
 
-      <div className={`mb-4 rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:mb-6 md:rounded-2xl md:p-6 ${isNavPending ? "pointer-events-none opacity-60" : ""}`}>
+      <div className={`mb-4 rounded-xl border border-border bg-card p-4 shadow-sm md:mb-6 md:rounded-2xl md:p-6 ${isNavPending ? "pointer-events-none opacity-60" : ""}`}>
         <div className="flex flex-col gap-3 md:grid md:grid-cols-5 md:gap-4">
           <div className="relative md:col-span-2">
-            <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
             <input
               type="text"
               placeholder="Search by name, slab ID or lot..."
@@ -467,15 +467,15 @@ export function InventoryList({ error, slabs, canAddStock, inTransitSlabIds = ne
                   navigate({ q: value, page: "" });
                 }, 400);
               }}
-              className="w-full rounded-xl border border-gray-200 py-3 pl-11 pr-4 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800"
+              className="w-full rounded-xl border border-border py-3 pl-11 pr-4 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
           <div className="relative">
-            <Filter className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+            <Filter className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
             <select
               value={warehouseId}
               onChange={(e) => setFilter("warehouse", e.target.value)}
-              className="w-full appearance-none rounded-xl border border-gray-200 bg-white py-3 pl-11 pr-4 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800"
+              className="w-full appearance-none rounded-xl border border-border bg-card py-3 pl-11 pr-4 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="">All Locations</option>
               {options.warehouses.map((w) => (
@@ -486,11 +486,11 @@ export function InventoryList({ error, slabs, canAddStock, inTransitSlabIds = ne
             </select>
           </div>
           <div className="relative">
-            <Filter className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+            <Filter className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
             <select
               value={statusId}
               onChange={(e) => setFilter("status", e.target.value)}
-              className="w-full appearance-none rounded-xl border border-gray-200 bg-white py-3 pl-11 pr-4 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800"
+              className="w-full appearance-none rounded-xl border border-border bg-card py-3 pl-11 pr-4 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="">All Status</option>
               {options.statuses.map((s) => (
@@ -501,11 +501,11 @@ export function InventoryList({ error, slabs, canAddStock, inTransitSlabIds = ne
             </select>
           </div>
           <div className="relative">
-            <ArrowUpDown className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+            <ArrowUpDown className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
             <select
               value={sortBy}
               onChange={(e) => setFilter("sort", e.target.value)}
-              className="w-full appearance-none rounded-xl border border-gray-200 bg-white py-3 pl-11 pr-4 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800"
+              className="w-full appearance-none rounded-xl border border-border bg-card py-3 pl-11 pr-4 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-ring"
             >
               {SORT_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -524,54 +524,54 @@ export function InventoryList({ error, slabs, canAddStock, inTransitSlabIds = ne
           </div>
         )}
       {paginatedLots.length === 0 ? (
-        <div className="rounded-2xl border border-gray-100 bg-white px-6 py-12 text-center text-gray-500 shadow-sm">
+        <div className="rounded-2xl border border-border bg-card px-6 py-12 text-center text-muted-foreground shadow-sm">
           {emptyMessage}
         </div>
       ) : (
         <>
           {/* Desktop table */}
-          <div className="max-md:hidden overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+          <div className="max-md:hidden overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="border-b border-gray-200 bg-gray-50">
+                <thead className="border-b border-border bg-muted">
                   <tr>
                     {isSelectMode && <th className="w-10 px-4 py-4" />}
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700" style={{ minWidth: "120px" }}>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-muted-foreground" style={{ minWidth: "120px" }}>
                       Photo
                     </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-muted-foreground">
                       Name
                     </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-muted-foreground">
                       Slab ID
                     </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-muted-foreground">
                       Size
                     </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">
-                      Sqft <span className="font-light text-gray-400">(estimate)</span>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-muted-foreground">
+                      Sqft <span className="font-light text-muted-foreground">(estimate)</span>
                     </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-muted-foreground">
                       Thickness
                     </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-muted-foreground">
                       Location
                     </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-muted-foreground">
                       Rack
                     </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-muted-foreground">
                       Status
                     </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-muted-foreground">
                       Price
                     </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-muted-foreground">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-border">
                   {paginatedLots.map((lot) => {
                     const expanded = isLotExpanded(lot.lotId);
                     const statusSummary = getLotStatusSummary(lot.slabs);
@@ -588,8 +588,8 @@ export function InventoryList({ error, slabs, canAddStock, inTransitSlabIds = ne
                           onClick={() => toggleLot(lot.lotId)}
                           className={`cursor-pointer transition-colors ${
                             isSelectMode && isSelected
-                              ? "bg-gray-900/5 hover:bg-gray-900/10"
-                              : "bg-gray-50 hover:bg-gray-100"
+                              ? "bg-primary/5 hover:bg-primary/10"
+                              : "bg-muted hover:bg-accent"
                           }`}
                         >
                           {isSelectMode && (
@@ -598,11 +598,11 @@ export function InventoryList({ error, slabs, canAddStock, inTransitSlabIds = ne
                                 <span
                                   className="flex h-5 w-5 items-center justify-center rounded border-2 transition-colors"
                                   style={{
-                                    background: isSelected ? "#111827" : "white",
-                                    borderColor: isSelected ? "#111827" : "#d1d5db",
+                                    background: isSelected ? "var(--primary)" : "var(--card)",
+                                    borderColor: isSelected ? "var(--primary)" : "var(--border)",
                                   }}
                                 >
-                                  {isSelected && <Check className="h-3 w-3 text-white" />}
+                                  {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
                                 </span>
                               ) : (
                                 <span className="block h-5 w-5" />
@@ -612,26 +612,26 @@ export function InventoryList({ error, slabs, canAddStock, inTransitSlabIds = ne
                           <td colSpan={isSelectMode ? 10 : 11} className="px-6 py-3">
                             <div className="flex items-center gap-3 flex-wrap">
                               <ChevronRight
-                                className={`h-4 w-4 shrink-0 text-gray-500 transition-transform duration-200 ${expanded ? "rotate-90" : ""}`}
+                                className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 ${expanded ? "rotate-90" : ""}`}
                               />
-                              <span className="font-mono text-sm font-bold text-gray-900">
+                              <span className="font-mono text-sm font-bold text-foreground">
                                 {getDisplayText(lot.lotNumber)}
                               </span>
-                              <span className="font-medium text-gray-800">
+                              <span className="font-medium text-foreground">
                                 {getDisplayText(lot.marbleName)}
                               </span>
-                              <span className="text-sm text-gray-400">·</span>
-                              <span className="text-sm text-gray-500">
+                              <span className="text-sm text-muted-foreground">·</span>
+                              <span className="text-sm text-muted-foreground">
                                 {lot.slabs.length}{" "}
                                 {lot.slabs.length === 1 ? "slab" : "slabs"}
                               </span>
-                              <span className="text-sm text-gray-400">·</span>
-                              <span className="text-sm text-gray-500">
-                                {formatNumber(totalSqft)} sqft <span className="font-light text-gray-400">(estimate)</span>
+                              <span className="text-sm text-muted-foreground">·</span>
+                              <span className="text-sm text-muted-foreground">
+                                {formatNumber(totalSqft)} sqft <span className="font-light text-muted-foreground">(estimate)</span>
                               </span>
                               <>
-                                <span className="text-sm text-gray-400">·</span>
-                                <span className="text-sm font-semibold text-gray-700">
+                                <span className="text-sm text-muted-foreground">·</span>
+                                <span className="text-sm font-semibold text-muted-foreground">
                                   {priceRange}
                                 </span>
                               </>
@@ -648,7 +648,7 @@ export function InventoryList({ error, slabs, canAddStock, inTransitSlabIds = ne
                                   <Link
                                     href={`/inventory/lot/${lot.lotId}`}
                                     onClick={(e) => e.stopPropagation()}
-                                    className="flex items-center gap-1 rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white! transition-colors hover:bg-gray-700 hover:text-white! [&_svg]:text-white!"
+                                    className="flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground! transition-colors hover:bg-primary/80 hover:text-primary-foreground! [&_svg]:text-primary-foreground!"
                                   >
                                     View Lot
                                     <ArrowUpRight className="h-3.5 w-3.5" />
@@ -657,11 +657,11 @@ export function InventoryList({ error, slabs, canAddStock, inTransitSlabIds = ne
                               </div>
                             </div>
                             {availRatio.total > 0 && (
-                              <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-gray-100">
+                              <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-muted">
                                 <div className="flex h-full">
                                   <div style={{ width: `${(availRatio.available / availRatio.total) * 100}%` }} className="bg-green-400" />
                                   <div style={{ width: `${(availRatio.reserved / availRatio.total) * 100}%` }} className="bg-orange-400" />
-                                  <div style={{ width: `${(availRatio.sold / availRatio.total) * 100}%` }} className="bg-gray-300" />
+                                  <div style={{ width: `${(availRatio.sold / availRatio.total) * 100}%` }} className="bg-border" />
                                 </div>
                               </div>
                             )}
@@ -676,43 +676,43 @@ export function InventoryList({ error, slabs, canAddStock, inTransitSlabIds = ne
                               <tr
                                 key={slab.id}
                                 onClick={() => startNavTransition(() => router.push(`/inventory/slab/${slab.id}`))}
-                                className={`cursor-pointer transition-colors border-l-4 border-l-transparent hover:border-l-gray-200 ${isInTransit ? "bg-blue-50/40 hover:bg-blue-50" : "bg-white hover:bg-gray-50"}`}
+                                className={`cursor-pointer transition-colors border-l-4 border-l-transparent hover:border-l-border ${isInTransit ? "bg-blue-50/40 hover:bg-blue-50 dark:bg-blue-950/20 dark:hover:bg-blue-950/30" : "bg-card hover:bg-muted"}`}
                               >
                                 {isSelectMode && <td />}
                                 <td className="py-3 pl-10 pr-4" style={{ minWidth: "120px" }}>
                                   <SlabThumbnail imageUrl={slab.thumbnailUrl} className="h-14 w-20 rounded-lg" />
                                 </td>
                                 <td className="px-6 py-4">
-                                  <p className="font-medium text-gray-900">
+                                  <p className="font-medium text-foreground">
                                     {getDisplayText(slab.marbleName)}
                                   </p>
-                                  <p className="text-sm text-gray-500">
+                                  <p className="text-sm text-muted-foreground">
                                     {getDisplayText(slab.categoryName)}
                                   </p>
                                 </td>
                                 <td className="px-6 py-4">
-                                  <p className="font-mono text-sm text-gray-700">
+                                  <p className="font-mono text-sm text-muted-foreground">
                                     {getDisplayText(slab.slabCode)}
                                   </p>
                                 </td>
-                                <td className="px-6 py-4 text-gray-700">
+                                <td className="px-6 py-4 text-muted-foreground">
                                   {formatSize(slab.length, slab.width)}
                                 </td>
-                                <td className="px-6 py-4 font-semibold text-gray-700">
+                                <td className="px-6 py-4 font-semibold text-muted-foreground">
                                   {formatNumber(slab.sqft)}
                                 </td>
-                                <td className="px-6 py-4 text-gray-700">
+                                <td className="px-6 py-4 text-muted-foreground">
                                   {formatThickness(slab.thicknessName) ?? "-"}
                                 </td>
-                                <td className="px-6 py-4 text-gray-700">
+                                <td className="px-6 py-4 text-muted-foreground">
                                   {getDisplayText(slab.warehouseName)}
                                 </td>
-                                <td className="px-6 py-4 font-mono text-sm text-gray-700">
+                                <td className="px-6 py-4 font-mono text-sm text-muted-foreground">
                                   {getDisplayText(slab.rackNumber)}
                                 </td>
                                 <td className="px-6 py-4">
                                   {isInTransit ? (
-                                    <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700">
+                                    <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
                                       In Transit
                                     </span>
                                   ) : (
@@ -721,7 +721,7 @@ export function InventoryList({ error, slabs, canAddStock, inTransitSlabIds = ne
                                     </span>
                                   )}
                                 </td>
-                                <td className="px-6 py-4 font-semibold text-gray-900">
+                                <td className="px-6 py-4 font-semibold text-foreground">
                                   ₹{formatNumber(slab.sellingPrice)}
                                 </td>
                                 <td className="px-6 py-4">
@@ -737,16 +737,16 @@ export function InventoryList({ error, slabs, canAddStock, inTransitSlabIds = ne
                                         className="cursor-not-allowed rounded-lg p-2 opacity-30"
                                         title="Cannot edit — slab is in transit"
                                       >
-                                        <Edit className="h-4 w-4 text-gray-400" />
+                                        <Edit className="h-4 w-4 text-muted-foreground" />
                                       </span>
                                     ) : (
                                       <Link
                                         href={`/inventory/edit/${slab.id}`}
                                         onClick={(e) => e.stopPropagation()}
-                                        className="rounded-lg p-2 transition-colors hover:bg-gray-100"
+                                        className="rounded-lg p-2 transition-colors hover:bg-muted"
                                         title="Edit"
                                       >
-                                        <Edit className="h-4 w-4 text-gray-600" />
+                                        <Edit className="h-4 w-4 text-muted-foreground" />
                                       </Link>
                                     )}
                                   </div>
@@ -774,10 +774,10 @@ export function InventoryList({ error, slabs, canAddStock, inTransitSlabIds = ne
               return (
                 <div
                   key={lot.lotId}
-                  className={`overflow-hidden rounded-xl border bg-white shadow-sm transition-all ${
+                  className={`overflow-hidden rounded-xl border bg-card shadow-sm transition-all ${
                     isSelectMode && isSelected
-                      ? "border-gray-900 ring-2 ring-gray-900/20"
-                      : "border-gray-100"
+                      ? "border-primary ring-2 ring-primary/20"
+                      : "border-border"
                   }`}
                 >
                   {/* Lot header */}
@@ -791,32 +791,32 @@ export function InventoryList({ error, slabs, canAddStock, inTransitSlabIds = ne
                         <span
                           className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors"
                           style={{
-                            background: isSelected ? "#111827" : "white",
-                            borderColor: isSelected ? "#111827" : "#d1d5db",
+                            background: isSelected ? "var(--primary)" : "var(--card)",
+                            borderColor: isSelected ? "var(--primary)" : "var(--border)",
                           }}
                         >
-                          {isSelected && <Check className="h-3 w-3 text-white" />}
+                          {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
                         </span>
                       ) : (
                         <span className="mt-0.5 block h-5 w-5 shrink-0" />
                       )
                     ) : (
                       <ChevronRight
-                        className={`mt-0.5 h-5 w-5 shrink-0 text-gray-500 transition-transform duration-200 ${expanded ? "rotate-90" : ""}`}
+                        className={`mt-0.5 h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200 ${expanded ? "rotate-90" : ""}`}
                       />
                     )}
                     <div className="min-w-0 flex-1">
                       <div className="mb-1 flex items-center gap-2">
-                        <span className="font-mono text-sm font-bold text-gray-900">
+                        <span className="font-mono text-sm font-bold text-foreground">
                           {getDisplayText(lot.lotNumber)}
                         </span>
-                        <span className="text-sm text-gray-400">·</span>
-                        <span className="text-sm text-gray-500">
+                        <span className="text-sm text-muted-foreground">·</span>
+                        <span className="text-sm text-muted-foreground">
                           {lot.slabs.length}{" "}
                           {lot.slabs.length === 1 ? "slab" : "slabs"}
                         </span>
                       </div>
-                      <p className="mb-2 font-medium text-gray-900">
+                      <p className="mb-2 font-medium text-foreground">
                         {getDisplayText(lot.marbleName)}
                       </p>
                       <div className="mb-1.5 flex flex-wrap gap-1.5">
@@ -829,14 +829,14 @@ export function InventoryList({ error, slabs, canAddStock, inTransitSlabIds = ne
                           </span>
                         ))}
                       </div>
-                      <p className="text-sm text-gray-500">
-                        {formatNumber(totalSqft)} sqft total <span className="font-light text-gray-400">(estimate)</span>
+                      <p className="text-sm text-muted-foreground">
+                        {formatNumber(totalSqft)} sqft total <span className="font-light text-muted-foreground">(estimate)</span>
                       </p>
                       {!isSelectMode && !lot.lotId.startsWith("__slab_") && (
                         <Link
                           href={`/inventory/lot/${lot.lotId}`}
                           onClick={(e) => e.stopPropagation()}
-                          className="mt-3 flex items-center gap-1 self-start rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white! hover:text-white! [&_svg]:text-white!"
+                          className="mt-3 flex items-center gap-1 self-start rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground! hover:text-primary-foreground! [&_svg]:text-primary-foreground!"
                         >
                           View Lot
                           <ArrowUpRight className="h-3.5 w-3.5" />
@@ -847,26 +847,26 @@ export function InventoryList({ error, slabs, canAddStock, inTransitSlabIds = ne
 
                   {/* Slab sub-cards */}
                   {expanded && (
-                    <div className="divide-y divide-gray-50 border-t border-gray-100">
+                    <div className="divide-y divide-border border-t border-border">
                       {lot.slabs.map((slab) => {
                         const isInTransit = inTransitSlabIds.has(slab.id);
                         return (
                           <div
                             key={slab.id}
                             onClick={() => startNavTransition(() => router.push(`/inventory/slab/${slab.id}`))}
-                            className={`cursor-pointer px-4 py-3 pl-11 ${isInTransit ? "bg-blue-50/40 active:bg-blue-100" : "bg-gray-50/60 active:bg-gray-100"}`}
+                            className={`cursor-pointer px-4 py-3 pl-11 ${isInTransit ? "bg-blue-50/40 active:bg-blue-100 dark:bg-blue-950/20 dark:active:bg-blue-950/30" : "bg-muted/60 active:bg-muted"}`}
                           >
                             <div className="mb-2 flex gap-3">
                               <SlabThumbnail imageUrl={slab.thumbnailUrl} className="h-16 w-24 shrink-0" />
                               <div className="min-w-0 flex-1">
-                                <p className="font-medium text-gray-900">
+                                <p className="font-medium text-foreground">
                                   {getDisplayText(slab.marbleName)}
                                 </p>
-                                <p className="mb-1 text-sm text-gray-500">
+                                <p className="mb-1 text-sm text-muted-foreground">
                                   {getDisplayText(slab.categoryName)}
                                 </p>
                                 {isInTransit ? (
-                                  <span className="inline-block rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+                                  <span className="inline-block rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
                                     In Transit
                                   </span>
                                 ) : (
@@ -879,48 +879,48 @@ export function InventoryList({ error, slabs, canAddStock, inTransitSlabIds = ne
 
                             <div className="mb-2 grid grid-cols-2 gap-2 text-sm">
                               <div>
-                                <p className="text-gray-500">Slab ID</p>
-                                <p className="font-mono text-gray-900">
+                                <p className="text-muted-foreground">Slab ID</p>
+                                <p className="font-mono text-foreground">
                                   {getDisplayText(slab.slabCode)}
                                 </p>
                               </div>
                               <div>
-                                <p className="text-gray-500">Size</p>
-                                <p className="text-gray-900">
+                                <p className="text-muted-foreground">Size</p>
+                                <p className="text-foreground">
                                   {formatSize(slab.length, slab.width)}
                                 </p>
                               </div>
                               <div>
-                                <p className="text-gray-500">Sqft <span className="font-light text-gray-400">(estimate)</span></p>
-                                <p className="font-semibold text-gray-900">
+                                <p className="text-muted-foreground">Sqft <span className="font-light text-muted-foreground">(estimate)</span></p>
+                                <p className="font-semibold text-foreground">
                                   {formatNumber(slab.sqft)}
                                 </p>
                               </div>
                               <div>
-                                <p className="text-gray-500">Thickness</p>
-                                <p className="text-gray-900">
+                                <p className="text-muted-foreground">Thickness</p>
+                                <p className="text-foreground">
                                   {formatThickness(slab.thicknessName) ?? "-"}
                                 </p>
                               </div>
                               <div>
-                                <p className="text-gray-500">Location</p>
-                                <p className="text-gray-900">
+                                <p className="text-muted-foreground">Location</p>
+                                <p className="text-foreground">
                                   {getDisplayText(slab.warehouseName)}
                                 </p>
                               </div>
                               <div>
-                                <p className="text-gray-500">Rack</p>
-                                <p className="font-mono text-gray-900">
+                                <p className="text-muted-foreground">Rack</p>
+                                <p className="font-mono text-foreground">
                                   {getDisplayText(slab.rackNumber)}
                                 </p>
                               </div>
                             </div>
 
-                            <div className="flex items-center justify-between border-t border-gray-200 pt-2">
+                            <div className="flex items-center justify-between border-t border-border pt-2">
                               <div>
-                                <p className="text-xs text-gray-500">Price</p>
-                                <p className="font-semibold text-gray-900">
-                                  ₹{formatNumber(slab.sellingPrice)}/sqft <span className="font-light text-gray-400">(estimate)</span>
+                                <p className="text-xs text-muted-foreground">Price</p>
+                                <p className="font-semibold text-foreground">
+                                  ₹{formatNumber(slab.sellingPrice)}/sqft <span className="font-light text-muted-foreground">(estimate)</span>
                                 </p>
                               </div>
                               <div className="flex gap-1">
@@ -929,16 +929,16 @@ export function InventoryList({ error, slabs, canAddStock, inTransitSlabIds = ne
                                     className="cursor-not-allowed rounded-lg p-2 opacity-30"
                                     title="Cannot edit — slab is in transit"
                                   >
-                                    <Edit className="h-4 w-4 text-gray-400" />
+                                    <Edit className="h-4 w-4 text-muted-foreground" />
                                   </span>
                                 ) : (
                                   <Link
                                     href={`/inventory/edit/${slab.id}`}
                                     onClick={(e) => e.stopPropagation()}
-                                    className="rounded-lg p-2 transition-colors hover:bg-gray-200"
+                                    className="rounded-lg p-2 transition-colors hover:bg-muted"
                                     title="Edit"
                                   >
-                                    <Edit className="h-4 w-4 text-gray-600" />
+                                    <Edit className="h-4 w-4 text-muted-foreground" />
                                   </Link>
                                 )}
                               </div>
@@ -966,9 +966,9 @@ export function InventoryList({ error, slabs, canAddStock, inTransitSlabIds = ne
 
       {/* Floating selection action bar */}
       {isSelectMode && selectedCount > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-gray-200 bg-white px-4 py-3 shadow-lg">
+        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card px-4 py-3 shadow-lg">
           <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3">
-            <span className="text-sm font-medium text-gray-700">
+            <span className="text-sm font-medium text-muted-foreground">
               {selectedCount} lot{selectedCount !== 1 ? "s" : ""} selected
             </span>
             <div className="flex flex-wrap gap-2">
@@ -976,7 +976,7 @@ export function InventoryList({ error, slabs, canAddStock, inTransitSlabIds = ne
                 type="button"
                 disabled={isPending}
                 onClick={() => { setActionError(null); setShowDeleteConfirm(true); }}
-                className="flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-lg bg-destructive px-3 py-2 text-sm font-semibold text-destructive-foreground transition-colors hover:bg-destructive/90 disabled:opacity-50"
               >
                 <Trash2 className="h-3.5 w-3.5" />
                 Delete ({selectedCount})
@@ -984,7 +984,7 @@ export function InventoryList({ error, slabs, canAddStock, inTransitSlabIds = ne
               <button
                 type="button"
                 onClick={() => setSelectedLotIds(new Set())}
-                className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
+                className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
               >
                 Clear
               </button>

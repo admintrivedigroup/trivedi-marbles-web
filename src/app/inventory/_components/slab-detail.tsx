@@ -64,11 +64,11 @@ function SpecRow({
 }) {
   return (
     <div className="flex items-start gap-3">
-      <span className="mt-0.5 shrink-0 text-gray-400">{icon}</span>
+      <span className="mt-0.5 shrink-0 text-muted-foreground">{icon}</span>
       <div className="min-w-0">
-        <p className="text-xs text-gray-500">{label}</p>
+        <p className="text-xs text-muted-foreground">{label}</p>
         <p
-          className={`mt-0.5 text-sm font-semibold text-gray-900 ${mono ? "font-mono" : ""}`}
+          className={`mt-0.5 text-sm font-semibold text-foreground ${mono ? "font-mono" : ""}`}
         >
           {value}
         </p>
@@ -85,49 +85,49 @@ function MovementHistory({ movements }: { movements: SlabMovement[] }) {
   const pageMovements = movements.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-      <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-3.5">
-        <History className="h-4 w-4 text-gray-500" />
-        <h2 className="text-sm font-semibold text-gray-900">Movement History</h2>
+    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      <div className="flex items-center gap-2 border-b border-border px-4 py-3.5">
+        <History className="h-4 w-4 text-muted-foreground" />
+        <h2 className="text-sm font-semibold text-foreground">Movement History</h2>
         {movements.length > 0 && (
-          <span className="ml-auto text-xs text-gray-400">{movements.length} total</span>
+          <span className="ml-auto text-xs text-muted-foreground">{movements.length} total</span>
         )}
       </div>
 
       {movements.length === 0 ? (
         <div className="flex flex-col items-center gap-2 py-8 text-center">
-          <ArrowLeftRight className="h-7 w-7 text-gray-200" />
-          <p className="text-xs text-gray-400">No movements recorded yet</p>
+          <ArrowLeftRight className="h-7 w-7 text-muted-foreground" />
+          <p className="text-xs text-muted-foreground">No movements recorded yet</p>
         </div>
       ) : (
         <>
-          <div className="divide-y divide-gray-50">
+          <div className="divide-y divide-border">
             {pageMovements.map((movement, index) => (
               <div key={movement.id} className="flex gap-3 px-4 py-3">
                 <div className="flex flex-col items-center gap-1">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-50">
-                    <ArrowLeftRight className="h-3.5 w-3.5 text-blue-500" />
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-950/30">
+                    <ArrowLeftRight className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400" />
                   </div>
                   {index < pageMovements.length - 1 && (
-                    <div className="w-px flex-1 bg-gray-100" />
+                    <div className="w-px flex-1 bg-border" />
                   )}
                 </div>
                 <div className="min-w-0 pb-1 pt-0.5">
-                  <p className="text-sm font-medium text-gray-900">
+                  <p className="text-sm font-medium text-foreground">
                     {movement.eventType}
                   </p>
                   {movement.fromLocation && movement.toLocation && (
-                    <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-500">
+                    <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
                       <MapPin className="h-3 w-3 shrink-0" />
                       {movement.fromLocation}
-                      <span className="text-gray-300">→</span>
+                      <span className="text-muted-foreground">→</span>
                       {movement.toLocation}
                     </p>
                   )}
                   {movement.notes && (
-                    <p className="mt-0.5 text-xs text-gray-400">{movement.notes}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{movement.notes}</p>
                   )}
-                  <p className="mt-1 text-xs text-gray-400">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     {formatDateTime(movement.createdAt)}
                   </p>
                 </div>
@@ -136,23 +136,23 @@ function MovementHistory({ movements }: { movements: SlabMovement[] }) {
           </div>
 
           {totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-gray-100 px-4 py-2.5">
+            <div className="flex items-center justify-between border-t border-border px-4 py-2.5">
               <button
                 type="button"
                 onClick={() => setPage((p) => p - 1)}
                 disabled={page === 1}
-                className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-30"
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-30"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-muted-foreground">
                 {page} / {totalPages}
               </span>
               <button
                 type="button"
                 onClick={() => setPage((p) => p + 1)}
                 disabled={page === totalPages}
-                className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-30"
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-30"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
@@ -169,35 +169,35 @@ function ReservationHistory({ entries }: { entries: ReservationHistoryEntry[] })
 
   function dotColor(after: string | null) {
     if (after === "Reserved") return "bg-orange-400";
-    if (after === "Sold") return "bg-gray-300";
+    if (after === "Sold") return "bg-muted-foreground";
     return "bg-green-400";
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-      <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-3.5">
-        <Clock className="h-4 w-4 text-gray-500" />
-        <h2 className="text-sm font-semibold text-gray-900">Reservation History</h2>
-        <span className="ml-auto text-xs text-gray-400">{entries.length} event{entries.length !== 1 ? "s" : ""}</span>
+    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      <div className="flex items-center gap-2 border-b border-border px-4 py-3.5">
+        <Clock className="h-4 w-4 text-muted-foreground" />
+        <h2 className="text-sm font-semibold text-foreground">Reservation History</h2>
+        <span className="ml-auto text-xs text-muted-foreground">{entries.length} event{entries.length !== 1 ? "s" : ""}</span>
       </div>
       <div className="divide-y divide-gray-50">
         {entries.map((entry, index) => (
           <div key={entry.id} className="flex gap-3 px-4 py-3">
             <div className="flex flex-col items-center gap-1">
               <div className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${dotColor(entry.after)}`} />
-              {index < entries.length - 1 && <div className="w-px flex-1 bg-gray-100" />}
+              {index < entries.length - 1 && <div className="w-px flex-1 bg-border" />}
             </div>
             <div className="min-w-0 pb-1">
-              <p className="text-sm font-medium text-gray-900">
+              <p className="text-sm font-medium text-foreground">
                 {entry.before ?? "—"} → {entry.after ?? "—"}
                 {entry.reservedFor && (
-                  <span className="ml-1.5 font-normal text-gray-600">for {entry.reservedFor}</span>
+                  <span className="ml-1.5 font-normal text-muted-foreground">for {entry.reservedFor}</span>
                 )}
               </p>
               {entry.reservedUntil && (
-                <p className="mt-0.5 text-xs text-gray-500">Until {formatDate(entry.reservedUntil) ?? entry.reservedUntil}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">Until {formatDate(entry.reservedUntil) ?? entry.reservedUntil}</p>
               )}
-              <p className="mt-1 text-xs text-gray-400">{formatDateTime(entry.createdAt)}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{formatDateTime(entry.createdAt)}</p>
             </div>
           </div>
         ))}
@@ -239,7 +239,7 @@ export function SlabDetail({ images, movements, reservationHistory, slab, isInTr
     slab.length && slab.width ? (
       <>
         {slab.length}&apos; × {slab.width}&apos; ({sqft} sqft{" "}
-        <span className="font-light text-gray-400">(estimate)</span>)
+        <span className="font-light text-muted-foreground">(estimate)</span>)
       </>
     ) : (
       "-"
@@ -296,7 +296,7 @@ export function SlabDetail({ images, movements, reservationHistory, slab, isInTr
       <div className="px-4 py-4 md:px-8">
         <Link
           href="/inventory/list"
-          className="inline-flex items-center gap-1.5 text-sm text-gray-500 transition-colors hover:text-gray-900"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Inventory
@@ -308,7 +308,7 @@ export function SlabDetail({ images, movements, reservationHistory, slab, isInTr
           {/* Left column — fixed narrow width */}
           <div className="shrink-0 space-y-3 lg:w-172.5">
             {/* Main photo */}
-            <div className="overflow-hidden rounded-2xl border border-gray-100 bg-gray-50 shadow-sm">
+            <div className="overflow-hidden rounded-2xl border border-border bg-muted shadow-sm">
               {images.length > 0 ? (
                 <button
                   type="button"
@@ -324,7 +324,7 @@ export function SlabDetail({ images, movements, reservationHistory, slab, isInTr
                 </button>
               ) : (
                 <div className="flex aspect-9/8 items-center justify-center">
-                  <Package className="h-16 w-16 text-gray-200" />
+                  <Package className="h-16 w-16 text-muted-foreground" />
                 </div>
               )}
             </div>
@@ -337,10 +337,10 @@ export function SlabDetail({ images, movements, reservationHistory, slab, isInTr
                     key={img.id}
                     type="button"
                     onClick={() => setActiveImageIndex(idx)}
-                    className={`shrink-0 h-14 w-14 overflow-hidden rounded-xl border-2 bg-gray-50 transition-colors ${
+                    className={`shrink-0 h-14 w-14 overflow-hidden rounded-xl border-2 bg-muted transition-colors ${
                       idx === activeImageIndex
-                        ? "border-gray-800"
-                        : "border-transparent hover:border-gray-300"
+                        ? "border-primary"
+                        : "border-transparent hover:border-border"
                     }`}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -352,8 +352,8 @@ export function SlabDetail({ images, movements, reservationHistory, slab, isInTr
                   </button>
                 ))
               ) : (
-                <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl border-2 border-gray-800 bg-gray-50">
-                  <Package className="h-5 w-5 text-gray-200" />
+                <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl border-2 border-primary bg-muted">
+                  <Package className="h-5 w-5 text-muted-foreground" />
                 </div>
               )}
             </div>
@@ -366,11 +366,11 @@ export function SlabDetail({ images, movements, reservationHistory, slab, isInTr
           </div>
 
           {/* Right column — detail card, grows to fill space */}
-          <div className="min-w-0 flex-1 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+          <div className="min-w-0 flex-1 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
             {/* Header */}
             <div className="p-6 pb-5">
               <div className="flex items-start justify-between gap-3">
-                <h1 className="text-2xl font-bold leading-tight text-gray-900">
+                <h1 className="text-2xl font-bold leading-tight text-foreground">
                   {slab.marbleName ?? "-"}
                 </h1>
                 <span
@@ -379,13 +379,13 @@ export function SlabDetail({ images, movements, reservationHistory, slab, isInTr
                   {slab.statusName ?? "Unknown"}
                 </span>
               </div>
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-sm text-muted-foreground">
                 {slab.categoryName ?? "-"}
               </p>
             </div>
 
             {/* Specs */}
-            <div className="border-t border-gray-100 px-6 py-5">
+            <div className="border-t border-border px-6 py-5">
               <div className="grid grid-cols-2 gap-x-6 gap-y-5">
                 <SpecRow
                   icon={<Tag className="h-4 w-4" />}
@@ -422,30 +422,30 @@ export function SlabDetail({ images, movements, reservationHistory, slab, isInTr
             </div>
 
             {/* Pricing */}
-            <div className="border-t border-gray-100 px-6 py-5">
-              <h2 className="mb-4 font-semibold text-gray-900">Pricing</h2>
+            <div className="border-t border-border px-6 py-5">
+              <h2 className="mb-4 font-semibold text-foreground">Pricing</h2>
               <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                 <div>
-                  <p className="text-xs text-gray-500">Sell Price</p>
-                  <p className="mt-1 text-xl font-bold text-green-600">
+                  <p className="text-xs text-muted-foreground">Sell Price</p>
+                  <p className="mt-1 text-xl font-bold text-green-600 dark:text-green-400">
                     {fmtCurrency(slab.sellingPrice)}
                   </p>
-                  <p className="text-xs text-gray-400">per sqft <span className="font-light text-gray-300">(estimate)</span></p>
+                  <p className="text-xs text-muted-foreground">per sqft <span className="font-light text-muted-foreground">(estimate)</span></p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Dealer Price</p>
-                  <p className="mt-1 text-xl font-bold text-blue-600">
+                  <p className="text-xs text-muted-foreground">Dealer Price</p>
+                  <p className="mt-1 text-xl font-bold text-blue-600 dark:text-blue-400">
                     {fmtCurrency(slab.dealerPrice)}
                   </p>
-                  <p className="text-xs text-gray-400">per sqft <span className="font-light text-gray-300">(estimate)</span></p>
+                  <p className="text-xs text-muted-foreground">per sqft <span className="font-light text-muted-foreground">(estimate)</span></p>
                 </div>
               </div>
 
-              <div className="mt-4 border-t border-gray-100 pt-4">
+              <div className="mt-4 border-t border-border pt-4">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm text-gray-700">
+                  <p className="text-sm text-muted-foreground">
                     Total Value:{" "}
-                    <span className="font-semibold text-gray-900">
+                    <span className="font-semibold text-foreground">
                       {totalValue !== null ? fmtCurrency(totalValue) : "-"}
                     </span>
                   </p>
@@ -454,7 +454,7 @@ export function SlabDetail({ images, movements, reservationHistory, slab, isInTr
                     onChange={(e) =>
                       setPriceBasis(e.target.value as "selling" | "dealer")
                     }
-                    className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-600 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800"
+                    className="rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs text-muted-foreground focus:border-transparent focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     <option value="selling">by Selling Price</option>
                     <option value="dealer">by Dealer Price</option>
@@ -465,35 +465,35 @@ export function SlabDetail({ images, movements, reservationHistory, slab, isInTr
 
             {/* Notes */}
             {slab.notes ? (
-              <div className="border-t border-gray-100 px-6 py-5">
-                <h2 className="mb-2 font-semibold text-gray-900">Notes</h2>
-                <p className="text-sm leading-relaxed text-gray-600">
+              <div className="border-t border-border px-6 py-5">
+                <h2 className="mb-2 font-semibold text-foreground">Notes</h2>
+                <p className="text-sm leading-relaxed text-muted-foreground">
                   {slab.notes}
                 </p>
               </div>
             ) : null}
 
             {/* Actions */}
-            <div className="border-t border-gray-100 px-6 py-5">
-              <h2 className="mb-4 font-semibold text-gray-900">Actions</h2>
+            <div className="border-t border-border px-6 py-5">
+              <h2 className="mb-4 font-semibold text-foreground">Actions</h2>
 
               {isInTransit && (
-                <div className="mb-4 flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+                <div className="mb-4 flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/30 dark:text-blue-400">
                   <span className="font-medium">In Transit</span>
-                  <span className="text-blue-500">—</span>
+                  <span className="text-blue-500 dark:text-blue-400">—</span>
                   This slab is currently being transferred. Editing and reserving are disabled until it is received at the destination.
                 </div>
               )}
 
               {isReserved && slab.reservedFor && (
-                <div className="mb-4 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-orange-500">Reserved</p>
-                  <p className="mt-1 text-sm font-semibold text-orange-900">{slab.reservedFor}</p>
+                <div className="mb-4 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 dark:border-orange-900/50 dark:bg-orange-950/30">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-orange-500 dark:text-orange-400">Reserved</p>
+                  <p className="mt-1 text-sm font-semibold text-orange-900 dark:text-orange-300">{slab.reservedFor}</p>
                   {slab.reservedUntil && (() => {
                     const expiry = new Date(slab.reservedUntil + "T23:59:59");
                     const isExpired = expiry < new Date();
                     return (
-                      <p className={`mt-0.5 text-xs ${isExpired ? "font-medium text-red-600" : "text-orange-600"}`}>
+                      <p className={`mt-0.5 text-xs ${isExpired ? "font-medium text-red-600 dark:text-red-400" : "text-orange-600 dark:text-orange-400"}`}>
                         {isExpired ? "Expired · was due " : "Until "}
                         {formatDate(slab.reservedUntil) ?? "-"}
                       </p>
@@ -503,7 +503,7 @@ export function SlabDetail({ images, movements, reservationHistory, slab, isInTr
               )}
 
               {actionError ? (
-                <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">
                   {actionError}
                 </div>
               ) : null}
@@ -511,14 +511,14 @@ export function SlabDetail({ images, movements, reservationHistory, slab, isInTr
               <div className="grid grid-cols-2 gap-3">
                 {/* Row 1 — Edit */}
                 {isInTransit ? (
-                  <div className="col-span-2 flex cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-400">
+                  <div className="col-span-2 flex cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-muted px-4 py-3 text-sm font-semibold text-muted-foreground">
                     <Edit2 className="h-4 w-4" />
                     Edit Details
                   </div>
                 ) : (
                   <Link
                     href={`/inventory/edit/${slab.id}`}
-                    className="col-span-2 flex items-center justify-center gap-2 rounded-xl border-2 border-gray-800 bg-white px-4 py-3.5 text-sm font-semibold text-gray-900 transition-all hover:bg-gray-800 hover:text-white hover:shadow-md active:scale-[0.98]"
+                    className="col-span-2 flex items-center justify-center gap-2 rounded-xl border-2 border-primary bg-card px-4 py-3.5 text-sm font-semibold text-foreground transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-md active:scale-[0.98]"
                   >
                     <Edit2 className="h-4 w-4" />
                     Edit Details
@@ -531,7 +531,7 @@ export function SlabDetail({ images, movements, reservationHistory, slab, isInTr
                     type="button"
                     onClick={() => requestStatusChange("Available")}
                     disabled={isPending || isInTransit}
-                    className="flex items-center justify-center gap-2 rounded-xl bg-gray-500 px-4 py-3 text-sm font-medium text-white transition-all hover:bg-gray-600 hover:shadow-md active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex items-center justify-center gap-2 rounded-xl bg-secondary px-4 py-3 text-sm font-medium text-secondary-foreground transition-all hover:bg-secondary/80 hover:shadow-md active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <X className="h-4 w-4" />
                     Unreserve
@@ -553,7 +553,7 @@ export function SlabDetail({ images, movements, reservationHistory, slab, isInTr
                     type="button"
                     onClick={() => requestStatusChange("Available")}
                     disabled={isPending}
-                    className="flex items-center justify-center gap-2 rounded-xl bg-gray-500 px-4 py-3 text-sm font-medium text-white transition-all hover:bg-gray-600 hover:shadow-md active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex items-center justify-center gap-2 rounded-xl bg-secondary px-4 py-3 text-sm font-medium text-secondary-foreground transition-all hover:bg-secondary/80 hover:shadow-md active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <X className="h-4 w-4" />
                     Mark Available
@@ -583,7 +583,7 @@ export function SlabDetail({ images, movements, reservationHistory, slab, isInTr
                   href={`/inventory/slab/${slab.id}/label`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 transition-all hover:bg-gray-50 hover:shadow-md active:scale-[0.98]"
+                  className="flex items-center justify-center gap-2 rounded-xl border border-border px-4 py-3 text-sm font-medium text-muted-foreground transition-all hover:bg-muted hover:shadow-md active:scale-[0.98]"
                 >
                   <Printer className="h-4 w-4" />
                   Print Label
@@ -603,7 +603,7 @@ export function SlabDetail({ images, movements, reservationHistory, slab, isInTr
                   type="button"
                   onClick={() => setShowDeleteConfirm(true)}
                   disabled={isPending}
-                  className="col-span-2 flex items-center justify-center gap-2 rounded-xl border border-red-200 px-4 py-3 text-sm font-medium text-red-600 transition-all hover:bg-red-50 hover:shadow-md active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="col-span-2 flex items-center justify-center gap-2 rounded-xl border border-red-200 px-4 py-3 text-sm font-medium text-red-600 transition-all hover:bg-red-50 hover:shadow-md active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/30"
                 >
                   <Trash2 className="h-4 w-4" />
                   Delete Slab
