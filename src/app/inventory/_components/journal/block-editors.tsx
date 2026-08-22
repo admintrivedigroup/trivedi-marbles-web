@@ -18,6 +18,7 @@ import type {
 } from "@/lib/journal/types";
 import type { JournalRelatedProduct } from "@/lib/journal/types";
 import { Field, IconButton, TextArea, TextInput, inputClass } from "./field-kit";
+import { generateBlockId } from "@/lib/journal/blocks";
 import { ImageUploadControl } from "./image-upload-control";
 
 type Editor<T> = { data: T; onChange: (data: T) => void };
@@ -347,7 +348,7 @@ export function FaqSectionBlockEditor({ data, onChange }: Editor<FaqSectionBlock
         type="button"
         onClick={() =>
           onChange({
-            faqs: [...data.faqs, { id: crypto.randomUUID(), question: "", answer: "" }],
+            faqs: [...data.faqs, { id: generateBlockId(), question: "", answer: "" }],
           })
         }
         className="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-800"

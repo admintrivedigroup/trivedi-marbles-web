@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils";
 
 export const inputClass =
-  "w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-100";
+  "w-full rounded-xl border border-input bg-input-background text-foreground px-3 py-2 text-sm focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-100 dark:bg-input";
 
 export function Field({
   label,
