@@ -1,7 +1,8 @@
 import type { MetadataRoute } from "next";
 
 import { marbles } from "@/data/marbles";
-import { getPublishedBlogPosts } from "@/lib/blog";
+import { getPublishedJournalPosts } from "@/lib/journal";
+import { getJournalSitemapEntries } from "@/lib/journal/sitemap";
 import { getWebsiteLots } from "@/lib/supabase/collection";
 
 const BASE_URL = "https://www.trivedimarbles.co.in";
@@ -11,7 +12,7 @@ const STATIC_ROUTES: MetadataRoute.Sitemap = [
   { url: `${BASE_URL}/collection`, priority: 0.9, changeFrequency: "daily" },
   { url: `${BASE_URL}/projects`, priority: 0.8, changeFrequency: "monthly" },
   { url: `${BASE_URL}/about`, priority: 0.7, changeFrequency: "monthly" },
-  { url: `${BASE_URL}/blog`, priority: 0.7, changeFrequency: "weekly" },
+  { url: `${BASE_URL}/journal`, priority: 0.7, changeFrequency: "weekly" },
   { url: `${BASE_URL}/contact`, priority: 0.6, changeFrequency: "yearly" },
 ];
 
@@ -24,9 +25,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   // Live inventory lot pages (from Supabase)
-  const [lots, blogPosts] = await Promise.all([
+  const [lots, journalPosts] = await Promise.all([
     getWebsiteLots(),
-    getPublishedBlogPosts(),
+    getPublishedJournalPosts(),
   ]);
 
   const lotRoutes: MetadataRoute.Sitemap = lots.map((lot) => ({
@@ -35,13 +36,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     changeFrequency: "weekly" as const,
   }));
 
-  // Blog post pages (from Supabase)
-  const blogRoutes: MetadataRoute.Sitemap = blogPosts.map((post) => ({
-    url: `${BASE_URL}/blog/${post.id}`,
-    lastModified: new Date(post.date),
-    priority: 0.6,
-    changeFrequency: "monthly" as const,
-  }));
+  // Journal post pages (from Supabase)
+  const journalRoutes = await getJournalSitemapEntries(journalPosts);
 
-  return [...STATIC_ROUTES, ...marbleRoutes, ...lotRoutes, ...blogRoutes];
+  return [...STATIC_ROUTES, ...marbleRoutes, ...lotRoutes, ...journalRoutes];
 }

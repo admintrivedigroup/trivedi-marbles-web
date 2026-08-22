@@ -7,9 +7,6 @@ import { getPublishedJournalPosts } from "@/lib/journal";
 import { PUBLIC_ROBOTS } from "@/lib/seo";
 import { JournalList } from "./_components/journal-list";
 
-// Not yet linked from nav or included in the sitemap (kept dark until the
-// business approves cutting over from the legacy /blog route) — this page is
-// otherwise a complete, working implementation of the new canonical journal.
 export const revalidate = 3600;
 
 export const metadata: Metadata = {

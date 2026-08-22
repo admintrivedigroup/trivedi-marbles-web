@@ -80,6 +80,26 @@ export async function getJournalPostBySlugForPreview(slug: string): Promise<Jour
   }
 }
 
+/** Used by the legacy /blog/[id] route to 301 old id-based URLs to their
+ * canonical /journal/[slug] equivalent. */
+export async function getJournalSlugById(id: string): Promise<string | null> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("journal_posts")
+      .select("slug")
+      .eq("id", id)
+      .eq("status", "published")
+      .lte("published_at", new Date().toISOString())
+      .maybeSingle();
+
+    if (error || !data) return null;
+    return (data.slug as string | null) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function getRelatedArticleSummaries(ids: string[]): Promise<JournalPost[]> {
   if (ids.length === 0) return [];
   try {

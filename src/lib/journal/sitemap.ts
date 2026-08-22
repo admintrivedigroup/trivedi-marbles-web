@@ -10,11 +10,7 @@ export function filterIndexableForSitemap(posts: JournalPost[]): JournalPost[] {
   return posts.filter((post) => Boolean(post.slug) && post.robots_index && isIndexableStatus(post));
 }
 
-/**
- * Not called from src/app/sitemap.ts yet — the /journal route is kept dark
- * (unlinked, unsitemapped) until the business approves the cutover from the
- * legacy /blog route. Wiring this in later is a one-line change.
- */
+/** Used by src/app/sitemap.ts to list indexable journal posts. */
 export async function getJournalSitemapEntries(posts: JournalPost[]): Promise<MetadataRoute.Sitemap> {
   return filterIndexableForSitemap(posts).map((post) => ({
     url: journalArticleUrl(post.slug as string),

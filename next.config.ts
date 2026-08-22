@@ -21,6 +21,11 @@ const nextConfig: NextConfig = {
         destination: "/collection",
         permanent: true,
       },
+      {
+        source: "/blog",
+        destination: "/journal",
+        permanent: true,
+      },
     ];
   },
   env: {
