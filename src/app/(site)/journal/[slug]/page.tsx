@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 
 import { FadeIn } from "@/components/animations/FadeIn";
 import { formatBlogDate } from "@/lib/blog-shared";
@@ -165,6 +166,14 @@ export default async function JournalDetailPage({ params }: Props) {
 
         <div className="mx-auto max-w-3xl px-6 py-16 md:px-12 lg:px-0">
           <FadeIn>
+            <Link
+              href="/journal"
+              className="mb-12 flex items-center gap-2 text-sm uppercase tracking-wider text-muted-foreground transition-colors hover:text-primary"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Journal
+            </Link>
+
             <p className="mb-10 border-l-2 border-secondary pl-6 font-serif text-xl leading-relaxed text-primary md:text-2xl">
               {post.excerpt}
             </p>
