@@ -34,24 +34,83 @@ const locations: Location[] = [
     directionsUrl: "https://maps.google.com/?q=Trivedi%20Marbles%20Pvt.%20Ltd.",
     mapEmbedUrl: AHMEDABAD_MAP_EMBED_URL,
   },
-  {
-    id: "ambaji",
-    name: "Ambaji Quarry Sourcing",
-    description:
-      "The source of our craftsmanship — heritage stone quarried in Ambaji, Gujarat. Visit us at our Ahmedabad office to explore slabs sourced directly from the quarry.",
-    address: [
-      "S.No.: 698/4, Ognaj",
-      "Opp. Vasant Nagar Township",
-      "Gota-Vadsar Road, Ahmedabad-380060",
-      "Gujarat, India",
-    ],
-    directionsUrl: "https://maps.google.com/?q=Trivedi%20Marbles%20Pvt.%20Ltd.",
-    mapEmbedUrl: AHMEDABAD_MAP_EMBED_URL,
-  },
+  // Temporarily removed — Ambaji Quarry Sourcing card. Re-add when ready:
+  // {
+  //   id: "ambaji",
+  //   name: "Ambaji Quarry Sourcing",
+  //   description:
+  //     "The source of our craftsmanship — heritage stone quarried in Ambaji, Gujarat. Visit us at our Ahmedabad office to explore slabs sourced directly from the quarry.",
+  //   address: [
+  //     "S.No.: 698/4, Ognaj",
+  //     "Opp. Vasant Nagar Township",
+  //     "Gota-Vadsar Road, Ahmedabad-380060",
+  //     "Gujarat, India",
+  //   ],
+  //   directionsUrl: "https://maps.google.com/?q=Trivedi%20Marbles%20Pvt.%20Ltd.",
+  //   mapEmbedUrl: AHMEDABAD_MAP_EMBED_URL,
+  // },
 ];
 
-export function LocationSection() {
-  const [selectedLocationId, setSelectedLocationId] = useState("ahmedabad");
+function SingleLocation({ location }: { location: Location }) {
+  return (
+    <section className="mt-24">
+      <FadeIn className="mb-10 text-center">
+        <span className="mb-4 block text-sm font-medium uppercase tracking-[0.3em] text-secondary">
+          Visit Us
+        </span>
+        <h2 className="font-serif text-4xl text-primary md:text-5xl">
+          Visit Us
+        </h2>
+      </FadeIn>
+
+      <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-stretch">
+        <FadeIn delay={0.15} className="h-full">
+          <div className="flex h-full flex-col rounded-[28px] border border-[#b08a3c]/20 bg-[#0d0d0d] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.28)] md:p-8">
+            <h3 className="font-serif text-2xl text-white">{location.name}</h3>
+            <p className="mt-3 max-w-xl text-sm leading-7 text-white/70">
+              {location.description}
+            </p>
+
+            <div className="mt-6 flex gap-3 text-sm leading-7 text-white/65">
+              <MapPin className="mt-1 h-5 w-5 shrink-0 text-[#d4af37]" />
+              <address className="not-italic">
+                {location.address.map((line) => (
+                  <div key={line}>{line}</div>
+                ))}
+              </address>
+            </div>
+
+            <Button
+              asChild
+              variant="ghost"
+              className="mt-8 h-11 w-fit rounded-full border border-[#d4af37]/40 bg-transparent px-5 text-xs uppercase tracking-[0.24em] text-[#f2d57a] hover:bg-[#d4af37] hover:text-black"
+            >
+              <a href={location.directionsUrl} target="_blank" rel="noreferrer">
+                Get Directions
+                <ArrowUpRight className="h-4 w-4" />
+              </a>
+            </Button>
+          </div>
+        </FadeIn>
+
+        <FadeIn delay={0.3} className="h-full">
+          <div className="relative h-full min-h-[420px] overflow-hidden rounded-[32px] border border-[#b08a3c]/20 bg-[#111111] shadow-[0_24px_80px_rgba(0,0,0,0.28)]">
+            <iframe
+              src={location.mapEmbedUrl}
+              title={`${location.name} map`}
+              className="min-h-[420px] w-full h-full"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+          </div>
+        </FadeIn>
+      </div>
+    </section>
+  );
+}
+
+function LocationSwitcher() {
+  const [selectedLocationId, setSelectedLocationId] = useState(locations[0].id);
 
   const selectedLocation =
     locations.find((location) => location.id === selectedLocationId) ?? locations[0];
@@ -166,5 +225,13 @@ export function LocationSection() {
         </FadeIn>
       </div>
     </section>
+  );
+}
+
+export function LocationSection() {
+  return locations.length > 1 ? (
+    <LocationSwitcher />
+  ) : (
+    <SingleLocation location={locations[0]} />
   );
 }
