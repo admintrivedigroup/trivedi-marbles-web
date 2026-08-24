@@ -31,6 +31,41 @@ const nextConfig: NextConfig = {
         destination: "/journal",
         permanent: true,
       },
+      {
+        source: "/collection/1",
+        destination: "/collection/ambaji-white-marble",
+        permanent: true,
+      },
+      {
+        source: "/collection/2",
+        destination: "/collection/fusion-black-marble",
+        permanent: true,
+      },
+      {
+        source: "/collection/3",
+        destination: "/collection/exotic-green-marble",
+        permanent: true,
+      },
+      {
+        source: "/collection/4",
+        destination: "/collection/ice-white-marble",
+        permanent: true,
+      },
+      {
+        source: "/collection/5",
+        destination: "/collection/lava-green-marble",
+        permanent: true,
+      },
+      {
+        source: "/collection/6",
+        destination: "/collection/fusion-green-extra-marble",
+        permanent: true,
+      },
+      {
+        source: "/collection/7",
+        destination: "/collection/fusion-brown-marble",
+        permanent: true,
+      },
     ];
   },
   env: {

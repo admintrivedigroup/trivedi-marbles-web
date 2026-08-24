@@ -6,10 +6,12 @@ import LotCollectionDetail from "@/components/collection/LotCollectionDetail";
 import { getMarbleById } from "@/data/marbles";
 import { getWebsiteLotById, getWebsiteLots } from "@/lib/supabase/collection";
 import {
+  buildBreadcrumbJsonLd,
   getMarbleImageAlt,
   getMarbleMetaDescription,
   getMarbleMetaTitle,
   PUBLIC_ROBOTS,
+  safeJsonLdString,
 } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
@@ -112,11 +114,21 @@ export default async function CollectionDetailPage({
       },
     };
 
+    const breadcrumb = buildBreadcrumbJsonLd([
+      { name: "Home", url: BASE },
+      { name: "Collection", url: `${BASE}/collection` },
+      { name: marble.name.split(" - ")[0].trim(), url: `${BASE}/collection/${id}` },
+    ]);
+
     return (
       <>
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+          dangerouslySetInnerHTML={{ __html: safeJsonLdString(schema) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: safeJsonLdString(breadcrumb) }}
         />
         <CollectionDetailClient marble={marble} />
       </>
@@ -162,11 +174,21 @@ export default async function CollectionDetailPage({
   };
   if (lot.thumbnailUrl) lotSchema.image = lot.thumbnailUrl;
 
+  const lotBreadcrumb = buildBreadcrumbJsonLd([
+    { name: "Home", url: BASE },
+    { name: "Collection", url: `${BASE}/collection` },
+    { name: lot.marbleName, url: `${BASE}/collection/${id}` },
+  ]);
+
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(lotSchema) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLdString(lotSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLdString(lotBreadcrumb) }}
       />
       <LotCollectionDetail lot={lot} related={related} />
     </>

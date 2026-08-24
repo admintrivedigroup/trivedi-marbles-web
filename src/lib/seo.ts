@@ -60,3 +60,24 @@ export function getMarbleImageAlt(marble: Marble): string {
   const baseName = marbleBaseName(marble);
   return `${baseName} ${marble.color.toLowerCase()} marble slab by ${BRAND_SHORT}`;
 }
+
+/**
+ * Escapes `<` so this can never be interpreted as a closing `</script>` tag
+ * (or any other markup) when embedded via dangerouslySetInnerHTML.
+ */
+export function safeJsonLdString(data: unknown): string {
+  return JSON.stringify(data).replace(/</g, "\\u003c");
+}
+
+export function buildBreadcrumbJsonLd(items: { name: string; url: string }[]) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: items.map((item, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: item.name,
+      item: item.url,
+    })),
+  };
+}

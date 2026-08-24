@@ -1,17 +1,12 @@
 import type { ContentBlock, JournalPost } from "./types";
 import { journalArticleUrl } from "./seo-fallbacks";
+import { safeJsonLdString, buildBreadcrumbJsonLd } from "@/lib/seo";
+
+export { safeJsonLdString, buildBreadcrumbJsonLd };
 
 const SITE_NAME = "Trivedi Marbles Pvt. Ltd.";
 const SITE_URL = "https://www.trivedimarbles.co.in";
 const LOGO_URL = `${SITE_URL}/images/vijay-trivedi-logo.webp`;
-
-/**
- * Escapes `<` so this can never be interpreted as a closing `</script>` tag
- * (or any other markup) when embedded via dangerouslySetInnerHTML.
- */
-export function safeJsonLdString(data: unknown): string {
-  return JSON.stringify(data).replace(/</g, "\\u003c");
-}
 
 export function buildArticleJsonLd(
   post: Pick<
@@ -34,19 +29,6 @@ export function buildArticleJsonLd(
       name: SITE_NAME,
       logo: { "@type": "ImageObject", url: LOGO_URL },
     },
-  };
-}
-
-export function buildBreadcrumbJsonLd(items: { name: string; url: string }[]) {
-  return {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: items.map((item, index) => ({
-      "@type": "ListItem",
-      position: index + 1,
-      name: item.name,
-      item: item.url,
-    })),
   };
 }
 

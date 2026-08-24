@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
-import { PUBLIC_ROBOTS } from "@/lib/seo";
+import { buildBreadcrumbJsonLd, PUBLIC_ROBOTS, safeJsonLdString } from "@/lib/seo";
+
+const BASE = "https://www.trivedimarbles.co.in";
+const breadcrumb = buildBreadcrumbJsonLd([
+  { name: "Home", url: BASE },
+  { name: "Our Story", url: `${BASE}/about` },
+]);
 
 export const metadata: Metadata = {
   title: "Our Story",
@@ -27,5 +33,13 @@ export const metadata: Metadata = {
 };
 
 export default function AboutLayout({ children }: { children: ReactNode }) {
-  return children;
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLdString(breadcrumb) }}
+      />
+      {children}
+    </>
+  );
 }

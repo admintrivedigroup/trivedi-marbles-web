@@ -611,6 +611,9 @@ function TaskCard({
       overdue ? "border-red-200 bg-red-50/30" : "border-gray-200",
       selected && "ring-2 ring-blue-400 border-blue-300",
     )}>
+      <Link href={`/inventory/tasks/${task.id}`} className="absolute inset-0 z-0 rounded-2xl" aria-label={task.title}>
+        <span className="sr-only">View details</span>
+      </Link>
       {selectMode ? (
         <button
           type="button"
@@ -638,18 +641,16 @@ function TaskCard({
             {priority.label}
           </span>
           <button type="button" onClick={onEdit}
-            className="rounded-lg p-1 text-gray-300 hover:bg-gray-100 hover:text-gray-700 transition-colors opacity-0 group-hover:opacity-100">
+            className="relative z-10 rounded-lg p-1 text-gray-300 hover:bg-gray-100 hover:text-gray-700 transition-colors opacity-0 group-hover:opacity-100">
             <Edit2 className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>
 
       {/* Title */}
-      <Link href={`/inventory/tasks/${task.id}`} className="mt-3 block">
-        <h3 className="text-sm font-semibold text-gray-900 leading-snug line-clamp-2 hover:text-blue-600 transition-colors">
-          {task.title}
-        </h3>
-      </Link>
+      <h3 className="mt-3 text-sm font-semibold text-gray-900 leading-snug line-clamp-2 group-hover:text-blue-600 transition-colors">
+        {task.title}
+      </h3>
       {task.description ? (
         <p className="mt-1 text-xs text-gray-500 line-clamp-2">{task.description}</p>
       ) : null}
@@ -689,11 +690,11 @@ function TaskCard({
 
       {/* Footer */}
       <div className="mt-3 flex items-center justify-between">
-        <Link href={`/inventory/tasks/${task.id}`} className="text-xs font-medium text-blue-600 hover:underline">
+        <span className="text-xs font-medium text-blue-600 group-hover:underline">
           View details →
-        </Link>
+        </span>
         <button type="button" onClick={onDelete}
-          className="rounded-lg p-1.5 text-gray-300 hover:bg-red-50 hover:text-red-500 transition-colors">
+          className="relative z-10 rounded-lg p-1.5 text-gray-300 hover:bg-red-50 hover:text-red-500 transition-colors">
           <Trash2 className="h-3.5 w-3.5" />
         </button>
       </div>

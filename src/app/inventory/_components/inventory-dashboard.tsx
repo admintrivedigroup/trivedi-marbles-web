@@ -34,6 +34,8 @@ import {
 
 import type { DashboardStats } from "@/app/inventory/_lib/dashboard";
 import type { UserProfile } from "@/app/inventory/_lib/user-profile";
+import { resolveDashboardDateRange, formatDashboardDateRangeLabel } from "@/app/inventory/_lib/dashboard-date-range";
+import { DashboardDateFilter } from "@/app/inventory/_components/dashboard-date-filter";
 
 const chartColors = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"];
 
@@ -158,20 +160,25 @@ function LeadConversionCard({
   totalLeads,
   convertedLeads,
   newLeadsThisWeek,
+  rangeLabel,
 }: {
   totalLeads: number;
   convertedLeads: number;
   newLeadsThisWeek: number;
+  rangeLabel: string | null;
 }) {
   const rate = totalLeads > 0 ? Math.round((convertedLeads / totalLeads) * 100) : 0;
 
   return (
     <article className="rounded-xl border border-border bg-card p-4 shadow-sm md:rounded-2xl md:p-6">
       <div className="mb-4 flex items-center justify-between">
-        <SectionHeading>Lead Pipeline</SectionHeading>
+        <div>
+          <SectionHeading>Lead Pipeline</SectionHeading>
+          <p className="-mt-3 text-xs text-muted-foreground">{rangeLabel ?? "All time"}</p>
+        </div>
         <Link
           href="/inventory/leads"
-          className="-mt-4 text-xs text-muted-foreground hover:text-foreground"
+          className="text-xs text-muted-foreground hover:text-foreground"
         >
           View all →
         </Link>
@@ -208,18 +215,23 @@ function LeadConversionCard({
 
 function StaffActivityCard({
   staffActivityToday,
+  rangeLabel,
 }: {
   staffActivityToday: { email: string; actionCount: number }[];
+  rangeLabel: string | null;
 }) {
   const maxCount = staffActivityToday[0]?.actionCount ?? 1;
 
   return (
     <article className="rounded-xl border border-border bg-card p-4 shadow-sm md:rounded-2xl md:p-6">
       <div className="mb-4 flex items-center justify-between">
-        <SectionHeading>Today's Activity</SectionHeading>
+        <div>
+          <SectionHeading>Staff Activity</SectionHeading>
+          <p className="-mt-3 text-xs text-muted-foreground">{rangeLabel ?? "Today"}</p>
+        </div>
         <Link
           href="/inventory/audit"
-          className="-mt-4 text-xs text-muted-foreground hover:text-foreground"
+          className="text-xs text-muted-foreground hover:text-foreground"
         >
           Full log →
         </Link>
@@ -353,16 +365,21 @@ function SoldQualityCard({
 
 function UserAuditFeedCard({
   recentAuditActivity,
+  rangeLabel,
 }: {
   recentAuditActivity: NonNullable<DashboardStats["recentAuditActivity"]>;
+  rangeLabel: string | null;
 }) {
   return (
     <article className="rounded-xl border border-border bg-card p-4 shadow-sm md:rounded-2xl md:p-6">
       <div className="mb-4 flex items-center justify-between">
-        <SectionHeading>User Activity</SectionHeading>
+        <div>
+          <SectionHeading>User Activity</SectionHeading>
+          {rangeLabel && <p className="-mt-3 text-xs text-muted-foreground">{rangeLabel}</p>}
+        </div>
         <Link
           href="/inventory/audit"
-          className="-mt-4 text-xs text-muted-foreground hover:text-foreground"
+          className="text-xs text-muted-foreground hover:text-foreground"
         >
           Full log →
         </Link>
@@ -398,12 +415,15 @@ function UserAuditFeedCard({
 
 function RecentActivityCard({
   activity,
+  rangeLabel,
 }: {
   activity: DashboardStats["recentActivity"];
+  rangeLabel: string | null;
 }) {
   return (
     <article className="rounded-xl border border-border bg-card p-4 shadow-sm md:rounded-2xl md:p-6">
       <SectionHeading>Recent Activity</SectionHeading>
+      <p className="-mt-3 mb-4 text-xs text-muted-foreground">{rangeLabel ?? "All time"}</p>
       {activity.length === 0 ? (
         <p className="py-6 text-center text-sm text-muted-foreground">No activity yet</p>
       ) : (
@@ -576,9 +596,11 @@ function TaskSummaryCard({
 export function InventoryDashboard({
   stats,
   profile,
+  dateFilter,
 }: {
   stats: DashboardStats;
   profile: UserProfile | null;
+  dateFilter: { preset: string | null; from: string | null; to: string | null };
 }) {
   const role = profile?.role ?? "staff";
   const isStaff = role === "staff";
@@ -592,6 +614,11 @@ export function InventoryDashboard({
     const h = new Date().getHours();
     return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
   }, []);
+
+  const rangeLabel = useMemo(() => {
+    const range = resolveDashboardDateRange(dateFilter.preset, dateFilter.from, dateFilter.to);
+    return formatDashboardDateRangeLabel(range);
+  }, [dateFilter.preset, dateFilter.from, dateFilter.to]);
 
   const badge = ROLE_BADGE[role];
 
@@ -616,6 +643,9 @@ export function InventoryDashboard({
           {badge.label}
         </span>
       </section>
+
+      {/* Date filter */}
+      <DashboardDateFilter preset={dateFilter.preset} from={dateFilter.from} to={dateFilter.to} />
 
       {/* Staff: quick action bar */}
       {isStaff && (
@@ -654,13 +684,13 @@ export function InventoryDashboard({
       <section className="grid grid-cols-2 gap-3 md:gap-6 lg:grid-cols-3 xl:grid-cols-6">
         <StatCard
           icon={Layers}
-          label="Total Lots"
+          label={rangeLabel ? "Lots Added" : "Total Lots"}
           value={String(stats.totalLots)}
           tone="bg-muted text-muted-foreground"
         />
         <StatCard
           icon={TrendingUp}
-          label="Total Sqft"
+          label={rangeLabel ? "Sqft Added" : "Total Sqft"}
           value={stats.totalSqft.toLocaleString("en-IN")}
           tone="bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300"
         />
@@ -668,7 +698,7 @@ export function InventoryDashboard({
           <StatCard
             key={name}
             icon={MapPin}
-            label={name}
+            label={rangeLabel ? `${name} (added)` : name}
             value={String(count)}
             tone={warehouseTones[i % warehouseTones.length]}
           />
@@ -702,6 +732,9 @@ export function InventoryDashboard({
         <section className="grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-2">
           <article className="rounded-xl border border-border bg-card p-4 shadow-sm md:rounded-2xl md:p-6">
             <SectionHeading>Stock by Location</SectionHeading>
+            <p className="-mt-3 mb-4 text-xs text-muted-foreground">
+              {rangeLabel ? `Added — ${rangeLabel}` : "All time"}
+            </p>
             {locationData.length === 0 ? (
               <p className="py-16 text-center text-sm text-muted-foreground">No data yet</p>
             ) : (
@@ -728,6 +761,9 @@ export function InventoryDashboard({
 
           <article className="rounded-xl border border-border bg-card p-4 shadow-sm md:rounded-2xl md:p-6">
             <SectionHeading>Stock by Marble Type</SectionHeading>
+            <p className="-mt-3 mb-4 text-xs text-muted-foreground">
+              {rangeLabel ? `Added — ${rangeLabel}` : "All time"}
+            </p>
             {stats.typeData.length === 0 ? (
               <p className="py-16 text-center text-sm text-muted-foreground">No data yet</p>
             ) : (
@@ -764,8 +800,9 @@ export function InventoryDashboard({
             totalLeads={stats.totalLeads ?? 0}
             convertedLeads={stats.convertedLeads ?? 0}
             newLeadsThisWeek={stats.newLeadsThisWeek ?? 0}
+            rangeLabel={rangeLabel}
           />
-          <StaffActivityCard staffActivityToday={stats.staffActivityToday} />
+          <StaffActivityCard staffActivityToday={stats.staffActivityToday} rangeLabel={rangeLabel} />
           <TaskSummaryCard taskSummary={stats.taskSummary} isStaff={false} />
         </section>
       )}
@@ -776,9 +813,9 @@ export function InventoryDashboard({
         {isStaff ? (
           <ExpiringTodayCard slabs={stats.expiringTodaySlabs} />
         ) : isSuperadmin && stats.recentAuditActivity ? (
-          <UserAuditFeedCard recentAuditActivity={stats.recentAuditActivity} />
+          <UserAuditFeedCard recentAuditActivity={stats.recentAuditActivity} rangeLabel={rangeLabel} />
         ) : (
-          <RecentActivityCard activity={stats.recentActivity} />
+          <RecentActivityCard activity={stats.recentActivity} rangeLabel={rangeLabel} />
         )}
         <AlertsCard alerts={stats.alerts} />
       </section>

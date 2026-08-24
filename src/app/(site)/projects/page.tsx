@@ -2,7 +2,13 @@ import type { Metadata } from "next";
 import Image from "next/image";
 
 import { FadeIn } from "@/components/animations/FadeIn";
-import { PUBLIC_ROBOTS } from "@/lib/seo";
+import { buildBreadcrumbJsonLd, PUBLIC_ROBOTS, safeJsonLdString } from "@/lib/seo";
+
+const BASE = "https://www.trivedimarbles.co.in";
+const breadcrumb = buildBreadcrumbJsonLd([
+  { name: "Home", url: BASE },
+  { name: "Signature Projects", url: `${BASE}/projects` },
+]);
 
 export const metadata: Metadata = {
   title: "Signature Projects",
@@ -31,6 +37,10 @@ import { signatureProjects } from "@/data/marbles";
 export default function ProjectsPage() {
   return (
     <section className="mx-auto max-w-screen-2xl px-6 pb-24 pt-32 md:px-12 lg:px-24">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLdString(breadcrumb) }}
+      />
       <FadeIn>
         <p className="text-sm uppercase tracking-[0.3em] text-accent">Projects</p>
         <h1 className="mt-6 font-serif text-5xl text-primary md:text-6xl">

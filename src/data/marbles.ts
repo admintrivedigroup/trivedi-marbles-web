@@ -28,7 +28,7 @@ export type SignatureProject = {
 
 export const marbles: Marble[] = [
   {
-    id: "1",
+    id: "ambaji-white-marble",
     name: "Ambaji White - An Essence of Purity and Contrast",
     color: "White",
     finish: "Mirror Finish, Honed Finish, Leather Finish",
@@ -45,7 +45,7 @@ export const marbles: Marble[] = [
     origin: "India - Ambaji",
   },
   {
-    id: "2",
+    id: "fusion-black-marble",
     name: "Fusion Black - A Statement of Darkness and Gold",
     color: "Black",
     finish: "Mirror Finish, Leather Finish, Honed Finish, Lappato Finish",
@@ -63,7 +63,7 @@ export const marbles: Marble[] = [
     origin: "India - Ambaji",
   },
   {
-    id: "3",
+    id: "exotic-green-marble",
     name: "Exotic Green - A Symphony of Nature's Elegance",
     color: "Green",
     finish: "Mirror Finish",
@@ -77,7 +77,7 @@ export const marbles: Marble[] = [
     origin: "India - Ambaji",
   },
   {
-    id: "4",
+    id: "ice-white-marble",
     name: "Ice White - Timeless Elegance in Every Vein",
     color: "White",
     finish: "Mirror Finish, Leather Finish, Honed Finish, Lappato Finish",
@@ -94,7 +94,7 @@ export const marbles: Marble[] = [
     origin: "India - Ambaji",
   },
   {
-    id: "5",
+    id: "lava-green-marble",
     name: "Lava Green - Nature's Artistic Marvel",
     color: "Green",
     finish: "Mirror Finish, Honed Finish",
@@ -108,7 +108,7 @@ export const marbles: Marble[] = [
     origin: "India - Ambaji",
   },
   {
-    id: "6",
+    id: "fusion-green-extra-marble",
     name: "Fusion Green Extra - Nature's gift of Elegance and Depth",
     color: "Green",
     finish: "Mirror Finish, Honed Finish, Leather Finish, Lappato Finish",
@@ -125,7 +125,7 @@ export const marbles: Marble[] = [
     origin: "India - Ambaji",
   },
   {
-    id: "7",
+    id: "fusion-brown-marble",
     name: "Fusion Brown",
     color: "Brown",
     finish: "Mirror Finish, Honed Finish, Leather Finish, Lappato Finish",

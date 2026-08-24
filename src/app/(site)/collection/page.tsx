@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
 
 import { FadeIn } from "@/components/animations/FadeIn";
-import { PUBLIC_ROBOTS } from "@/lib/seo";
+import { buildBreadcrumbJsonLd, PUBLIC_ROBOTS, safeJsonLdString } from "@/lib/seo";
+
+const BASE = "https://www.trivedimarbles.co.in";
+const breadcrumb = buildBreadcrumbJsonLd([
+  { name: "Home", url: BASE },
+  { name: "Collection", url: `${BASE}/collection` },
+]);
 
 export const metadata: Metadata = {
   title: "The Collection",
@@ -37,6 +43,10 @@ export default async function CollectionPage() {
 
   return (
     <div className="mx-auto min-h-screen w-full max-w-400 bg-background px-6 pb-24 pt-32 md:px-12 lg:px-24">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLdString(breadcrumb) }}
+      />
       <FadeIn className="mb-16">
         <h1 className="mb-6 font-serif text-5xl text-primary md:text-6xl">
           The Collection

@@ -43,15 +43,25 @@ export async function getDashboardStats(
   allowedWarehouseIds: string[] | null = null,
   role: Role = "staff",
   currentUserId?: string,
+  dateRange: { from: Date; to: Date } | null = null,
 ): Promise<DashboardStats> {
   const { slabs } = await getInventorySlabs({ warehouseId: "", statusId: "", sortBy: "newest", allowedWarehouseIds });
 
-  const totalSlabs = slabs.length;
-  const totalLots = new Set(slabs.map((s) => s.lotId).filter(Boolean)).size;
-  const totalSqft = slabs.reduce((sum, slab) => sum + (slab.sqft ?? 0), 0);
+  // Slabs added within the selected date filter (falls back to all slabs when no filter is active).
+  // Only used for metrics that are meaningful as "added in period" — current-state snapshots
+  // (reservations, stock value, sold counts, inventory age) intentionally keep using `slabs`.
+  const slabsInRange = dateRange
+    ? slabs.filter(
+        (s) => s.createdAt && new Date(s.createdAt) >= dateRange.from && new Date(s.createdAt) <= dateRange.to,
+      )
+    : slabs;
+
+  const totalSlabs = slabsInRange.length;
+  const totalLots = new Set(slabsInRange.map((s) => s.lotId).filter(Boolean)).size;
+  const totalSqft = slabsInRange.reduce((sum, slab) => sum + (slab.sqft ?? 0), 0);
 
   const warehouseLotMap = new Map<string, Set<string>>();
-  for (const slab of slabs) {
+  for (const slab of slabsInRange) {
     if (slab.warehouseName && slab.lotId) {
       if (!warehouseLotMap.has(slab.warehouseName)) {
         warehouseLotMap.set(slab.warehouseName, new Set());
@@ -122,7 +132,7 @@ export async function getDashboardStats(
   );
 
   const typeMap = new Map<string, number>();
-  for (const slab of slabs) {
+  for (const slab of slabsInRange) {
     if (slab.statusName !== SLAB_STATUS.SOLD && slab.categoryName) {
       typeMap.set(slab.categoryName, (typeMap.get(slab.categoryName) ?? 0) + 1);
     }
@@ -131,7 +141,7 @@ export async function getDashboardStats(
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => b.count - a.count);
 
-  const recentActivity = [...slabs]
+  const recentActivity = [...slabsInRange]
     .sort((a, b) => {
       if (!a.createdAt || !b.createdAt) return 0;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
@@ -197,7 +207,7 @@ export async function getDashboardStats(
     });
   }
 
-  if (totalSlabs === 0) {
+  if (slabs.length === 0) {
     alerts.push({
       id: "empty",
       severity: "low",
@@ -231,13 +241,24 @@ export async function getDashboardStats(
   if (role === "admin" || role === "superadmin") {
     const adminClient = createAdminClient();
 
+    let leadsQuery = supabase.from("client_leads").select("id, converted, created_at");
+    if (dateRange) {
+      leadsQuery = leadsQuery
+        .gte("created_at", dateRange.from.toISOString())
+        .lte("created_at", dateRange.to.toISOString());
+    }
+
+    const activityFrom = dateRange ? dateRange.from : startOfToday;
+    const activityTo = dateRange ? dateRange.to : endOfToday;
+
     const [leadsRes, pendingTransfersRes, todayAuditRes] = await Promise.all([
-      supabase.from("client_leads").select("id, converted, created_at"),
+      leadsQuery,
       supabase.from("transfer_requests").select("id").eq("status", "in_transit"),
       adminClient
         .from("audit_logs")
         .select("user_email")
-        .gte("created_at", startOfToday.toISOString()),
+        .gte("created_at", activityFrom.toISOString())
+        .lte("created_at", activityTo.toISOString()),
     ]);
 
     const leads = (leadsRes.data ?? []) as { id: string; converted: boolean; created_at: string }[];
@@ -292,11 +313,17 @@ export async function getDashboardStats(
     ];
 
     // Recent audit activity with user attribution
-    const { data: auditData } = await adminClient
+    let recentAuditQuery = adminClient
       .from("audit_logs")
       .select("id, user_email, action, target_label, created_at")
       .order("created_at", { ascending: false })
       .limit(6);
+    if (dateRange) {
+      recentAuditQuery = recentAuditQuery
+        .gte("created_at", dateRange.from.toISOString())
+        .lte("created_at", dateRange.to.toISOString());
+    }
+    const { data: auditData } = await recentAuditQuery;
 
     base.recentAuditActivity = (
       (auditData ?? []) as {

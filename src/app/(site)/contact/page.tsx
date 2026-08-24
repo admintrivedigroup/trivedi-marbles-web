@@ -4,7 +4,13 @@ import { Mail, MapPin, Phone } from "lucide-react";
 import { FadeIn } from "@/components/animations/FadeIn";
 import { ContactForm } from "@/components/contact/ContactForm";
 import { LocationSection } from "@/components/contact/LocationSection";
-import { PUBLIC_ROBOTS } from "@/lib/seo";
+import { buildBreadcrumbJsonLd, PUBLIC_ROBOTS, safeJsonLdString } from "@/lib/seo";
+
+const BASE = "https://www.trivedimarbles.co.in";
+const breadcrumb = buildBreadcrumbJsonLd([
+  { name: "Home", url: BASE },
+  { name: "Contact Us", url: `${BASE}/contact` },
+]);
 
 export const metadata: Metadata = {
   title: "Contact Us",
@@ -42,6 +48,10 @@ function WhatsAppIcon() {
 export default function ContactPage() {
   return (
     <div className="mx-auto min-h-screen w-full max-w-7xl bg-background px-6 pb-24 pt-32 md:px-12 lg:px-24">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLdString(breadcrumb) }}
+      />
       <FadeIn className="mb-16 text-center">
         <span className="mb-4 block text-sm font-medium uppercase tracking-[0.2em] text-secondary">
           Get in Touch

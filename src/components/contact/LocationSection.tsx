@@ -9,8 +9,6 @@ import { cn } from "@/lib/utils";
 
 const AHMEDABAD_MAP_EMBED_URL =
   "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3669.741900490303!2d72.52164847535549!3d23.10654221318925!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x395e9d3f15555555%3A0x3e1c1365cba580e2!2sTrivedi%20Marbles%20Pvt.%20Ltd.!5e0!3m2!1sen!2sin!4v1776423819684!5m2!1sen!2sin";
-const AMBAJI_MAP_EMBED_URL =
-  "https://www.google.com/maps/embed?pb=!1m10!1m8!1m3!1d619.1422113291104!2d72.85636689831513!3d24.331313070806427!3m2!1i1024!2i768!4f13.1!5e1!3m2!1sen!2sin!4v1780913660666!5m2!1sen!2sin\" width=\"600\" height=\"450\" style=\"border:0;\" allowfullscreen=\"\" loading=\"lazy\" referrerpolicy=\"no-referrer-when-downgrade\"></iframe>";
 
 type Location = {
   id: string;
@@ -38,17 +36,17 @@ const locations: Location[] = [
   },
   {
     id: "ambaji",
-    name: "Ambaji Factory & Quarry",
+    name: "Ambaji Quarry Sourcing",
     description:
-      "The source of our craftsmanship, where heritage stone is quarried and shaped with modern precision.",
+      "The source of our craftsmanship — heritage stone quarried in Ambaji, Gujarat. Visit us at our Ahmedabad office to explore slabs sourced directly from the quarry.",
     address: [
-      "Ambaji, Banaskantha District",
+      "S.No.: 698/4, Ognaj",
+      "Opp. Vasant Nagar Township",
+      "Gota-Vadsar Road, Ahmedabad-380060",
       "Gujarat, India",
-      "Factory and quarry address",
-      "Add full location details here",
     ],
-    directionsUrl: "https://maps.google.com/?q=Ambaji%20Factory%20and%20Quarry",
-    mapEmbedUrl: AMBAJI_MAP_EMBED_URL,
+    directionsUrl: "https://maps.google.com/?q=Trivedi%20Marbles%20Pvt.%20Ltd.",
+    mapEmbedUrl: AHMEDABAD_MAP_EMBED_URL,
   },
 ];
 
@@ -92,7 +90,7 @@ export function LocationSection() {
                     <div className="mb-4 flex items-start justify-between gap-4">
                       <div>
                         <p className="mb-2 text-xs uppercase tracking-[0.28em] text-[#d4af37]/70">
-                          {location.id === "ahmedabad" ? "Corporate Office" : "Production Site"}
+                          {location.id === "ahmedabad" ? "Corporate Office" : "Quarry Origin"}
                         </p>
                         <h3 className="font-serif text-2xl text-white">
                           {location.name}
@@ -156,29 +154,14 @@ export function LocationSection() {
               </div>
             </div>
 
-            {selectedLocation.mapEmbedUrl ? (
-              <iframe
-                key={selectedLocation.id}
-                src={selectedLocation.mapEmbedUrl}
-                title={`${selectedLocation.name} map`}
-                className="min-h-[420px] w-full flex-1"
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-              />
-            ) : (
-              <div className="flex min-h-[420px] flex-1 items-center justify-center px-6 text-center">
-                <div className="max-w-md rounded-[24px] border border-dashed border-[#d4af37]/30 bg-white/[0.03] p-8">
-                  <MapPin className="mx-auto mb-4 h-8 w-8 text-[#d4af37]" />
-                  <p className="font-serif text-2xl text-white">
-                    Ambaji map embed pending
-                  </p>
-                  <p className="mt-3 text-sm leading-7 text-white/65">
-                    Replace <code>AMBAJI_MAP_EMBED_URL</code> with the final Google
-                    Maps iframe URL to enable this view.
-                  </p>
-                </div>
-              </div>
-            )}
+            <iframe
+              key={selectedLocation.id}
+              src={selectedLocation.mapEmbedUrl}
+              title={`${selectedLocation.name} map`}
+              className="min-h-[420px] w-full flex-1"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
           </div>
         </FadeIn>
       </div>
