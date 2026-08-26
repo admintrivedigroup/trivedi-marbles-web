@@ -1,13 +1,15 @@
 "use client";
 
-import type { SlabSettings } from "@/lib/visualizerM2F/types";
+import type { RenderMode, SlabSettings } from "@/lib/visualizerM2F/types";
 
 type Props = {
-  settings: SlabSettings;
-  onChange: (s: SlabSettings) => void;
+  settings:   SlabSettings;
+  onChange:   (s: SlabSettings) => void;
+  renderMode: RenderMode;
 };
 
-export function SlabControls({ settings, onChange }: Props) {
+export function SlabControls({ settings, onChange, renderMode }: Props) {
+  const bookmatchDisabled = renderMode !== "slab";
   const set = <K extends keyof SlabSettings>(k: K, v: SlabSettings[K]) =>
     onChange({ ...settings, [k]: v });
 
@@ -97,9 +99,20 @@ export function SlabControls({ settings, onChange }: Props) {
           />
           Randomize offset / flip / brightness per slab
         </label>
-        <label className="flex cursor-not-allowed items-center gap-1.5 text-[10px] text-stone-300">
-          <input type="checkbox" disabled className="h-3 w-3 rounded" />
-          Bookmatch (coming soon)
+        <label
+          title={bookmatchDisabled ? "Bookmatch only applies to Random Slabs mode" : undefined}
+          className={`flex items-center gap-1.5 text-[10px] font-medium ${
+            bookmatchDisabled ? "cursor-not-allowed text-stone-300" : "cursor-pointer text-stone-600"
+          }`}
+        >
+          <input
+            type="checkbox"
+            checked={settings.bookmatch}
+            disabled={bookmatchDisabled}
+            onChange={(e) => set("bookmatch", e.target.checked)}
+            className="h-3 w-3 rounded accent-[#9c7c42]"
+          />
+          Bookmatch (mirror alternate columns)
         </label>
       </div>
     </div>

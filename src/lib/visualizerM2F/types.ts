@@ -68,6 +68,7 @@ export type SlabSettings = {
   jointSize:  number;  // total grout-line width in UV space  (0–0.015)
   jointColor: string;  // CSS hex color for grout
   randomize:  boolean; // per-slab offset / flip / brightness variation
+  bookmatch:  boolean; // mirror alternating columns horizontally so seams read as a symmetric bookmatch — forces offset/rotation off, overrides randomize's flip; only affects renderMode "slab"
   layout:     SlabLayout; // "straight" (default grid) | "herringbone" — only affects renderMode "slab"
 };
 
@@ -77,5 +78,6 @@ export const DEFAULT_SLAB_SETTINGS: SlabSettings = {
   jointSize:  0.004,
   jointColor: "#c8c0b0",
   randomize:  true,
+  bookmatch:  false,
   layout:     "straight",
 };

@@ -74,9 +74,29 @@ function slabDebugColor(col: number, row: number): [number, number, number] {
   return hslToRgb((idx * 137.508) % 360, 0.65, 0.55);
 }
 
-function computeSlabParams(col: number, row: number, randomize: boolean): SlabCachedParams {
+function computeSlabParams(col: number, row: number, randomize: boolean, bookmatch: boolean): SlabCachedParams {
   const rng = makeSlabRng(col, row);
   const r0 = rng(), r1 = rng(), r2 = rng(), r3 = rng(), r4 = rng(), r5 = rng();
+
+  if (bookmatch) {
+    // Deterministic mirror by column parity — adjacent columns are horizontal
+    // mirror images of each other, so veins meet symmetrically at each vertical
+    // seam. Offset/rotation must stay off (any of it would throw the mirrored
+    // veins out of alignment); brightness jitter alone can't break the mirror,
+    // so it still honors randomize when both are on.
+    const colParity = ((col % 2) + 2) % 2;
+    return {
+      offsetU:    0,
+      offsetV:    0,
+      flipH:      colParity === 1,
+      flipV:      false,
+      cosA:       1,
+      sinA:       0,
+      hasRot:     false,
+      brightness: randomize ? 0.9 + r5 * 0.2 : 1.0,
+    };
+  }
+
   const rotDeg = randomize ? (r4 - 0.5) * 4 : 0;   // ±2°
   const angRad = rotDeg * Math.PI / 180;
   return {
@@ -95,12 +115,13 @@ function getOrMakeSlabParams(
   col:      number,
   row:      number,
   randomize: boolean,
+  bookmatch: boolean,
   cache:    Map<number, SlabCachedParams>,
 ): SlabCachedParams {
   const key  = ((col & 0x7FFF) | ((row & 0x7FFF) << 15)) >>> 0;
   const hit  = cache.get(key);
   if (hit) return hit;
-  const p = computeSlabParams(col, row, randomize);
+  const p = computeSlabParams(col, row, randomize, bookmatch);
   cache.set(key, p);
   return p;
 }
@@ -1101,7 +1122,7 @@ export async function renderTextureFromGeometry(
           } else {
             const safeU = safeSpanU > 0 ? (slabFracU - halfJointU) / safeSpanU : slabFracU;
             const safeV = safeSpanV > 0 ? (slabFracV - halfJointV) / safeSpanV : slabFracV;
-            const p = getOrMakeSlabParams(col, row, slabCfg.randomize, slabCache);
+            const p = getOrMakeSlabParams(col, row, slabCfg.randomize, slabCfg.bookmatch, slabCache);
 
             let su = p.flipH ? 1 - safeU : safeU;
             let sv = p.flipV ? 1 - safeV : safeV;

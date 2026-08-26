@@ -463,7 +463,7 @@ export function VisualizerM2F({ currentSlab, comparisons, exitHref }: Props) {
       {selectedCat === "floor" && (renderMode === "slab" || renderMode === "sequential") && textureUrl && (
         <div className="rounded-xl border border-stone-200 bg-stone-50 p-4">
           <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-stone-400">Slab layout</p>
-          <SlabControls settings={slabSettings} onChange={setSlabSettings} />
+          <SlabControls settings={slabSettings} onChange={setSlabSettings} renderMode={renderMode} />
         </div>
       )}
 
