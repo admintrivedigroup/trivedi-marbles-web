@@ -23,6 +23,7 @@ export type UserProfile = {
   lastSeenAt: string | null;
   lowStockAlertsEnabled: boolean;
   darkModeEnabled: boolean;
+  onboardingCompletedAt: string | null;
 };
 
 export type ManagedUser = {
@@ -49,7 +50,7 @@ export const getCurrentUserProfile = cache(async (): Promise<UserProfile | null>
   const [profileRes, permissionsRes, warehouseRes] = await Promise.all([
     supabase
       .from("user_profiles")
-      .select("role, display_name, avatar_url, created_at, last_seen_at, low_stock_alerts_enabled, dark_mode_enabled")
+      .select("role, display_name, avatar_url, created_at, last_seen_at, low_stock_alerts_enabled, dark_mode_enabled, onboarding_completed_at")
       .eq("user_id", user.id)
       .maybeSingle(),
     supabase
@@ -81,6 +82,7 @@ export const getCurrentUserProfile = cache(async (): Promise<UserProfile | null>
     lastSeenAt: profileRes.data?.last_seen_at ?? null,
     lowStockAlertsEnabled: profileRes.data?.low_stock_alerts_enabled ?? true,
     darkModeEnabled: profileRes.data?.dark_mode_enabled ?? false,
+    onboardingCompletedAt: profileRes.data?.onboarding_completed_at ?? null,
   };
 });
 

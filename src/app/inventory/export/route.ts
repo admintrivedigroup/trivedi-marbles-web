@@ -29,15 +29,20 @@ export async function GET(request: NextRequest) {
   const sort        = sp.get("sort")      ?? "";
   const sortBy: SortBy = VALID_SORTS.includes(sort as SortBy) ? (sort as SortBy) : "newest";
   const search      = sp.get("q")?.trim() ?? "";
+  const categoryId  = sp.get("category")  ?? "";
 
   const profile = await getCurrentUserProfile();
-  const { slabs } = await getInventorySlabs({
+  const { slabs: allSlabs } = await getInventorySlabs({
     warehouseId,
     statusId,
     sortBy,
     search,
     allowedWarehouseIds: profile?.warehouseIds ?? null,
   });
+
+  const slabs = categoryId
+    ? allSlabs.filter((s) => (categoryId === "uncategorized" ? !s.categoryId : s.categoryId === categoryId))
+    : allSlabs;
 
   // Resolve filter labels for the subtitle row
   let warehouseName = "";
@@ -56,7 +61,14 @@ export async function GET(request: NextRequest) {
     statusName = (statuses ?? []).find((r) => String(r.id) === statusId)?.name ?? "";
   }
 
+  const categoryName = categoryId
+    ? categoryId === "uncategorized"
+      ? "Uncategorized"
+      : (slabs[0]?.categoryName ?? "")
+    : "";
+
   const filterParts: string[] = [];
+  if (categoryName) filterParts.push(`Category: ${categoryName}`);
   if (warehouseName) filterParts.push(`Warehouse: ${warehouseName}`);
   if (statusName) filterParts.push(`Status: ${statusName}`);
   if (search) filterParts.push(`Search: "${search}"`);

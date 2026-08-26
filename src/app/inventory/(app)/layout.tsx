@@ -34,6 +34,7 @@ export default async function InventoryAppLayout({
         avatarUrl={profile?.avatarUrl ?? null}
         role={profile?.role ?? "staff"}
         permissions={profile?.permissions ?? null}
+        showOnboarding={profile !== null && profile.onboardingCompletedAt === null}
       >
         {children}
       </InventoryShell>

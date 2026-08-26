@@ -3,12 +3,13 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 import type { InventoryListSlab } from "./inventory-list";
-import { toNum, toStr, relName } from "./normalize";
+import { toNum, toStr, relName, relId } from "./normalize";
 
 export type LotInfo = {
   id: string;
   lotNumber: string | null;
   marbleName: string | null;
+  categoryId: string | null;
   categoryName: string | null;
   thicknessName: string | null;
   warehouseName: string | null;
@@ -38,7 +39,7 @@ export async function getLotDetail(lotId: string): Promise<LotDetailResult> {
           `
           id, lot_number, marble_name, purchase_date,
           invoice_number, selling_price, dealer_price, notes, created_at, show_on_website,
-          marble_categories(name),
+          marble_categories(id, name),
           thickness_options(name),
           warehouses(name)
         `,
@@ -79,6 +80,7 @@ export async function getLotDetail(lotId: string): Promise<LotDetailResult> {
       id: lotId2,
       lotNumber: toStr(lotRow.lot_number),
       marbleName: toStr(lotRow.marble_name),
+      categoryId: relId(lotRow.marble_categories),
       categoryName: relName(lotRow.marble_categories),
       thicknessName: relName(lotRow.thickness_options),
       warehouseName: relName(lotRow.warehouses),
@@ -127,6 +129,7 @@ export async function getLotDetail(lotId: string): Promise<LotDetailResult> {
           createdAt: toStr(row.created_at),
           lotId: row.lot_id != null ? String(row.lot_id) : null,
           lotNumber: lot.lotNumber,
+          categoryId: lot.categoryId,
           categoryName: lot.categoryName,
           warehouseName: relName(row.warehouses),
           statusName: relName(row.slab_statuses),

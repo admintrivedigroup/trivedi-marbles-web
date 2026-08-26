@@ -1,17 +1,26 @@
 import { Skeleton } from "@/app/inventory/_components/ui/skeleton";
 
-export default function InventoryListLoading() {
+export default function CategoryLotGridLoading() {
   return (
     <div className="p-4 md:p-8">
+      <Skeleton className="mb-4 h-5 w-28 rounded" />
+
       <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center md:mb-8">
         <div className="space-y-3">
-          <Skeleton className="h-8 w-36 rounded-xl" />
+          <Skeleton className="h-8 w-48 rounded-xl" />
           <Skeleton className="h-4 w-28 rounded-xl" />
         </div>
         <Skeleton className="h-12 w-40 rounded-xl" />
       </div>
 
-      <Skeleton className="mb-6 h-12 w-full rounded-xl md:mb-8" />
+      <div className="mb-6 rounded-xl border border-border bg-card p-4 shadow-sm md:mb-8 md:rounded-2xl md:p-6">
+        <div className="flex flex-col gap-3 md:grid md:grid-cols-5 md:gap-4">
+          <Skeleton className="h-12 rounded-xl md:col-span-2" />
+          <Skeleton className="h-12 rounded-xl" />
+          <Skeleton className="h-12 rounded-xl" />
+          <Skeleton className="h-12 rounded-xl" />
+        </div>
+      </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 md:gap-4 lg:grid-cols-5">
         {Array.from({ length: 10 }).map((_, index) => (

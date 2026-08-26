@@ -36,6 +36,7 @@ import { EnquireModal }     from "@/app/inventory/_components/visualizer-m2f/Enq
 import type { RoomCache } from "@/lib/visualizerM2F/RoomCache";
 import { roomCacheManagerM2F } from "@/lib/visualizerM2F/RoomCacheManager";
 import { renderFromCache } from "@/lib/visualizerM2F/renderFromCache";
+import { hashImageFile, getCachedAnalysis, saveCachedAnalysis } from "@/lib/visualizerM2F/imageAnalysisCache";
 
 // Occluder categories: objects that should NOT be covered by the marble texture
 const OCCLUDER_CATS = new Set(["furniture", "fixture"]);
@@ -177,7 +178,7 @@ export function VisualizerM2F({ currentSlab, comparisons, exitHref }: Props) {
   // ── Handlers ─────────────────────────────────────────────────────────────
 
   async function handleFile(file: File) {
-    const compressed = await compressPhoto(file);
+    const [compressed, imageHash] = await Promise.all([compressPhoto(file), hashImageFile(file)]);
 
     if (prevPhotoUrl.current) URL.revokeObjectURL(prevPhotoUrl.current);
     const url = URL.createObjectURL(compressed);
@@ -204,7 +205,7 @@ export function VisualizerM2F({ currentSlab, comparisons, exitHref }: Props) {
     setCompareRightUrl(null);
     setCompareRightSlab(null);
 
-    await runPipeline(compressed, url, dims);
+    await runPipeline(compressed, url, dims, imageHash);
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -223,10 +224,13 @@ export function VisualizerM2F({ currentSlab, comparisons, exitHref }: Props) {
   }
 
   // AI runs automatically once a photo is selected — no manual "Run pipeline" step.
+  // If this exact photo (by content hash) was already analyzed before, the cached
+  // Mask2Former/depth results are reused and the AI calls are skipped entirely.
   async function runPipeline(
     currentPhoto: File,
     currentPhotoUrl: string,
     dims: { w: number; h: number },
+    imageHash: string | null,
   ) {
     setSegRunning(true);
     setDepthRunning(true);
@@ -234,10 +238,13 @@ export function VisualizerM2F({ currentSlab, comparisons, exitHref }: Props) {
     const W = String(dims.w);
     const H = String(dims.h);
 
-    await Promise.all([
-      (async () => {
+    const cached = imageHash ? await getCachedAnalysis(imageHash) : null;
+    if (cached) console.log("[VisualizerM2F] Reusing cached AI results for this photo");
+
+    const [segR, depthR] = await Promise.all([
+      (async (): Promise<PipelineSegResult> => {
         try {
-          const r = await runMask2Former(currentPhoto, W, H);
+          const r = cached?.segResult ?? await runMask2Former(currentPhoto, W, H);
           setSegResult(r);
           if (r.error) setPipelineError(r.error);
 
@@ -248,26 +255,43 @@ export function VisualizerM2F({ currentSlab, comparisons, exitHref }: Props) {
             const ov    = await generateSegOverlay(currentPhotoUrl, r.segments, getLabelColor, oW, oH);
             setOverlayUrl(ov);
           }
+          return r;
         } catch (e) {
           const msg = e instanceof Error ? e.message : String(e);
-          setSegResult({ segments: [], inferenceMs: 0, error: msg });
+          const errR: PipelineSegResult = { segments: [], inferenceMs: 0, error: msg };
+          setSegResult(errR);
           setPipelineError(msg);
+          return errR;
         } finally {
           setSegRunning(false);
         }
       })(),
-      (async () => {
+      (async (): Promise<PipelineDepthResult> => {
         try {
-          const r = await runDepthEstimation(currentPhoto, W, H);
+          const r = cached?.depthResult ?? await runDepthEstimation(currentPhoto, W, H);
           setDepthResult(r);
+          return r;
         } catch (e) {
           const msg = e instanceof Error ? e.message : String(e);
-          setDepthResult({ depthBase64: null, colorDepthBase64: null, inferenceMs: 0, error: msg });
+          const errR: PipelineDepthResult = { depthBase64: null, colorDepthBase64: null, inferenceMs: 0, error: msg };
+          setDepthResult(errR);
+          return errR;
         } finally {
           setDepthRunning(false);
         }
       })(),
     ]);
+
+    if (!cached && imageHash && !segR.error && segR.segments.length > 0) {
+      void saveCachedAnalysis({
+        imageHash,
+        imgWidth:  dims.w,
+        imgHeight: dims.h,
+        segResult: segR,
+        depthResult: depthR,
+        createdAt: Date.now(),
+      });
+    }
   }
 
   async function handleSurfaceSelect(cat: string, segs: PipelineSegment[]) {

@@ -1,52 +1,36 @@
 import { Suspense } from "react";
 
-import { InventoryList } from "@/app/inventory/_components/inventory-list";
-import { getInventorySlabs, type SortBy } from "@/app/inventory/_lib/inventory-list";
-import { getInTransitSlabIds } from "@/app/inventory/_lib/transfers";
+import { InventoryCategories } from "@/app/inventory/_components/inventory-categories";
+import { getCategoryOverview } from "@/app/inventory/_lib/category-overview";
 import { getCurrentUserProfile } from "@/app/inventory/_lib/user-profile";
 
 import InventoryListLoading from "./loading";
 
-const VALID_SORTS: SortBy[] = ["newest", "oldest", "name_asc", "name_desc", "sqft_desc", "sqft_asc"];
-
 export default async function InventoryListPage({
   searchParams,
 }: {
-  searchParams: Promise<{ warehouse?: string; status?: string; sort?: string; q?: string; page?: string }>;
+  searchParams: Promise<{ q?: string }>;
 }) {
   const params = await searchParams;
-  const warehouseId = typeof params.warehouse === "string" ? params.warehouse : "";
-  const statusId = typeof params.status === "string" ? params.status : "";
-  const sortBy: SortBy = VALID_SORTS.includes(params.sort as SortBy) ? (params.sort as SortBy) : "newest";
   const search = typeof params.q === "string" ? params.q.trim() : "";
-  const rawPage = Number(params.page ?? "1");
-  const page = Number.isFinite(rawPage) && rawPage >= 1 ? Math.floor(rawPage) : 1;
 
   const profile = await getCurrentUserProfile();
 
-  const [{ error, slabs, totalLots, totalPages, totalSlabs }, inTransitSlabIds] = await Promise.all([
-    getInventorySlabs({
-      warehouseId,
-      statusId,
-      sortBy,
-      search,
-      allowedWarehouseIds: profile?.warehouseIds ?? null,
-      page,
-    }),
-    getInTransitSlabIds(),
-  ]);
+  const { error, categories, uncategorized, searchResults, totalLots, totalSlabs } = await getCategoryOverview(
+    profile?.warehouseIds ?? null,
+    search,
+  );
 
   return (
     <Suspense fallback={<InventoryListLoading />}>
-      <InventoryList
+      <InventoryCategories
         error={error}
-        slabs={slabs}
-        inTransitSlabIds={inTransitSlabIds}
-        canAddStock={profile?.permissions.add_stock ?? false}
-        sortBy={sortBy}
+        categories={categories}
+        uncategorized={uncategorized}
+        searchResults={searchResults}
         totalLots={totalLots}
-        totalPages={totalPages}
         totalSlabs={totalSlabs}
+        canAddStock={profile?.permissions.add_stock ?? false}
       />
     </Suspense>
   );

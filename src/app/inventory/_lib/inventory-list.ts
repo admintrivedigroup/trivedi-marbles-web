@@ -1,16 +1,17 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
-import { toNum, toStr, relName, relLot, relLotNumber } from "@/app/inventory/_lib/normalize";
+import { toNum, toStr, relName, relId, relLot, relLotNumber } from "@/app/inventory/_lib/normalize";
 
 type SlabImageRelation =
   | Array<{ image_url?: unknown; sort_order?: unknown }>
   | null;
 
 type NameRelation = { name?: unknown } | Array<{ name?: unknown }> | null;
+type CategoryRelation = { id?: unknown; name?: unknown } | Array<{ id?: unknown; name?: unknown }> | null;
 type LotRelation =
-  | { lot_number?: unknown; marble_name?: unknown; marble_categories?: NameRelation; thickness_options?: NameRelation }
-  | Array<{ lot_number?: unknown; marble_name?: unknown; marble_categories?: NameRelation; thickness_options?: NameRelation }>
+  | { lot_number?: unknown; marble_name?: unknown; marble_categories?: CategoryRelation; thickness_options?: NameRelation }
+  | Array<{ lot_number?: unknown; marble_name?: unknown; marble_categories?: CategoryRelation; thickness_options?: NameRelation }>
   | null;
 
 type InventorySlabRow = {
@@ -36,6 +37,7 @@ type InventorySlabRow = {
 };
 
 export type InventoryListSlab = {
+  categoryId: string | null;
   categoryName: string | null;
   createdAt: string | null;
   dealerPrice: number | null;
@@ -97,7 +99,7 @@ const SLAB_SELECT = `
   lot_id,
   warehouses(name),
   slab_statuses(name),
-  marble_lots(lot_number, marble_name, marble_categories(name), thickness_options(name)),
+  marble_lots(lot_number, marble_name, marble_categories(id, name), thickness_options(name)),
   slab_images(image_url, sort_order)
 `;
 
@@ -130,6 +132,7 @@ function normalizeInventorySlab(row: InventorySlabRow): InventoryListSlab | null
 
   const lot = relLot(row.marble_lots);
   return {
+    categoryId: relId(lot?.marble_categories),
     categoryName: relName(lot?.marble_categories),
     createdAt: toStr(row.created_at),
     dealerPrice: toNum(row.dealer_price),

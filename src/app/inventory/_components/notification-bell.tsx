@@ -12,7 +12,13 @@ import {
 import { formatRelativeTime } from "@/app/inventory/_lib/format";
 import { cn } from "@/lib/utils";
 
-export function NotificationBell({ align = "right" }: { align?: "left" | "right" }) {
+export function NotificationBell({
+  align = "right",
+  tourId,
+}: {
+  align?: "left" | "right";
+  tourId?: string;
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -71,7 +77,7 @@ export function NotificationBell({ align = "right" }: { align?: "left" | "right"
   }
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} data-tour={tourId} className="relative">
       <button
         type="button"
         onClick={handleToggle}

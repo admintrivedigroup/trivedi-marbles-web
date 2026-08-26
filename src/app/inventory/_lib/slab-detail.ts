@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 import type { InventoryListSlab } from "./inventory-list";
-import { toNum, toStr, relName, relLot } from "./normalize";
+import { toNum, toStr, relName, relId, relLot } from "./normalize";
 
 export type SlabDetailResult = {
   error: string | null;
@@ -41,7 +41,7 @@ export async function getSlabById(id: string): Promise<SlabDetailResult> {
         reserved_until,
         warehouses(name),
         slab_statuses(name),
-        marble_lots(lot_number, marble_name, marble_categories(name), thickness_options(name)),
+        marble_lots(lot_number, marble_name, marble_categories(id, name), thickness_options(name)),
         slab_images(image_url, sort_order)
       `)
       .eq("id", id)
@@ -92,6 +92,7 @@ export async function getSlabById(id: string): Promise<SlabDetailResult> {
         thumbnailUrl,
         reservedFor: toStr(row.reserved_for),
         reservedUntil: toStr(row.reserved_until),
+        categoryId: relId(lot?.marble_categories),
         categoryName: relName(lot?.marble_categories),
         warehouseName: relName(row.warehouses),
         statusName: relName(row.slab_statuses),

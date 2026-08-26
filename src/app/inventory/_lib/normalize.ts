@@ -28,6 +28,12 @@ export function relName(value: unknown): string | null {
   return null;
 }
 
+export function relId(value: unknown): string | null {
+  const row = Array.isArray(value) ? (value[0] as Record<string, unknown> | undefined) : (value as Record<string, unknown> | null);
+  const id = row?.id;
+  return typeof id === "number" || typeof id === "string" ? String(id) : null;
+}
+
 export function relLotNumber(value: unknown): string | null {
   if (Array.isArray(value)) {
     return toStr((value[0] as Record<string, unknown> | undefined)?.lot_number);

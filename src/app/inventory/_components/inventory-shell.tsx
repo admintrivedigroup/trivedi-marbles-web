@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -12,6 +12,7 @@ import {
   ClipboardList,
   Eye,
   FileText,
+  HelpCircle,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -33,11 +34,15 @@ import dynamic from "next/dynamic";
 
 import { logout } from "@/app/inventory/_actions/auth";
 import { pingActivity } from "@/app/inventory/_actions/activity";
+import { completeOnboarding } from "@/app/inventory/_actions/profile";
 import { cn } from "@/lib/utils";
 import { withCloudinaryThumbnail } from "@/lib/cloudinary/upload";
 import { Avatar, AvatarFallback, AvatarImage } from "@/app/inventory/_components/ui/avatar";
 import { NotificationBell } from "@/app/inventory/_components/notification-bell";
 import { useInventoryTheme } from "@/app/inventory/_components/theme-provider";
+import { WelcomeDialog } from "@/app/inventory/_components/onboarding/welcome-dialog";
+import { SpotlightTour } from "@/app/inventory/_components/onboarding/spotlight-tour";
+import { SPOTLIGHT_STEPS } from "@/app/inventory/_components/onboarding/onboarding-steps";
 
 const QrScanner = dynamic(
   () => import("@/app/inventory/_components/qr-scanner").then((m) => ({ default: m.QrScanner })),
@@ -52,6 +57,7 @@ type InventoryShellProps = {
   avatarUrl: string | null;
   role: Role;
   permissions: ResolvedPermissions | null;
+  showOnboarding: boolean;
 };
 
 type NavigationItem = {
@@ -61,20 +67,26 @@ type NavigationItem = {
   matchers: string[];
   permission?: keyof ResolvedPermissions;
   roles?: Role[];
+  tourId?: string;
 };
 
+// Grouped roughly by how often it's touched: daily stock work first, then
+// work management, then sales, then occasional tools, then admin-only pages
+// (Settings last since it's also one tap away from the account card below).
 const navigationItems: NavigationItem[] = [
   {
     href: "/inventory/dashboard",
     icon: LayoutDashboard,
     label: "Dashboard",
     matchers: ["/inventory/dashboard"],
+    tourId: "tour-dashboard",
   },
   {
     href: "/inventory/list",
     icon: Package,
     label: "Inventory",
     matchers: ["/inventory/list", "/inventory/slab", "/inventory/lot"],
+    tourId: "tour-inventory",
   },
   {
     href: "/inventory/add",
@@ -82,6 +94,7 @@ const navigationItems: NavigationItem[] = [
     label: "Add Stock",
     matchers: ["/inventory/add", "/inventory/edit"],
     permission: "add_stock",
+    tourId: "tour-add-stock",
   },
   {
     href: "/inventory/movement",
@@ -89,6 +102,28 @@ const navigationItems: NavigationItem[] = [
     label: "Movement",
     matchers: ["/inventory/movement"],
     permission: "stock_movement",
+    tourId: "tour-movement",
+  },
+  {
+    href: "/inventory/tasks",
+    icon: ClipboardList,
+    label: "Tasks",
+    matchers: ["/inventory/tasks"],
+    tourId: "tour-tasks",
+  },
+  {
+    href: "/inventory/task-calendar",
+    icon: CalendarDays,
+    label: "Task Calendar",
+    matchers: ["/inventory/task-calendar"],
+    tourId: "tour-task-calendar",
+  },
+  {
+    href: "/inventory/kra",
+    icon: Target,
+    label: "KRA / KPI",
+    matchers: ["/inventory/kra"],
+    tourId: "tour-kra",
   },
   {
     href: "/inventory/quotations",
@@ -96,40 +131,7 @@ const navigationItems: NavigationItem[] = [
     label: "Quotations",
     matchers: ["/inventory/quotations"],
     permission: "quotations",
-  },
-  {
-    href: "/inventory/settings",
-    icon: Settings,
-    label: "Settings",
-    matchers: ["/inventory/settings"],
-    permission: "settings",
-  },
-  {
-    href: "/inventory/users",
-    icon: Users,
-    label: "Users",
-    matchers: ["/inventory/users"],
-    permission: "manage_users",
-  },
-  {
-    href: "/inventory/audit",
-    icon: ClipboardList,
-    label: "Audit Log",
-    matchers: ["/inventory/audit"],
-    roles: ["admin", "superadmin"],
-  },
-  {
-    href: "/inventory/archive",
-    icon: Archive,
-    label: "Archive",
-    matchers: ["/inventory/archive"],
-    roles: ["admin", "superadmin"],
-  },
-  {
-    href: "/inventory/visualize",
-    icon: Eye,
-    label: "Visualizer",
-    matchers: ["/inventory/visualize"],
+    tourId: "tour-quotations",
   },
   {
     href: "/inventory/leads",
@@ -137,6 +139,14 @@ const navigationItems: NavigationItem[] = [
     label: "Client Leads",
     matchers: ["/inventory/leads"],
     permission: "client_leads",
+    tourId: "tour-client-leads",
+  },
+  {
+    href: "/inventory/visualize",
+    icon: Eye,
+    label: "Visualizer",
+    matchers: ["/inventory/visualize"],
+    tourId: "tour-visualizer",
   },
   {
     href: "/inventory/journal",
@@ -144,24 +154,39 @@ const navigationItems: NavigationItem[] = [
     label: "Journal",
     matchers: ["/inventory/journal"],
     roles: ["admin", "superadmin"],
+    tourId: "tour-journal",
   },
   {
-    href: "/inventory/tasks",
+    href: "/inventory/users",
+    icon: Users,
+    label: "Users",
+    matchers: ["/inventory/users"],
+    permission: "manage_users",
+    tourId: "tour-users",
+  },
+  {
+    href: "/inventory/audit",
     icon: ClipboardList,
-    label: "Tasks",
-    matchers: ["/inventory/tasks"],
+    label: "Audit Log",
+    matchers: ["/inventory/audit"],
+    roles: ["admin", "superadmin"],
+    tourId: "tour-audit-log",
   },
   {
-    href: "/inventory/task-calendar",
-    icon: CalendarDays,
-    label: "Task Calendar",
-    matchers: ["/inventory/task-calendar"],
+    href: "/inventory/archive",
+    icon: Archive,
+    label: "Archive",
+    matchers: ["/inventory/archive"],
+    roles: ["admin", "superadmin"],
+    tourId: "tour-archive",
   },
   {
-    href: "/inventory/kra",
-    icon: Target,
-    label: "KRA / KPI",
-    matchers: ["/inventory/kra"],
+    href: "/inventory/settings",
+    icon: Settings,
+    label: "Settings",
+    matchers: ["/inventory/settings"],
+    permission: "settings",
+    tourId: "tour-settings",
   },
 ];
 
@@ -177,12 +202,13 @@ export const ROLE_BADGE: Record<Role, { label: string; className: string }> = {
   staff: { label: "Staff", className: "bg-muted text-muted-foreground" },
 };
 
-function ThemeToggleButton() {
+function ThemeToggleButton({ tourId }: { tourId?: string }) {
   const { isDark, toggleDark } = useInventoryTheme();
   return (
     <button
       type="button"
       onClick={toggleDark}
+      data-tour={tourId}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
       className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
     >
@@ -198,10 +224,29 @@ export function InventoryShell({
   avatarUrl,
   role,
   permissions,
+  showOnboarding,
 }: InventoryShellProps) {
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const [onboardingPhase, setOnboardingPhase] = useState<"idle" | "welcome" | "spotlight">(
+    showOnboarding ? "welcome" : "idle",
+  );
+  const autoOnboardingHandled = useRef(false);
+
+  function finishOnboarding() {
+    setOnboardingPhase("idle");
+    setIsSidebarOpen(false);
+    if (showOnboarding && !autoOnboardingHandled.current) {
+      autoOnboardingHandled.current = true;
+      void completeOnboarding();
+    }
+  }
+
+  function replayOnboarding() {
+    setIsSidebarOpen(false);
+    setOnboardingPhase("welcome");
+  }
 
   useEffect(() => {
     const ping = () => {
@@ -264,8 +309,16 @@ export function InventoryShell({
               />
             </Link>
             <div className="flex items-center gap-1">
-              <ThemeToggleButton />
-              <NotificationBell align="left" />
+              <button
+                type="button"
+                onClick={replayOnboarding}
+                aria-label="Show guide"
+                className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <HelpCircle className="h-5 w-5" />
+              </button>
+              <ThemeToggleButton tourId="tour-theme" />
+              <NotificationBell align="left" tourId="tour-notifications" />
               <button
                 type="button"
                 onClick={() => setIsSidebarOpen(false)}
@@ -290,6 +343,7 @@ export function InventoryShell({
                 key={item.href}
                 href={item.href}
                 aria-current={isActive ? "page" : undefined}
+                data-tour={item.tourId}
                 onClick={() => setIsSidebarOpen(false)}
                 className={cn(
                   "flex items-center gap-3 rounded-xl px-4 py-3 transition-all",
@@ -308,6 +362,7 @@ export function InventoryShell({
         <div className="border-t border-border p-4">
           <Link
             href="/inventory/settings"
+            data-tour="tour-account"
             onClick={() => setIsSidebarOpen(false)}
             className="mb-3 flex items-center gap-3 rounded-xl px-4 py-2 transition-colors hover:bg-muted"
           >
@@ -375,6 +430,14 @@ export function InventoryShell({
             />
             <span className="truncate font-bold text-foreground">Marble Inventory</span>
           </div>
+          <button
+            type="button"
+            onClick={replayOnboarding}
+            aria-label="Show guide"
+            className="rounded-lg p-2 transition-colors hover:bg-muted"
+          >
+            <HelpCircle className="h-6 w-6 text-foreground" />
+          </button>
           <ThemeToggleButton />
           <NotificationBell />
           <button
@@ -390,6 +453,20 @@ export function InventoryShell({
         <div className="px-4 py-4 md:px-6 md:py-6 lg:px-8 lg:py-8">{children}</div>
       </main>
     </div>
+
+    <WelcomeDialog
+      open={onboardingPhase === "welcome"}
+      onSkip={finishOnboarding}
+      onContinue={() => {
+        setOnboardingPhase("spotlight");
+        setIsSidebarOpen(true);
+      }}
+    />
+    <SpotlightTour
+      steps={SPOTLIGHT_STEPS}
+      active={onboardingPhase === "spotlight"}
+      onDone={finishOnboarding}
+    />
     </>
   );
 }

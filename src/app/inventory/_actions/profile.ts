@@ -68,3 +68,24 @@ export async function updateDarkModePreference(enabled: boolean): Promise<Profil
   revalidatePath("/inventory", "layout");
   return { error: null };
 }
+
+// Marks the first-run onboarding guide as seen. Safe to call more than once
+// (e.g. finishing a replay from the "?" help button) — it just refreshes the
+// timestamp.
+export async function completeOnboarding(): Promise<ProfileUpdateResult> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) return { error: "You must be signed in." };
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("user_profiles")
+    .update({ onboarding_completed_at: new Date().toISOString() })
+    .eq("user_id", user.id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/inventory", "layout");
+  return { error: null };
+}
