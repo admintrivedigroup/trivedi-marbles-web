@@ -499,7 +499,10 @@ function boxBlur3(src: Float32Array, W: number, H: number, r: number): Float32Ar
 }
 
 const SHADOW_STRENGTH    = 0.85;  // how strongly the low-freq (ambient shadow) layer modulates the texture
-const HIGHLIGHT_STRENGTH = 0.55;  // how strongly the high-freq (specular) layer modulates the texture
+const HIGHLIGHT_STRENGTH = 0;     // high-freq layer carries the OLD floor's own grain/veining (that's what "high
+                                   // frequency" means for a patterned floor), so reapplying it prints the old
+                                   // floor's pattern onto the new slab. Disabled — lowMul (blurred, pattern-free
+                                   // ambient shadow) plus the art-directed specular hotspot carry realism instead.
 const LOW_MUL_MIN = 0.4, LOW_MUL_MAX = 1.75; // clamp so deep shadows/hot spots don't crush or blow out the texture
 const FEATHER_PX_FRAC = 1 / 250; // floor-boundary feather width as a fraction of min(W,H)
 
