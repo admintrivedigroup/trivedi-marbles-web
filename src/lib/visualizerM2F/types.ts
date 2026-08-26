@@ -52,7 +52,7 @@ export const DEFAULT_TEXTURE_SETTINGS: TextureSettings = {
   scale:      1.0,
   rotation:   0,
   brightness: 1.0,
-  opacity:    0.88,
+  opacity:    1.0,
   finish:     "matte",
 };
 
