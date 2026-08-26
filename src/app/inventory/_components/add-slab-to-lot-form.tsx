@@ -343,7 +343,7 @@ export function AddSlabToLotForm({ lot }: { lot: LotMeta }) {
 
         {/* Inherited info note */}
         <p className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-xs text-gray-500">
-          Marble name, category, thickness, warehouse, and pricing are inherited from lot{" "}
+          Marble name, category, thickness, and warehouse are inherited from lot{" "}
           <span className="font-mono font-medium">{lot.lotNumber}</span>.
         </p>
 

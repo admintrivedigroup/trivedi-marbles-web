@@ -13,47 +13,6 @@ import { useLookupOptions } from "@/app/inventory/_components/lookup-options-con
 import { updateLot } from "@/app/inventory/_actions/update-lot";
 import type { LotForEdit } from "@/app/inventory/_lib/lot-edit";
 
-function PriceInput({
-  disabled,
-  id,
-  label,
-  name,
-  onChange,
-  value,
-}: {
-  disabled?: boolean;
-  id: string;
-  label: string;
-  name: string;
-  onChange: (e: ChangeEvent<HTMLInputElement>) => void;
-  value: string;
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-sm font-medium text-gray-700">
-        {label}
-      </label>
-      <div className="relative">
-        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-500">
-          Rs.
-        </span>
-        <input
-          id={id}
-          name={name}
-          type="number"
-          min="0"
-          step="1"
-          value={value}
-          onChange={onChange}
-          placeholder="0"
-          disabled={disabled}
-          className="w-full rounded-xl border border-gray-200 py-3 pl-9 pr-4 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400"
-        />
-      </div>
-    </div>
-  );
-}
-
 function formatThicknessLabel(value: string) {
   return /^\d+(\.\d+)?$/.test(value) ? `${value}mm` : value;
 }
@@ -73,8 +32,6 @@ export function EditLot({ lot }: { lot: LotForEdit }) {
     warehouseId: lot.warehouseId,
     purchaseDate: lot.purchaseDate,
     invoiceNumber: lot.invoiceNumber,
-    sellingPrice: lot.sellingPrice,
-    dealerPrice: lot.dealerPrice,
     notes: lot.notes,
     showOnWebsite: lot.showOnWebsite,
   });
@@ -304,34 +261,6 @@ export function EditLot({ lot }: { lot: LotForEdit }) {
               />
             </div>
           </div>
-        </section>
-
-        {/* Pricing */}
-        <section className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:rounded-2xl md:p-6">
-          <h3 className="mb-4 text-base font-bold text-gray-900 md:text-lg">
-            Pricing (per sqft <span className="font-light text-gray-400">(estimate)</span>)
-          </h3>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <PriceInput
-              id="sellingPrice"
-              label="Sell Price"
-              name="sellingPrice"
-              value={form.sellingPrice}
-              onChange={handleChange}
-              disabled={isPending}
-            />
-            <PriceInput
-              id="dealerPrice"
-              label="Dealer Price"
-              name="dealerPrice"
-              value={form.dealerPrice}
-              onChange={handleChange}
-              disabled={isPending}
-            />
-          </div>
-          <p className="mt-3 text-xs text-gray-400">
-            Updating pricing here will apply to all slabs in this lot.
-          </p>
         </section>
 
         {/* Lot Notes */}

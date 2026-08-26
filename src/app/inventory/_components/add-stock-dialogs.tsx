@@ -1,51 +1,10 @@
 "use client";
 
-import { useState, useTransition, type ChangeEvent, type FormEvent } from "react";
+import { useState, useTransition, type FormEvent } from "react";
 import { LoaderCircle, X } from "lucide-react";
 
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { StockLookupOption } from "@/app/inventory/_lib/stock";
-
-export function PriceInput({
-  disabled,
-  id,
-  label,
-  name,
-  onChange,
-  value,
-}: {
-  disabled?: boolean;
-  id: string;
-  label: string;
-  name: string;
-  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
-  value: string;
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-sm font-medium text-gray-700">
-        {label}
-      </label>
-      <div className="relative">
-        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-500">
-          Rs.
-        </span>
-        <input
-          id={id}
-          name={name}
-          type="number"
-          min="0"
-          step="1"
-          value={value}
-          onChange={onChange}
-          placeholder="0"
-          disabled={disabled}
-          className="w-full rounded-xl border border-gray-200 py-3 pl-9 pr-4 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400"
-        />
-      </div>
-    </div>
-  );
-}
 
 export function AddOptionDialog({
   label,

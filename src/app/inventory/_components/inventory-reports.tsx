@@ -14,31 +14,10 @@ import {
   YAxis,
 } from "recharts";
 
-import { slabs } from "@/data/inventory";
-
 const salesData: { month: string; revenue: number; slabs: number }[] = [];
+const categoryData: { name: string; value: number }[] = [];
 
 export function InventoryReports() {
-  const categoryData = slabs.reduce<{ name: string; value: number }[]>(
-    (acc, slab) => {
-      if (slab.status === "Sold") {
-        return acc;
-      }
-
-      const existing = acc.find((item) => item.name === slab.category);
-      const value = slab.sellPrice * slab.sqft;
-
-      if (existing) {
-        existing.value += value;
-      } else {
-        acc.push({ name: slab.category, value });
-      }
-
-      return acc;
-    },
-    [],
-  );
-
   return (
     <div className="p-4 md:p-8">
       <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center md:mb-8">

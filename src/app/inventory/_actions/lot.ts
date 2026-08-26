@@ -6,10 +6,7 @@ import type { SaveLotResult } from "@/app/inventory/_actions/stock-state";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/app/inventory/_lib/audit";
 import { requirePermission } from "@/app/inventory/_lib/action-auth";
-import {
-  parseRequiredPositiveNumber,
-  parseOptionalNonNegativeNumber,
-} from "@/app/inventory/_lib/validate";
+import { parseRequiredPositiveNumber } from "@/app/inventory/_lib/validate";
 
 type SlabInput = {
   notes: string | null;
@@ -36,8 +33,6 @@ export async function saveLot(formData: FormData): Promise<SaveLotResult> {
   const warehouseId = String(formData.get("warehouseId") ?? "").trim();
   const purchaseDate = String(formData.get("purchaseDate") ?? "").trim();
   const invoiceNumber = String(formData.get("invoiceNumber") ?? "").trim();
-  const sellingPriceInput = String(formData.get("sellingPrice") ?? "").trim();
-  const dealerPriceInput = String(formData.get("dealerPrice") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
   const slabsJson = String(formData.get("slabsJson") ?? "").trim();
 
@@ -47,12 +42,6 @@ export async function saveLot(formData: FormData): Promise<SaveLotResult> {
   if (!statusId) return { lotId: null, message: "Status is required.", slabCount: 0, slabIds: [], status: "error" };
   if (!thicknessId) return { lotId: null, message: "Thickness is required.", slabCount: 0, slabIds: [], status: "error" };
   if (!warehouseId) return { lotId: null, message: "Warehouse is required.", slabCount: 0, slabIds: [], status: "error" };
-
-  const sellingPriceResult = parseOptionalNonNegativeNumber(sellingPriceInput, "Sell price");
-  if (sellingPriceResult.error) return { lotId: null, message: sellingPriceResult.error, slabCount: 0, slabIds: [], status: "error" };
-
-  const dealerPriceResult = parseOptionalNonNegativeNumber(dealerPriceInput, "Dealer price");
-  if (dealerPriceResult.error) return { lotId: null, message: dealerPriceResult.error, slabCount: 0, slabIds: [], status: "error" };
 
   let rawSlabs: unknown[];
   try {
@@ -116,8 +105,6 @@ export async function saveLot(formData: FormData): Promise<SaveLotResult> {
       warehouse_id: normalizeForeignKey(warehouseId),
       purchase_date: purchaseDate || null,
       invoice_number: invoiceNumber || null,
-      selling_price: sellingPriceResult.value,
-      dealer_price: dealerPriceResult.value,
       notes: notes || null,
       created_by: user.id,
     })
@@ -146,8 +133,6 @@ export async function saveLot(formData: FormData): Promise<SaveLotResult> {
     slab_code: slab.slabCode,
     status_id: normalizeForeignKey(statusId),
     warehouse_id: normalizeForeignKey(warehouseId),
-    selling_price: sellingPriceResult.value,
-    dealer_price: dealerPriceResult.value,
     length: slab.length,
     width: slab.width,
     sqft: slab.sqft,

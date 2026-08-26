@@ -15,8 +15,6 @@ export type DashboardStats = {
   reservedCount: number;
   expiredReservationCount: number;
   expiringSoonCount: number;
-  stockValueBySelling: number;
-  stockValueByDealer: number;
   typeData: { name: string; count: number }[];
   recentActivity: { id: string; text: string; time: string }[];
   alerts: { id: string; severity: "low" | "medium" | "high"; text: string }[];
@@ -34,7 +32,6 @@ export type DashboardStats = {
   // Superadmin only
   soldLotsCount?: number;
   soldSqft?: number;
-  dataQualityIssues?: number;
   inventoryAgeBuckets?: { label: string; count: number }[];
   recentAuditActivity?: { id: string; userEmail: string | null; action: string; targetLabel: string | null; time: string }[];
 };
@@ -122,14 +119,6 @@ export async function getDashboardStats(
   const taskRows = (taskRes.data ?? []) as { status: string; due_date: string | null }[];
 
   const activeSlabs = slabs.filter((s) => s.statusName !== SLAB_STATUS.SOLD);
-  const stockValueBySelling = activeSlabs.reduce(
-    (sum, s) => sum + (s.sellingPrice ?? 0) * (s.sqft ?? 0),
-    0,
-  );
-  const stockValueByDealer = activeSlabs.reduce(
-    (sum, s) => sum + (s.dealerPrice ?? 0) * (s.sqft ?? 0),
-    0,
-  );
 
   const typeMap = new Map<string, number>();
   for (const slab of slabsInRange) {
@@ -223,8 +212,6 @@ export async function getDashboardStats(
     reservedCount,
     expiredReservationCount,
     expiringSoonCount,
-    stockValueBySelling,
-    stockValueByDealer,
     typeData,
     recentActivity,
     alerts,
@@ -287,11 +274,6 @@ export async function getDashboardStats(
     const soldSlabs = slabs.filter((s) => s.statusName === SLAB_STATUS.SOLD);
     base.soldLotsCount = new Set(soldSlabs.map((s) => s.lotId).filter(Boolean)).size;
     base.soldSqft = Math.round(soldSlabs.reduce((sum, s) => sum + (s.sqft ?? 0), 0));
-
-    // Data quality: active slabs missing either price
-    base.dataQualityIssues = activeSlabs.filter(
-      (s) => s.sellingPrice === null || s.dealerPrice === null,
-    ).length;
 
     // Inventory age buckets on active slabs
     const ageBuckets = [0, 0, 0, 0]; // 0-30, 31-60, 61-90, 90+

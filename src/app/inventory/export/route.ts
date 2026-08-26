@@ -89,7 +89,6 @@ export async function GET(request: NextRequest) {
     { key: "rackNumber",    label: "Rack",          width: 10, align: "center" as const },
     { key: "warehouseName", label: "Location",      width: 16, align: "left"  as const },
     { key: "statusName",    label: "Status",        width: 13, align: "center" as const },
-    { key: "sellingPrice",  label: "Selling Price", width: 14, align: "right" as const, numFmt: '₹#,##0.00' },
     { key: "notes",         label: "Notes",         width: 28, align: "left"  as const },
   ];
 
@@ -145,7 +144,6 @@ export async function GET(request: NextRequest) {
       rackNumber:    s.rackNumber,
       warehouseName: s.warehouseName,
       statusName:    s.statusName,
-      sellingPrice:  s.sellingPrice,
       notes:         s.notes ?? "",
     });
 

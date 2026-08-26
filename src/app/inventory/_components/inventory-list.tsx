@@ -111,17 +111,6 @@ function getLotTotalSqft(slabs: InventoryListSlab[]): number {
   return slabs.reduce((sum, s) => sum + (s.sqft ?? 0), 0);
 }
 
-function getLotPriceRange(slabs: InventoryListSlab[]): string {
-  const prices = slabs
-    .map((s) => s.sellingPrice)
-    .filter((p): p is number => p !== null);
-  if (prices.length === 0) return "-";
-  const min = Math.min(...prices);
-  const max = Math.max(...prices);
-  if (min === max) return `₹${formatNumber(min)}`;
-  return `₹${formatNumber(min)} – ₹${formatNumber(max)}`;
-}
-
 function getPageNumbers(current: number, total: number): (number | "...")[] {
   if (total <= 7) {
     return Array.from({ length: total }, (_, i) => i + 1);
@@ -564,9 +553,6 @@ export function InventoryList({ error, slabs, canAddStock, inTransitSlabIds = ne
                       Status
                     </th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-muted-foreground">
-                      Price
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-muted-foreground">
                       Actions
                     </th>
                   </tr>
@@ -576,7 +562,6 @@ export function InventoryList({ error, slabs, canAddStock, inTransitSlabIds = ne
                     const expanded = isLotExpanded(lot.lotId);
                     const statusSummary = getLotStatusSummary(lot.slabs);
                     const totalSqft = getLotTotalSqft(lot.slabs);
-                    const priceRange = getLotPriceRange(lot.slabs);
                     const availRatio = getLotAvailableRatio(lot.slabs);
                     const isSelectable = !lot.lotId.startsWith("__slab_");
                     const isSelected = selectedLotIds.has(lot.lotId);
@@ -609,7 +594,7 @@ export function InventoryList({ error, slabs, canAddStock, inTransitSlabIds = ne
                               )}
                             </td>
                           )}
-                          <td colSpan={isSelectMode ? 10 : 11} className="px-6 py-3">
+                          <td colSpan={isSelectMode ? 9 : 10} className="px-6 py-3">
                             <div className="flex items-center gap-3 flex-wrap">
                               <ChevronRight
                                 className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 ${expanded ? "rotate-90" : ""}`}
@@ -629,12 +614,6 @@ export function InventoryList({ error, slabs, canAddStock, inTransitSlabIds = ne
                               <span className="text-sm text-muted-foreground">
                                 {formatNumber(totalSqft)} sqft <span className="font-light text-muted-foreground">(estimate)</span>
                               </span>
-                              <>
-                                <span className="text-sm text-muted-foreground">·</span>
-                                <span className="text-sm font-semibold text-muted-foreground">
-                                  {priceRange}
-                                </span>
-                              </>
                               <div className="ml-auto flex flex-wrap items-center gap-2">
                                 {statusSummary.map(([status, count]) => (
                                   <span
@@ -720,9 +699,6 @@ export function InventoryList({ error, slabs, canAddStock, inTransitSlabIds = ne
                                       {getDisplayText(slab.statusName)}
                                     </span>
                                   )}
-                                </td>
-                                <td className="px-6 py-4 font-semibold text-foreground">
-                                  ₹{formatNumber(slab.sellingPrice)}
                                 </td>
                                 <td className="px-6 py-4">
                                   <div className="flex items-center gap-1">
@@ -916,13 +892,7 @@ export function InventoryList({ error, slabs, canAddStock, inTransitSlabIds = ne
                               </div>
                             </div>
 
-                            <div className="flex items-center justify-between border-t border-border pt-2">
-                              <div>
-                                <p className="text-xs text-muted-foreground">Price</p>
-                                <p className="font-semibold text-foreground">
-                                  ₹{formatNumber(slab.sellingPrice)}/sqft <span className="font-light text-muted-foreground">(estimate)</span>
-                                </p>
-                              </div>
+                            <div className="flex items-center justify-end border-t border-border pt-2">
                               <div className="flex gap-1">
                                 {isInTransit ? (
                                   <span

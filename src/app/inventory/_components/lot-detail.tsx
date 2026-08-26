@@ -34,7 +34,6 @@ import {
 import { updateLotSlabsStatus } from "@/app/inventory/_actions/update-lot-status";
 import { batchUpdateSlabsStatus } from "@/app/inventory/_actions/batch-update-slab-status";
 import { batchDeleteSlabs } from "@/app/inventory/_actions/batch-delete-slabs";
-import { batchUpdateSlabPrice } from "@/app/inventory/_actions/batch-update-slab-price";
 import { cloneLot } from "@/app/inventory/_actions/clone-lot";
 import { deleteSlab } from "@/app/inventory/_actions/delete-slab";
 import { deleteLot } from "@/app/inventory/_actions/delete-lot";
@@ -43,7 +42,6 @@ import { ReserveDialog, type ReservationData } from "@/app/inventory/_components
 import { toggleLotWebsite } from "@/app/inventory/_actions/toggle-lot-website";
 import {
   formatNumber as fmtNum,
-  formatCurrency as fmtCurrency,
   formatDate as fmtDate,
   formatThickness as fmtThickness,
   formatSize as fmtSize,
@@ -173,16 +171,14 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
   type ActiveModal =
     | "bulk-reserve" | "bulk-sold" | "bulk-unreserve" | "bulk-unsell"
     | "delete-lot" | "clone-lot"
-    | "selection-reserve" | "selection-sold" | "selection-unreserve" | "selection-unsell" | "selection-delete" | "selection-price"
+    | "selection-reserve" | "selection-sold" | "selection-unreserve" | "selection-unsell" | "selection-delete"
     | null;
 
   const [activeModal, setActiveModal] = useState<ActiveModal>(null);
   const [pendingSlabDelete, setPendingSlabDelete] = useState<PendingSlabDelete | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [priceBasis, setPriceBasis] = useState<"selling" | "dealer">("selling");
   const [showOnWebsite, setShowOnWebsite] = useState(lot.showOnWebsite);
   const [cloneLotNumber, setCloneLotNumber] = useState("");
-  const [priceFormValues, setPriceFormValues] = useState({ sell: "", dealer: "" });
   const [isTogglingWebsite, setIsTogglingWebsite] = useState(false);
 
   // --- Selection state ---
@@ -205,11 +201,6 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
   const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
 
   const totalSqft = slabs.reduce((sum, s) => sum + (s.sqft ?? 0), 0);
-  const selectedLotPrice = priceBasis === "dealer" ? lot.dealerPrice : lot.sellingPrice;
-  const totalValue =
-    selectedLotPrice !== null && totalSqft > 0
-      ? selectedLotPrice * totalSqft
-      : null;
 
   // Derived selection data
   const selectedSlabs = slabs.filter((s) => selectedIds.has(s.id));
@@ -402,25 +393,6 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
       const result = await batchDeleteSlabs(ids, lot.id);
       if (result.error) { setActionError(result.error); }
       else { setSelectedIds(new Set()); router.refresh(); }
-    });
-  }
-
-  function confirmSelectionPriceUpdate() {
-    setActiveModal(null);
-    const ids = Array.from(selectedIds);
-    const sell = priceFormValues.sell ? Number(priceFormValues.sell) : null;
-    const dealer = priceFormValues.dealer ? Number(priceFormValues.dealer) : null;
-    if (sell === null && dealer === null) {
-      setActionError("Enter at least one price to update.");
-      return;
-    }
-    startTransition(async () => {
-      const result = await batchUpdateSlabPrice(ids, lot.id, {
-        sellingPrice: sell,
-        dealerPrice: dealer,
-      });
-      if (result.error) { setActionError(result.error); }
-      else { setSelectedIds(new Set()); setPriceFormValues({ sell: "", dealer: "" }); router.refresh(); }
     });
   }
 
@@ -644,11 +616,8 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
                       </Link>
                     </div>
 
-                    {/* Footer: price + actions */}
-                    <div className="flex items-center justify-between border-t border-border px-3 py-2">
-                      <span className="text-sm font-semibold text-foreground">
-                        {fmtCurrency(slab.sellingPrice)}
-                      </span>
+                    {/* Footer: actions */}
+                    <div className="flex items-center justify-end border-t border-border px-3 py-2">
                       <div className="flex items-center gap-0.5">
                         {isReserved ? (
                           <button
@@ -753,52 +722,6 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
                   value={addedDate}
                 />
               ) : null}
-            </div>
-          </div>
-
-          {/* Pricing */}
-          <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Pricing
-              </h2>
-              <select
-                value={priceBasis}
-                onChange={(e) =>
-                  setPriceBasis(e.target.value as "selling" | "dealer")
-                }
-                className="rounded-lg border border-border bg-input px-2 py-1 text-xs text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="selling">Sell Price</option>
-                <option value="dealer">Dealer Price</option>
-              </select>
-            </div>
-            <p className="text-3xl font-bold text-foreground">
-              {fmtCurrency(selectedLotPrice)}
-            </p>
-            <p className="mt-0.5 text-xs text-muted-foreground">per sqft <span className="font-light text-muted-foreground">(estimate)</span></p>
-
-            {totalValue !== null ? (
-              <div className="mt-3 rounded-xl bg-muted px-3 py-2.5">
-                <p className="text-xs text-muted-foreground">Total Lot Value</p>
-                <p className="mt-0.5 text-lg font-bold text-foreground">
-                  {fmtCurrency(totalValue)}
-                </p>
-              </div>
-            ) : null}
-
-            <div className="mt-3 grid grid-cols-2 gap-1.5 border-t border-border pt-3">
-              {[
-                { label: "Sell", value: lot.sellingPrice },
-                { label: "Dealer", value: lot.dealerPrice },
-              ].map(({ label, value }) => (
-                <div key={label} className="text-center">
-                  <p className="text-[11px] text-muted-foreground">{label}</p>
-                  <p className="mt-0.5 truncate text-xs font-semibold text-foreground">
-                    {fmtCurrency(value)}
-                  </p>
-                </div>
-              ))}
             </div>
           </div>
 
@@ -1035,15 +958,6 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
               <button
                 type="button"
                 disabled={isPending}
-                onClick={() => { setPriceFormValues({ sell: "", dealer: "" }); setActionError(null); setActiveModal("selection-price"); }}
-                className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
-              >
-                <Tag className="h-3.5 w-3.5" />
-                Update Prices
-              </button>
-              <button
-                type="button"
-                disabled={isPending}
                 onClick={() => { setActionError(null); setActiveModal("selection-delete"); }}
                 className="flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
               >
@@ -1200,7 +1114,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
           <div className="w-full max-w-sm rounded-2xl bg-card p-6 shadow-xl">
             <h3 className="mb-1 text-base font-bold text-foreground">Clone Lot</h3>
             <p className="mb-4 text-sm text-muted-foreground">
-              Creates a new lot with the same marble, dimensions, and prices. All slabs are cloned as Available.
+              Creates a new lot with the same marble and dimensions. All slabs are cloned as Available.
             </p>
             <label htmlFor="clone-lot-number" className="mb-1.5 block text-sm font-medium text-muted-foreground">
               New Lot Number
@@ -1237,59 +1151,6 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
         </div>
       )}
 
-      {/* Price update dialog */}
-      {activeModal === "selection-price" && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-card p-6 shadow-xl">
-            <h3 className="mb-1 text-base font-bold text-foreground">Update Prices</h3>
-            <p className="mb-4 text-sm text-muted-foreground">
-              Override prices for {selectedIds.size} selected slab{selectedIds.size !== 1 ? "s" : ""}. Leave a field blank to keep the existing value.
-            </p>
-            <div className="space-y-3 mb-5">
-              {(
-                [
-                  { id: "price-sell", label: "Sell Price", key: "sell" },
-                  { id: "price-dealer", label: "Dealer Price", key: "dealer" },
-                ] as const
-              ).map(({ id, label, key }) => (
-                <div key={key}>
-                  <label htmlFor={id} className="mb-1 block text-sm font-medium text-muted-foreground">{label}</label>
-                  <div className="relative">
-                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">₹</span>
-                    <input
-                      id={id}
-                      type="number"
-                      min="0"
-                      step="1"
-                      placeholder="(unchanged)"
-                      value={priceFormValues[key]}
-                      onChange={(e) => setPriceFormValues((prev) => ({ ...prev, [key]: e.target.value }))}
-                      className="w-full rounded-xl border border-border py-3 pl-8 pr-4 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-ring"
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setActiveModal(null)}
-                className="rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={isPending}
-                onClick={confirmSelectionPriceUpdate}
-                className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Update
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }

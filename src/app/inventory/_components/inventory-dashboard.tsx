@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import {
   AlertCircle,
@@ -310,53 +310,25 @@ function InventoryAgeCard({
 function SoldQualityCard({
   soldLotsCount,
   soldSqft,
-  dataQualityIssues,
 }: {
   soldLotsCount: number;
   soldSqft: number;
-  dataQualityIssues: number;
 }) {
   return (
     <article className="rounded-xl border border-border bg-card p-4 shadow-sm md:rounded-2xl md:p-6">
       <SectionHeading>Stock Intelligence</SectionHeading>
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-3 border-b border-border pb-4">
-          <div className="rounded-lg bg-muted p-3">
-            <p className="text-xs text-muted-foreground">Lots sold</p>
-            <p className="mt-1 text-xl font-bold text-foreground">
-              {soldLotsCount.toLocaleString("en-IN")}
-            </p>
-          </div>
-          <div className="rounded-lg bg-muted p-3">
-            <p className="text-xs text-muted-foreground">Sqft sold</p>
-            <p className="mt-1 text-xl font-bold text-foreground">
-              {soldSqft.toLocaleString("en-IN")}
-            </p>
-          </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-lg bg-muted p-3">
+          <p className="text-xs text-muted-foreground">Lots sold</p>
+          <p className="mt-1 text-xl font-bold text-foreground">
+            {soldLotsCount.toLocaleString("en-IN")}
+          </p>
         </div>
-        <div
-          className={`flex items-start gap-3 rounded-xl p-3 ${
-            dataQualityIssues > 0 ? "bg-amber-50 dark:bg-amber-950/30" : "bg-emerald-50 dark:bg-emerald-950/30"
-          }`}
-        >
-          {dataQualityIssues > 0 ? (
-            <>
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-              <div>
-                <p className="text-sm font-medium text-foreground">
-                  {dataQualityIssues} slab{dataQualityIssues === 1 ? "" : "s"} missing prices
-                </p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  Incomplete data may affect quotations
-                </p>
-              </div>
-            </>
-          ) : (
-            <>
-              <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-              <p className="text-sm text-muted-foreground">All active slabs have pricing data</p>
-            </>
-          )}
+        <div className="rounded-lg bg-muted p-3">
+          <p className="text-xs text-muted-foreground">Sqft sold</p>
+          <p className="mt-1 text-xl font-bold text-foreground">
+            {soldSqft.toLocaleString("en-IN")}
+          </p>
         </div>
       </div>
     </article>
@@ -473,51 +445,6 @@ function AlertsCard({ alerts }: { alerts: DashboardStats["alerts"] }) {
           })}
         </div>
       )}
-    </article>
-  );
-}
-
-// ─── Stock Value card (admin/superadmin) ──────────────────────────────────────
-
-function formatStockValue(value: number) {
-  if (value >= 100_000) return `${(value / 100_000).toFixed(1)}L`;
-  if (value >= 1_000) return `${(value / 1_000).toFixed(0)}K`;
-  return value.toLocaleString("en-IN");
-}
-
-type PriceBasis = "selling" | "dealer";
-
-function StockValueCard({
-  stockValueBySelling,
-  stockValueByDealer,
-}: {
-  stockValueBySelling: number;
-  stockValueByDealer: number;
-}) {
-  const [priceBasis, setPriceBasis] = useState<PriceBasis>("selling");
-  const stockValue = priceBasis === "dealer" ? stockValueByDealer : stockValueBySelling;
-
-  return (
-    <article className="rounded-xl border border-border bg-card p-4 shadow-sm md:rounded-2xl md:p-6">
-      <div className="flex flex-col items-start gap-3 md:flex-row md:items-center md:gap-4">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300 md:h-12 md:w-12 md:rounded-xl">
-          <span className="text-3xl font-bold md:text-4xl">₹</span>
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-xs text-muted-foreground md:text-sm">Stock Value</p>
-          <p className="text-xl font-bold text-foreground md:text-2xl">{formatStockValue(stockValue)}</p>
-        </div>
-      </div>
-      <div className="mt-3 border-t border-border pt-3">
-        <select
-          value={priceBasis}
-          onChange={(e) => setPriceBasis(e.target.value as PriceBasis)}
-          className="w-full rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs text-muted-foreground focus:border-transparent focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          <option value="selling">by Selling Price</option>
-          <option value="dealer">by Dealer Price</option>
-        </select>
-      </div>
     </article>
   );
 }
@@ -717,14 +644,7 @@ export function InventoryDashboard({
             tone="bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-300"
           />
         )}
-        {isStaff ? (
-          <IncomingTransfersCard count={stats.incomingTransfersCount} />
-        ) : (
-          <StockValueCard
-            stockValueBySelling={stats.stockValueBySelling}
-            stockValueByDealer={stats.stockValueByDealer}
-          />
-        )}
+        {isStaff && <IncomingTransfersCard count={stats.incomingTransfersCount} />}
       </section>
 
       {/* Charts — admin / superadmin only */}
@@ -788,7 +708,6 @@ export function InventoryDashboard({
           <SoldQualityCard
             soldLotsCount={stats.soldLotsCount ?? 0}
             soldSqft={stats.soldSqft ?? 0}
-            dataQualityIssues={stats.dataQualityIssues ?? 0}
           />
         </section>
       )}

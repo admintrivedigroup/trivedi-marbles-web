@@ -35,7 +35,6 @@ import { deleteSlab } from "@/app/inventory/_actions/delete-slab";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ReserveDialog, type ReservationData } from "@/app/inventory/_components/reserve-dialog";
 import {
-  formatCurrency as fmtCurrency,
   formatDate,
   formatDateTime,
   formatThickness,
@@ -214,7 +213,6 @@ export function SlabDetail({ images, movements, reservationHistory, slab, isInTr
   );
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const [priceBasis, setPriceBasis] = useState<"selling" | "dealer">("selling");
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showReserveDialog, setShowReserveDialog] = useState(false);
@@ -232,8 +230,6 @@ export function SlabDetail({ images, movements, reservationHistory, slab, isInTr
   }, [isFullscreen, images.length]);
 
   const sqft = slab.sqft ?? 0;
-  const selectedPrice = priceBasis === "dealer" ? slab.dealerPrice : slab.sellingPrice;
-  const totalValue = selectedPrice !== null && sqft > 0 ? selectedPrice * sqft : null;
 
   const sizeLabel =
     slab.length && slab.width ? (
@@ -418,48 +414,6 @@ export function SlabDetail({ images, movements, reservationHistory, slab, isInTr
                   value={slab.slabCode ?? "-"}
                   mono
                 />
-              </div>
-            </div>
-
-            {/* Pricing */}
-            <div className="border-t border-border px-6 py-5">
-              <h2 className="mb-4 font-semibold text-foreground">Pricing</h2>
-              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
-                <div>
-                  <p className="text-xs text-muted-foreground">Sell Price</p>
-                  <p className="mt-1 text-xl font-bold text-green-600 dark:text-green-400">
-                    {fmtCurrency(slab.sellingPrice)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">per sqft <span className="font-light text-muted-foreground">(estimate)</span></p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Dealer Price</p>
-                  <p className="mt-1 text-xl font-bold text-blue-600 dark:text-blue-400">
-                    {fmtCurrency(slab.dealerPrice)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">per sqft <span className="font-light text-muted-foreground">(estimate)</span></p>
-                </div>
-              </div>
-
-              <div className="mt-4 border-t border-border pt-4">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm text-muted-foreground">
-                    Total Value:{" "}
-                    <span className="font-semibold text-foreground">
-                      {totalValue !== null ? fmtCurrency(totalValue) : "-"}
-                    </span>
-                  </p>
-                  <select
-                    value={priceBasis}
-                    onChange={(e) =>
-                      setPriceBasis(e.target.value as "selling" | "dealer")
-                    }
-                    className="rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs text-muted-foreground focus:border-transparent focus:outline-none focus:ring-2 focus:ring-ring"
-                  >
-                    <option value="selling">by Selling Price</option>
-                    <option value="dealer">by Dealer Price</option>
-                  </select>
-                </div>
               </div>
             </div>
 

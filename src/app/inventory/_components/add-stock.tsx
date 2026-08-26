@@ -32,7 +32,6 @@ import { useLookupOptions } from "@/app/inventory/_components/lookup-options-con
 import {
   AddOptionDialog,
   ManageOptionsDialog,
-  PriceInput,
 } from "@/app/inventory/_components/add-stock-dialogs";
 import {
   SlabGrid,
@@ -42,13 +41,11 @@ import {
 
 type LotFormValues = {
   categoryId: string;
-  dealerPrice: string;
   invoiceNumber: string;
   lotNumber: string;
   marbleName: string;
   notes: string;
   purchaseDate: string;
-  sellingPrice: string;
   statusId: string;
   thicknessId: string;
   warehouseId: string;
@@ -91,13 +88,11 @@ function createInitialLotForm({
 }): LotFormValues {
   return {
     categoryId: "",
-    dealerPrice: "",
     invoiceNumber: "",
     lotNumber: "",
     marbleName: "",
     notes: "",
     purchaseDate: "",
-    sellingPrice: "",
     statusId: statusOptions[0]?.id ?? "",
     thicknessId: thicknessOptions[0]?.id ?? "",
     warehouseId: warehouseOptions[0]?.id ?? "",
@@ -650,31 +645,6 @@ export function AddStock() {
                 )}
               </select>
             </div>
-          </div>
-        </section>
-
-        {/* Pricing */}
-        <section className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:rounded-2xl md:p-6">
-          <h3 className="mb-4 text-base font-bold text-gray-900 md:text-lg">
-            Pricing (per sqft <span className="font-light text-gray-400">(estimate)</span>)
-          </h3>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <PriceInput
-              id="sellingPrice"
-              label="Sell Price"
-              name="sellingPrice"
-              value={lotForm.sellingPrice}
-              onChange={handleLotFieldChange}
-              disabled={isPending}
-            />
-            <PriceInput
-              id="dealerPrice"
-              label="Dealer Price"
-              name="dealerPrice"
-              value={lotForm.dealerPrice}
-              onChange={handleLotFieldChange}
-              disabled={isPending}
-            />
           </div>
         </section>
 
