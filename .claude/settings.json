@@ -111,7 +111,8 @@
       "Bash(cp \"C:/Users/ladha/AppData/Local/Temp/claude/c--Users-ladha-Desktop-trivedi-marbles/1413ae0d-fe1d-491f-b448-ba4f8d640c15/scratchpad/shot.mjs\" ./__darkmode_shot.mjs)",
       "Bash(node ./__darkmode_shot.mjs)",
       "Bash(npx --yes playwright --help)",
-      "Bash(npx --yes playwright screenshot --viewport-size=1280,900 --wait-for-timeout=3000 http://localhost:3000/inventory/dashboard \"C:/Users/ladha/AppData/Local/Temp/claude/c--Users-ladha-Desktop-trivedi-marbles/1413ae0d-fe1d-491f-b448-ba4f8d640c15/scratchpad/shot.png\")"
+      "Bash(npx --yes playwright screenshot --viewport-size=1280,900 --wait-for-timeout=3000 http://localhost:3000/inventory/dashboard \"C:/Users/ladha/AppData/Local/Temp/claude/c--Users-ladha-Desktop-trivedi-marbles/1413ae0d-fe1d-491f-b448-ba4f8d640c15/scratchpad/shot.png\")",
+      "Bash(grep -iE \"^tsx$|ts-node\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\ladha\\AppData\\Local\\Temp\\claude\\c--Users-ladha-Desktop-trivedi-marbles\\19d4f574-d73e-4c4d-a67f-4e65879212d6\\scratchpad",

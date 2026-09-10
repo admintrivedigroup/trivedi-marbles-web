@@ -18,6 +18,7 @@ import {
   Menu,
   Moon,
   Package,
+  PencilRuler,
   Plus,
   ScanLine,
   Settings,
@@ -43,6 +44,13 @@ import { useInventoryTheme } from "@/app/inventory/_components/theme-provider";
 import { WelcomeDialog } from "@/app/inventory/_components/onboarding/welcome-dialog";
 import { SpotlightTour } from "@/app/inventory/_components/onboarding/spotlight-tour";
 import { SPOTLIGHT_STEPS } from "@/app/inventory/_components/onboarding/onboarding-steps";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/app/inventory/_components/ui/dialog";
 
 const QrScanner = dynamic(
   () => import("@/app/inventory/_components/qr-scanner").then((m) => ({ default: m.QrScanner })),
@@ -68,6 +76,7 @@ type NavigationItem = {
   permission?: keyof ResolvedPermissions;
   roles?: Role[];
   tourId?: string;
+  opensLeadsMenu?: boolean;
 };
 
 // Grouped roughly by how often it's touched: daily stock work first, then
@@ -140,6 +149,7 @@ const navigationItems: NavigationItem[] = [
     matchers: ["/inventory/leads"],
     permission: "client_leads",
     tourId: "tour-client-leads",
+    opensLeadsMenu: true,
   },
   {
     href: "/inventory/visualize",
@@ -229,6 +239,7 @@ export function InventoryShell({
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const [isLeadsMenuOpen, setIsLeadsMenuOpen] = useState(false);
   const [onboardingPhase, setOnboardingPhase] = useState<"idle" | "welcome" | "spotlight">(
     showOnboarding ? "welcome" : "idle",
   );
@@ -344,7 +355,13 @@ export function InventoryShell({
                 href={item.href}
                 aria-current={isActive ? "page" : undefined}
                 data-tour={item.tourId}
-                onClick={() => setIsSidebarOpen(false)}
+                onClick={(event) => {
+                  if (item.opensLeadsMenu) {
+                    event.preventDefault();
+                    setIsLeadsMenuOpen(true);
+                  }
+                  setIsSidebarOpen(false);
+                }}
                 className={cn(
                   "flex items-center gap-3 rounded-xl px-4 py-3 transition-all",
                   isActive
@@ -467,6 +484,39 @@ export function InventoryShell({
       active={onboardingPhase === "spotlight"}
       onDone={finishOnboarding}
     />
+
+    <Dialog open={isLeadsMenuOpen} onOpenChange={setIsLeadsMenuOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Client Leads</DialogTitle>
+          <DialogDescription>Choose which leads you want to view.</DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col gap-3">
+          <Link
+            href="/inventory/leads"
+            onClick={() => setIsLeadsMenuOpen(false)}
+            className="flex items-center gap-3 rounded-xl border border-border px-4 py-3 transition-colors hover:bg-muted"
+          >
+            <UserSearch className="h-5 w-5 shrink-0 text-muted-foreground" />
+            <div className="min-w-0">
+              <p className="font-medium text-foreground">Client Leads (Factory Visited)</p>
+              <p className="text-sm text-muted-foreground">Clients who visited the factory directly</p>
+            </div>
+          </Link>
+          <Link
+            href="/inventory/leads/architect"
+            onClick={() => setIsLeadsMenuOpen(false)}
+            className="flex items-center gap-3 rounded-xl border border-border px-4 py-3 transition-colors hover:bg-muted"
+          >
+            <PencilRuler className="h-5 w-5 shrink-0 text-muted-foreground" />
+            <div className="min-w-0">
+              <p className="font-medium text-foreground">Architect Leads</p>
+              <p className="text-sm text-muted-foreground">Leads sourced through architects</p>
+            </div>
+          </Link>
+        </div>
+      </DialogContent>
+    </Dialog>
     </>
   );
 }
