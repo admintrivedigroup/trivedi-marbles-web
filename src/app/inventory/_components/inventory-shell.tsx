@@ -486,7 +486,7 @@ export function InventoryShell({
     />
 
     <Dialog open={isLeadsMenuOpen} onOpenChange={setIsLeadsMenuOpen}>
-      <DialogContent>
+      <DialogContent overlayClassName="backdrop-blur-xl">
         <DialogHeader>
           <DialogTitle>Client Leads</DialogTitle>
           <DialogDescription>Choose which leads you want to view.</DialogDescription>
