@@ -6,7 +6,11 @@ import Image from "next/image";
 import { motion, useScroll, useTransform } from "motion/react";
 import {
   Anchor,
+  BadgeCheck,
   CheckCircle,
+  Crown,
+  Factory,
+  Ruler,
   ShieldCheck,
   TrendingUp,
 } from "lucide-react";
@@ -49,6 +53,41 @@ const trustItems = [
     icon: TrendingUp,
     title: "Bulk Supply",
     desc: "Large-scale supply for residential and commercial projects.",
+  },
+];
+
+function renderWordMarkTitle(title: string) {
+  return title.split(/(\d+)/g).map((part, index) =>
+    /^\d+$/.test(part) ? (
+      <span key={index} className="lining-nums">
+        {part}
+      </span>
+    ) : (
+      part
+    )
+  );
+}
+
+const wordMarks = [
+  {
+    icon: Factory,
+    title: "Processed to Perfection",
+    desc: "From quarry block to polished slab, every piece passes through our meticulous, multi-stage finishing process.",
+  },
+  {
+    icon: Crown,
+    title: "King of White",
+    desc: "Our signature Ambaji White marble — unrivaled in purity, brightness, and finish.",
+  },
+  {
+    icon: Ruler,
+    title: "Power of 20",
+    desc: "Every slab meets a minimum 20mm thickness, engineered for lasting strength and durability.",
+  },
+  {
+    icon: BadgeCheck,
+    title: "TQS",
+    desc: "Trivedi Quality Standard — our internal benchmark ensuring every slab represents the very best of our production.",
   },
 ];
 
@@ -309,6 +348,30 @@ export default function Hero() {
               Discover Our Story
             </Link>
           </FadeIn>
+        </div>
+      </section>
+
+      <section className="bg-white px-6 py-24 md:px-12 lg:px-24">
+        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-12 divide-y divide-border/40 sm:grid-cols-2 sm:divide-x sm:divide-y-0 md:grid-cols-4 md:gap-8">
+          {wordMarks.map((mark, index) => {
+            const Icon = mark.icon;
+
+            return (
+              <FadeIn
+                key={mark.title}
+                delay={index * 0.1}
+                className="flex flex-col items-center px-6 pt-8 text-center first:pt-0 sm:pt-0"
+              >
+                <Icon className="mb-4 h-8 w-8 text-secondary" />
+                <h3 className="mb-3 whitespace-nowrap font-serif text-base uppercase tracking-normal text-primary sm:text-lg">
+                  {renderWordMarkTitle(mark.title)}
+                </h3>
+                <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
+                  {mark.desc}
+                </p>
+              </FadeIn>
+            );
+          })}
         </div>
       </section>
 
