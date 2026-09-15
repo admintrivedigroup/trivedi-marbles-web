@@ -137,6 +137,9 @@ RESEND_API_KEY=your-resend-key
 # CAPTCHA (contact form bot protection)
 NEXT_PUBLIC_TURNSTILE_SITE_KEY=your-turnstile-site-key
 TURNSTILE_SECRET_KEY=your-turnstile-secret
+
+# Cron (scheduled jobs — see vercel.json)
+CRON_SECRET=a-long-random-string   # Vercel sends this as a Bearer token to authenticate cron requests
 ```
 
 > The `VITE_` prefixed variables are mapped to `NEXT_PUBLIC_` equivalents in `next.config.ts` for compatibility.

@@ -14,6 +14,8 @@ import { updateOwnProfile } from "@/app/inventory/_actions/profile";
 import {
   updateLowStockThreshold,
   updateNotificationPreference,
+  updateStockMovementAlertPreference,
+  updateReservationReminderPreference,
 } from "@/app/inventory/_actions/notifications";
 import { useLookupOptions } from "@/app/inventory/_components/lookup-options-context";
 import { ROLE_BADGE } from "@/app/inventory/_components/inventory-shell";
@@ -319,6 +321,16 @@ function NotificationsSection({
   );
   const [isSavingPreference, setIsSavingPreference] = useState(false);
 
+  const [stockMovementAlertsEnabled, setStockMovementAlertsEnabled] = useState(
+    profile?.stockMovementAlertsEnabled ?? false,
+  );
+  const [isSavingMovementPreference, setIsSavingMovementPreference] = useState(false);
+
+  const [reservationRemindersEnabled, setReservationRemindersEnabled] = useState(
+    profile?.reservationRemindersEnabled ?? false,
+  );
+  const [isSavingReminderPreference, setIsSavingReminderPreference] = useState(false);
+
   const canEditThreshold = profile?.role === "admin" || profile?.role === "superadmin";
   const [threshold, setThreshold] = useState(String(initialLowStockThreshold ?? 5));
   const [thresholdFeedback, setThresholdFeedback] = useState<FeedbackState>(null);
@@ -332,6 +344,28 @@ function NotificationsSection({
     setIsSavingPreference(false);
     if (res.error) {
       setLowStockAlertsEnabled(!next);
+    }
+  }
+
+  async function handleToggleStockMovement() {
+    const next = !stockMovementAlertsEnabled;
+    setStockMovementAlertsEnabled(next);
+    setIsSavingMovementPreference(true);
+    const res = await updateStockMovementAlertPreference(next);
+    setIsSavingMovementPreference(false);
+    if (res.error) {
+      setStockMovementAlertsEnabled(!next);
+    }
+  }
+
+  async function handleToggleReservationReminders() {
+    const next = !reservationRemindersEnabled;
+    setReservationRemindersEnabled(next);
+    setIsSavingReminderPreference(true);
+    const res = await updateReservationReminderPreference(next);
+    setIsSavingReminderPreference(false);
+    if (res.error) {
+      setReservationRemindersEnabled(!next);
     }
   }
 
@@ -378,19 +412,31 @@ function NotificationsSection({
             disabled={isSavingPreference}
           />
         </div>
-        <div className="flex items-center justify-between border-t border-border pt-4 opacity-60">
+        <div className="flex items-center justify-between border-t border-border pt-4">
           <div>
             <p className="font-medium text-foreground">Reservation Reminders</p>
-            <p className="text-sm text-muted-foreground">Coming soon</p>
+            <p className="text-sm text-muted-foreground">
+              Get notified in the bell menu the day before and the day a reservation expires
+            </p>
           </div>
-          <Toggle checked={false} />
+          <Toggle
+            checked={reservationRemindersEnabled}
+            onClick={handleToggleReservationReminders}
+            disabled={isSavingReminderPreference}
+          />
         </div>
-        <div className="flex items-center justify-between border-t border-border pt-4 opacity-60">
+        <div className="flex items-center justify-between border-t border-border pt-4">
           <div>
             <p className="font-medium text-foreground">Stock Movement Alerts</p>
-            <p className="text-sm text-muted-foreground">Coming soon</p>
+            <p className="text-sm text-muted-foreground">
+              Get notified in the bell menu when slabs change status or are transferred between warehouses
+            </p>
           </div>
-          <Toggle checked={false} />
+          <Toggle
+            checked={stockMovementAlertsEnabled}
+            onClick={handleToggleStockMovement}
+            disabled={isSavingMovementPreference}
+          />
         </div>
 
         {canEditThreshold ? (

@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/app/inventory/_lib/audit";
 import { requirePermission } from "@/app/inventory/_lib/action-auth";
+import { notifyTransfer } from "@/app/inventory/_lib/stock-movement-notify";
 
 export type SaveMovementResult = {
   error: string | null;
@@ -104,6 +105,15 @@ export async function saveMovement(
       to: String(targetWarehouse.name),
       notes: notes || null,
     },
+  }).catch(() => {});
+
+  notifyTransfer({
+    slabIds: [slabId],
+    fromWarehouseIds: slab.warehouse_id ? [String(slab.warehouse_id)] : [],
+    fromWarehouseName,
+    toWarehouseId,
+    toWarehouseName: String(targetWarehouse.name),
+    actorUserId: user?.id ?? null,
   }).catch(() => {});
 
   revalidatePath("/inventory/movement");
@@ -234,6 +244,15 @@ export async function saveBatchMovement(
     },
   }).catch(() => {});
 
+  notifyTransfer({
+    slabIds: slabsToMove.map((s) => String(s.id)),
+    fromWarehouseIds: [...new Set(slabsToMove.map((s) => String(s.warehouse_id)).filter(Boolean))],
+    fromWarehouseName,
+    toWarehouseId,
+    toWarehouseName: String(targetWarehouse.name),
+    actorUserId: user?.id ?? null,
+  }).catch(() => {});
+
   revalidatePath("/inventory/movement");
   revalidatePath("/inventory/list");
   revalidatePath("/inventory/dashboard");
@@ -266,7 +285,7 @@ export async function createTransferRequest(
 
   const { data: slabs, error: slabsError } = await supabase
     .from("slabs")
-    .select("id, warehouse_id, warehouses(name), slab_code, marble_name")
+    .select("id, warehouse_id, warehouses(name)")
     .in("id", slabIds);
 
   if (slabsError || !slabs || slabs.length === 0) {
@@ -364,6 +383,15 @@ export async function createTransferRequest(
       to: toWarehouse?.name ?? null,
       notes: notes || null,
     },
+  }).catch(() => {});
+
+  notifyTransfer({
+    slabIds: slabsToTransfer.map((s) => String(s.id)),
+    fromWarehouseIds: [fromWarehouseId],
+    fromWarehouseName,
+    toWarehouseId,
+    toWarehouseName: toWarehouse?.name ?? String(toWarehouseId),
+    actorUserId: user?.id ?? null,
   }).catch(() => {});
 
   revalidatePath("/inventory/movement");
@@ -502,6 +530,15 @@ export async function receiveTransfer(
       from: fromWarehouseName,
       to: toWarehouseName,
     },
+  }).catch(() => {});
+
+  notifyTransfer({
+    slabIds: (slabRows ?? []).map((s) => String(s.id)),
+    fromWarehouseIds: transfer.from_warehouse_id ? [String(transfer.from_warehouse_id)] : [],
+    fromWarehouseName,
+    toWarehouseId,
+    toWarehouseName: toWarehouseName ?? toWarehouseId,
+    actorUserId: user?.id ?? null,
   }).catch(() => {});
 
   revalidatePath("/inventory/movement");

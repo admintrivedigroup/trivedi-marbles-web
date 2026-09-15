@@ -7,6 +7,7 @@ import { logAudit } from "@/app/inventory/_lib/audit";
 import { requirePermission } from "@/app/inventory/_lib/action-auth";
 import { SLAB_STATUS } from "@/app/inventory/_lib/slab-status";
 import { notifyLowStockForSlabIds } from "@/app/inventory/_lib/low-stock";
+import { notifyStatusChange } from "@/app/inventory/_lib/stock-movement-notify";
 
 // Subset of SLAB_STATUS values that can be set manually via this action.
 // "In Transit" is excluded — that status is managed by the transfer workflow.
@@ -105,6 +106,7 @@ export async function updateSlabStatus(
   if (statusName === SLAB_STATUS.RESERVED || statusName === SLAB_STATUS.SOLD) {
     notifyLowStockForSlabIds([slabId]).catch(() => {});
   }
+  notifyStatusChange({ slabIds: [slabId], statusName, actorUserId: user.id }).catch(() => {});
 
   revalidatePath(`/inventory/slab/${slabId}`);
   revalidatePath("/inventory/list");

@@ -189,6 +189,7 @@ async function notifyEligibleUsers(
       body,
       category_id: pair.categoryId,
       warehouse_id: pair.warehouseId,
+      link: `/inventory/list/${pair.categoryId}?warehouse=${pair.warehouseId}`,
     })),
   );
 }

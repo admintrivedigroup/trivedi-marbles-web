@@ -11,6 +11,7 @@ export type NotificationItem = {
   type: string;
   title: string;
   body: string | null;
+  link: string | null;
   readAt: string | null;
   createdAt: string;
 };
@@ -28,7 +29,7 @@ export async function getMyNotifications(limit = 20): Promise<NotificationsResul
   const [{ data: items }, { count: unreadCount }] = await Promise.all([
     supabase
       .from("notifications")
-      .select("id, type, title, body, read_at, created_at")
+      .select("id, type, title, body, link, read_at, created_at")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(limit),
@@ -45,6 +46,7 @@ export async function getMyNotifications(limit = 20): Promise<NotificationsResul
       type: row.type,
       title: row.title,
       body: row.body,
+      link: row.link,
       readAt: row.read_at,
       createdAt: row.created_at,
     })),
@@ -105,6 +107,44 @@ export async function updateNotificationPreference(
   const { error } = await admin
     .from("user_profiles")
     .update({ low_stock_alerts_enabled: lowStockAlertsEnabled })
+    .eq("user_id", user.id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/inventory/settings");
+  return { error: null };
+}
+
+export async function updateStockMovementAlertPreference(
+  enabled: boolean,
+): Promise<NotificationActionResult> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "You must be signed in." };
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("user_profiles")
+    .update({ stock_movement_alerts_enabled: enabled })
+    .eq("user_id", user.id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/inventory/settings");
+  return { error: null };
+}
+
+export async function updateReservationReminderPreference(
+  enabled: boolean,
+): Promise<NotificationActionResult> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "You must be signed in." };
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("user_profiles")
+    .update({ reservation_reminders_enabled: enabled })
     .eq("user_id", user.id);
 
   if (error) return { error: error.message };

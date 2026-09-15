@@ -28,10 +28,12 @@ export type TransferRequest = {
 };
 
 type WarehouseRel = { name: string | null } | Array<{ name: string | null }> | null;
-type MarbleLotsRel = { lot_number: string | null } | Array<{ lot_number: string | null }> | null;
+type MarbleLotsRel =
+  | { lot_number: string | null; marble_name: string | null }
+  | Array<{ lot_number: string | null; marble_name: string | null }>
+  | null;
 type SlabRel = {
   slab_code: string | null;
-  marble_name: string | null;
   sqft: number | null;
   rack_number: string | null;
   marble_lots?: MarbleLotsRel;
@@ -62,7 +64,7 @@ const TRANSFER_SELECT = `
   to_warehouse:warehouses!transfer_requests_to_warehouse_id_fkey(name),
   transfer_request_items(
     id, slab_id, new_rack_number, received_notes,
-    slabs(slab_code, marble_name, sqft, rack_number, marble_lots(lot_number))
+    slabs(slab_code, sqft, rack_number, marble_lots(lot_number, marble_name))
   )
 ` as const;
 
@@ -70,6 +72,12 @@ function getLotNumber(rel: MarbleLotsRel): string | null {
   if (!rel) return null;
   if (Array.isArray(rel)) return rel[0]?.lot_number ?? null;
   return rel.lot_number ?? null;
+}
+
+function getMarbleName(rel: MarbleLotsRel): string | null {
+  if (!rel) return null;
+  if (Array.isArray(rel)) return rel[0]?.marble_name ?? null;
+  return rel.marble_name ?? null;
 }
 
 function getWarehouseName(rel: WarehouseRel): string | null {
@@ -93,7 +101,7 @@ function normalizeTransfer(row: TransferRequestRow): TransferRequest {
       itemId: item.id,
       slabId: String(item.slab_id),
       slabCode: item.slabs?.slab_code ?? null,
-      marbleName: item.slabs?.marble_name ?? null,
+      marbleName: getMarbleName((item.slabs?.marble_lots as MarbleLotsRel) ?? null),
       lotNumber: getLotNumber((item.slabs?.marble_lots as MarbleLotsRel) ?? null),
       sqft: item.slabs?.sqft ?? null,
       currentRackNumber: item.slabs?.rack_number ?? null,

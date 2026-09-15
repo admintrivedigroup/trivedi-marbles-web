@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Bell } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Bell, ChevronRight } from "lucide-react";
 
 import {
   getMyNotifications,
@@ -19,6 +20,7 @@ export function NotificationBell({
   align?: "left" | "right";
   tourId?: string;
 }) {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -60,13 +62,18 @@ export function NotificationBell({
     if (next) void refresh();
   }
 
-  async function handleItemClick(item: NotificationItem) {
-    if (item.readAt) return;
-    setItems((current) =>
-      current.map((n) => (n.id === item.id ? { ...n, readAt: new Date().toISOString() } : n)),
-    );
-    setUnreadCount((count) => Math.max(0, count - 1));
-    await markNotificationRead(item.id);
+  function handleItemClick(item: NotificationItem) {
+    if (!item.readAt) {
+      setItems((current) =>
+        current.map((n) => (n.id === item.id ? { ...n, readAt: new Date().toISOString() } : n)),
+      );
+      setUnreadCount((count) => Math.max(0, count - 1));
+      void markNotificationRead(item.id);
+    }
+    if (item.link) {
+      setIsOpen(false);
+      router.push(item.link);
+    }
   }
 
   async function handleMarkAllRead() {
@@ -144,6 +151,9 @@ export function NotificationBell({
                         {formatRelativeTime(item.createdAt)}
                       </p>
                     </div>
+                    {item.link ? (
+                      <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
+                    ) : null}
                   </div>
                 </button>
               ))

@@ -7,6 +7,7 @@ import { logAudit } from "@/app/inventory/_lib/audit";
 import { requirePermission } from "@/app/inventory/_lib/action-auth";
 import { SLAB_STATUS } from "@/app/inventory/_lib/slab-status";
 import { notifyLowStockForSlabIds } from "@/app/inventory/_lib/low-stock";
+import { notifyStatusChange } from "@/app/inventory/_lib/stock-movement-notify";
 import type { ReservationData } from "@/app/inventory/_actions/update-slab-status";
 
 export type BatchUpdateSlabsResult = {
@@ -84,6 +85,7 @@ export async function batchUpdateSlabsStatus(
   if (statusName === SLAB_STATUS.RESERVED || statusName === SLAB_STATUS.SOLD) {
     notifyLowStockForSlabIds(slabIds).catch(() => {});
   }
+  notifyStatusChange({ slabIds, statusName, actorUserId: user.id, lotId }).catch(() => {});
 
   revalidatePath(`/inventory/lot/${lotId}`);
   revalidatePath("/inventory/list");

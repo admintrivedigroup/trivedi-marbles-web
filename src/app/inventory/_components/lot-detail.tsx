@@ -305,7 +305,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
       if (result.error) {
         setActionError(result.error);
       } else {
-        router.push("/inventory/list");
+        router.push(lot.categoryId ? `/inventory/list/${lot.categoryId}` : "/inventory/list");
       }
     });
   }
@@ -419,7 +419,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
       {/* Back navigation */}
       <div className="mb-6">
         <Link
-          href="/inventory/list"
+          href={lot.categoryId ? `/inventory/list/${lot.categoryId}` : "/inventory/list"}
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />

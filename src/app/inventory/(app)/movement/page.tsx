@@ -25,11 +25,18 @@ export default async function StockMovementPage({
     getOutgoingTransfers(warehouseIds),
   ]);
 
-  // Exclude slabs already in an active transfer so they can't be dispatched twice
+  // Exclude a whole lot from "Available Lots" once any of its slabs are in an
+  // active outgoing transfer, so the lot can't be picked again until that
+  // transfer is received or cancelled.
   const inTransitSlabIds = new Set(
     outgoingTransfers.flatMap((t) => t.slabs.map((s) => s.slabId)),
   );
-  const availableSlabs = slabs.filter((s) => !inTransitSlabIds.has(s.id));
+  const inTransitLotIds = new Set(
+    slabs.filter((s) => inTransitSlabIds.has(s.id) && s.lotId).map((s) => s.lotId as string),
+  );
+  const availableSlabs = slabs.filter(
+    (s) => !inTransitSlabIds.has(s.id) && !(s.lotId && inTransitLotIds.has(s.lotId)),
+  );
 
   return (
     <StockMovement

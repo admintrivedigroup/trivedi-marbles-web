@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/app/inventory/_lib/audit";
 import { requirePermission } from "@/app/inventory/_lib/action-auth";
 import { SLAB_STATUS } from "@/app/inventory/_lib/slab-status";
+import { notifyStatusChange } from "@/app/inventory/_lib/stock-movement-notify";
 import type { ReservationData } from "@/app/inventory/_actions/update-slab-status";
 
 export type UpdateLotStatusResult = {
@@ -126,6 +127,14 @@ export async function updateLotSlabsStatus(
         ? { reservedFor: reservationData.reservedFor, reservedUntil: reservationData.reservedUntil }
         : {}),
     },
+  }).catch(() => {});
+
+  notifyStatusChange({
+    slabIds: slabIds.map(String),
+    statusName: config.targetStatus as "Available" | "Reserved" | "Sold",
+    actorUserId: user.id,
+    contextLabel: lotLabel,
+    lotId,
   }).catch(() => {});
 
   revalidatePath(`/inventory/lot/${lotId}`);

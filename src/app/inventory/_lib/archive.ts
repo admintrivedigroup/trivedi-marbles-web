@@ -34,7 +34,7 @@ export async function getArchivedItems(): Promise<ArchiveResult> {
       await Promise.all([
         supabase
           .from("slabs")
-          .select("id, slab_code, marble_name, sqft, lot_id, deleted_at, marble_lots(lot_number)")
+          .select("id, slab_code, sqft, lot_id, deleted_at, marble_lots(lot_number, marble_name)")
           .not("deleted_at", "is", null)
           .order("deleted_at", { ascending: false })
           .limit(500),
@@ -52,15 +52,20 @@ export async function getArchivedItems(): Promise<ArchiveResult> {
     const slabs: ArchivedSlab[] = (slabData ?? []).map((row) => {
       const rel = row.marble_lots as unknown;
       let lotNumber: string | null = null;
+      let marbleName: string | null = null;
       if (Array.isArray(rel)) {
-        lotNumber = (rel[0] as { lot_number?: string })?.lot_number ?? null;
+        const first = rel[0] as { lot_number?: string; marble_name?: string } | undefined;
+        lotNumber = first?.lot_number ?? null;
+        marbleName = first?.marble_name ?? null;
       } else if (rel && typeof rel === "object") {
-        lotNumber = (rel as { lot_number?: string }).lot_number ?? null;
+        const obj = rel as { lot_number?: string; marble_name?: string };
+        lotNumber = obj.lot_number ?? null;
+        marbleName = obj.marble_name ?? null;
       }
       return {
         id: String(row.id),
         slabCode: typeof row.slab_code === "string" ? row.slab_code : null,
-        marbleName: typeof row.marble_name === "string" ? row.marble_name : null,
+        marbleName,
         lotNumber,
         lotId: row.lot_id != null ? String(row.lot_id) : null,
         sqft: typeof row.sqft === "number" ? row.sqft : null,

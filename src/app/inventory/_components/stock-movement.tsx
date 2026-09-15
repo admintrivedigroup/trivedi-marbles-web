@@ -38,7 +38,9 @@ type StockMovementProps = {
   historyDateTo?: string;
 };
 
-type TransferItem = {
+type SlabTransferItem = {
+  type: "slab";
+  key: string;
   id: string;
   slabCode: string | null;
   marbleName: string | null;
@@ -46,6 +48,19 @@ type TransferItem = {
   sqft: number | null;
   lotNumber: string | null;
 };
+
+type LotTransferItem = {
+  type: "lot";
+  key: string;
+  lotId: string;
+  lotNumber: string | null;
+  marbleName: string | null;
+  slabIds: string[];
+  totalSqft: number;
+  warehouseNames: string[];
+};
+
+type TransferItem = SlabTransferItem | LotTransferItem;
 
 type LotGroup = {
   key: string;
@@ -548,13 +563,22 @@ export function StockMovement({
     [filteredLotGroups, currentPage],
   );
 
-  const addedIds = useMemo(() => new Set(transferItems.map((i) => i.id)), [transferItems]);
+  const addedIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const item of transferItems) {
+      if (item.type === "slab") ids.add(item.id);
+      else for (const id of item.slabIds) ids.add(id);
+    }
+    return ids;
+  }, [transferItems]);
 
   const addSlab = (slab: InventoryListSlab) => {
     if (addedIds.has(slab.id)) return;
     setTransferItems((prev) => [
       ...prev,
       {
+        type: "slab",
+        key: `slab-${slab.id}`,
         id: slab.id,
         slabCode: slab.slabCode,
         marbleName: slab.marbleName,
@@ -565,34 +589,85 @@ export function StockMovement({
     ]);
   };
 
+  // Selecting a whole lot collapses it into a single queue entry, replacing
+  // any individual slabs from that lot already in the queue.
   const addLot = (group: LotGroup) => {
     const toAdd = group.slabs.filter((s) => !addedIds.has(s.id));
     if (toAdd.length === 0) return;
+    const groupSlabIds = new Set(group.slabs.map((s) => s.id));
+    const warehouseNames = [
+      ...new Set(group.slabs.map((s) => s.warehouseName).filter((w): w is string => w !== null)),
+    ];
     setTransferItems((prev) => [
-      ...prev,
-      ...toAdd.map((slab) => ({
-        id: slab.id,
-        slabCode: slab.slabCode,
-        marbleName: slab.marbleName,
-        warehouseName: slab.warehouseName,
-        sqft: slab.sqft,
-        lotNumber: slab.lotNumber,
-      })),
+      ...prev.filter((item) =>
+        item.type === "slab" ? !groupSlabIds.has(item.id) : item.key !== `lot-${group.key}`,
+      ),
+      {
+        type: "lot",
+        key: `lot-${group.key}`,
+        lotId: group.lotId ?? group.key,
+        lotNumber: group.lotNumber,
+        marbleName: group.marbleName,
+        slabIds: group.slabs.map((s) => s.id),
+        totalSqft: group.totalSqft,
+        warehouseNames,
+      },
     ]);
   };
 
+  // Per-slab deselect: drops the slab from the queue, splitting it out of a
+  // consolidated lot entry if it was part of one.
   const removeSlab = (id: string) => {
-    setTransferItems((prev) => prev.filter((i) => i.id !== id));
+    setTransferItems((prev) => {
+      const next: TransferItem[] = [];
+      for (const item of prev) {
+        if (item.type === "slab") {
+          if (item.id !== id) next.push(item);
+          continue;
+        }
+        if (!item.slabIds.includes(id)) {
+          next.push(item);
+          continue;
+        }
+        const remainingIds = item.slabIds.filter((sid) => sid !== id);
+        if (remainingIds.length === 0) continue;
+        const removedSlab = slabs.find((s) => s.id === id);
+        next.push({
+          ...item,
+          slabIds: remainingIds,
+          totalSqft: item.totalSqft - (removedSlab?.sqft ?? 0),
+        });
+      }
+      return next;
+    });
   };
 
-  const totalSqft = transferItems.reduce((sum, i) => sum + (i.sqft ?? 0), 0);
+  // Removes an entire queue row (used by the Transfer Queue panel's X button).
+  const removeQueueItem = (key: string) => {
+    setTransferItems((prev) => prev.filter((item) => item.key !== key));
+  };
+
+  const totalSlabCount = useMemo(
+    () => transferItems.reduce((sum, item) => sum + (item.type === "slab" ? 1 : item.slabIds.length), 0),
+    [transferItems],
+  );
+
+  const totalSqft = useMemo(
+    () =>
+      transferItems.reduce(
+        (sum, item) => sum + (item.type === "slab" ? item.sqft ?? 0 : item.totalSqft),
+        0,
+      ),
+    [transferItems],
+  );
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    if (transferItems.length === 0 || !toWarehouseId) return;
+    const slabIds = transferItems.flatMap((item) => (item.type === "slab" ? [item.id] : item.slabIds));
+    if (slabIds.length === 0 || !toWarehouseId) return;
 
     const formData = new FormData();
-    formData.set("slabIds", transferItems.map((i) => i.id).join(","));
+    formData.set("slabIds", slabIds.join(","));
     formData.set("toWarehouseId", toWarehouseId);
     formData.set("notes", notes);
 
@@ -927,9 +1002,9 @@ export function StockMovement({
               <section className="rounded-xl border border-gray-100 bg-white shadow-sm md:rounded-2xl">
                 <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
                   <h2 className="text-base font-bold text-gray-900">Transfer Queue</h2>
-                  {transferItems.length > 0 && (
+                  {totalSlabCount > 0 && (
                     <span className="rounded-full bg-gray-900 px-2.5 py-0.5 text-xs font-semibold text-white">
-                      {transferItems.length}
+                      {totalSlabCount}
                     </span>
                   )}
                 </div>
@@ -941,31 +1016,63 @@ export function StockMovement({
                     </p>
                   ) : (
                     <ul className="divide-y divide-gray-50">
-                      {transferItems.map((item) => (
-                        <li key={item.id} className="flex items-start gap-3 px-4 py-3">
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-semibold text-gray-900">
-                              {item.marbleName}
-                            </p>
-                            <p className="font-mono text-xs text-gray-500">
-                              {item.slabCode}
-                              {item.lotNumber && (
-                                <span className="ml-1 text-gray-400">· {item.lotNumber}</span>
+                      {transferItems.map((item) =>
+                        item.type === "slab" ? (
+                          <li key={item.key} className="flex items-start gap-3 px-4 py-3">
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-semibold text-gray-900">
+                                {item.marbleName}
+                              </p>
+                              <p className="font-mono text-xs text-gray-500">
+                                {item.slabCode}
+                                {item.lotNumber && (
+                                  <span className="ml-1 text-gray-400">· {item.lotNumber}</span>
+                                )}
+                              </p>
+                              {item.warehouseName && (
+                                <p className="mt-0.5 text-xs text-gray-400">{item.warehouseName}</p>
                               )}
-                            </p>
-                            {item.warehouseName && (
-                              <p className="mt-0.5 text-xs text-gray-400">{item.warehouseName}</p>
-                            )}
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => removeSlab(item.id)}
-                            className="mt-0.5 shrink-0 rounded-md p-1 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </li>
-                      ))}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeQueueItem(item.key)}
+                              className="mt-0.5 shrink-0 rounded-md p-1 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </li>
+                        ) : (
+                          <li key={item.key} className="flex items-start gap-3 px-4 py-3">
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-semibold text-gray-900">
+                                <span className="mr-1.5 inline-flex items-center rounded bg-blue-50 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-blue-600">
+                                  LOT
+                                </span>
+                                {item.marbleName}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {item.lotNumber ?? "—"}
+                                <span className="ml-1 text-gray-400">
+                                  · {item.slabIds.length} slab{item.slabIds.length !== 1 ? "s" : ""} ·{" "}
+                                  {Math.round(item.totalSqft)} sqft
+                                </span>
+                              </p>
+                              {item.warehouseNames.length > 0 && (
+                                <p className="mt-0.5 text-xs text-gray-400">
+                                  {item.warehouseNames.join(", ")}
+                                </p>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeQueueItem(item.key)}
+                              className="mt-0.5 shrink-0 rounded-md p-1 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </li>
+                        ),
+                      )}
                     </ul>
                   )}
                 </div>
@@ -1024,7 +1131,7 @@ export function StockMovement({
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between text-gray-600">
                       <span>Slabs</span>
-                      <span className="font-medium text-gray-900">{transferItems.length}</span>
+                      <span className="font-medium text-gray-900">{totalSlabCount}</span>
                     </div>
                     <div className="flex justify-between text-gray-600">
                       <span>Total sqft <span className="font-light text-gray-400">(estimate)</span></span>
@@ -1036,15 +1143,15 @@ export function StockMovement({
 
                   <button
                     type="submit"
-                    disabled={isPending || transferItems.length === 0 || !toWarehouseId}
+                    disabled={isPending || totalSlabCount === 0 || !toWarehouseId}
                     className="flex w-full items-center justify-center gap-2 rounded-xl bg-gray-900 py-3.5 text-sm font-medium text-white transition-all hover:bg-gray-700 disabled:cursor-not-allowed disabled:bg-gray-300"
                   >
                     {isPending ? (
                       <><LoaderCircle className="h-4 w-4 animate-spin" /> Sending...</>
                     ) : (
                       <><Truck className="h-4 w-4" /> Send{" "}
-                        {transferItems.length > 0
-                          ? `${transferItems.length} Slab${transferItems.length !== 1 ? "s" : ""}`
+                        {totalSlabCount > 0
+                          ? `${totalSlabCount} Slab${totalSlabCount !== 1 ? "s" : ""}`
                           : "Stock"}
                       </>
                     )}
