@@ -336,10 +336,10 @@ export default function Hero() {
               Mastering the Art of Stone Since 1949
             </h2>
             <p className="mb-6 leading-relaxed text-muted-foreground">
-              Incorporated in 1984, Trivedi Marbles Pvt. Ltd. is reckoned as a trusted name in the marble sector. We have been offering high-quality Ambaji White to our clients since our inception and recently have expanded our product portfolio to include new & exotic materials from the quarry of D.K. Trivedi & Sons.
+              Incorporated in 1984, Trivedi Marbles Pvt. Ltd. is reckoned as a trusted name in the marble sector. We have been offering high-quality Ambaji White to our clients since our inception and recently have expanded our product portfolio to include new & exotic marbles from the quarry of D.K. Trivedi & Sons.
             </p>
             <p className="mb-10 leading-relaxed text-muted-foreground">
-              Trivedi Marbles, along with its sister concerns M/s. Trivedi Marmo and M/s. D.K. Trivedi Marbles has its manufacturing and wholesaling facility in Ambaji, and a retail outlet in Ahmedabad, Gujarat (India).
+              Trivedi Marbles has its manufacturing and wholesaling facility in Ambaji, and a retail outlet in Ahmedabad, Gujarat (India).
             </p>
             <Link
               href="/about"
