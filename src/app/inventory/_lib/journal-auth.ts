@@ -5,12 +5,12 @@ import { redirect } from "next/navigation";
 import { getCurrentUserProfile } from "@/app/inventory/_lib/user-profile";
 
 /**
- * Journal management is scoped to admin/superadmin, matching the nav's
- * existing `roles: ["admin", "superadmin"]` gate on the Journal link (same
- * scoping as the sibling Archive/Audit Log features). Unlike the nav (which
- * only hides the link), this is enforced server-side — pages redirect and
- * every mutating server action throws — so the restriction can't be
- * bypassed by navigating directly to a URL or calling an action manually.
+ * Journal management is scoped by the `view_journal` permission, matching
+ * the nav's `permission: "view_journal"` gate on the Journal link. Unlike
+ * the nav (which only hides the link), this is enforced server-side —
+ * pages redirect and every mutating server action throws — so the
+ * restriction can't be bypassed by navigating directly to a URL or calling
+ * an action manually.
  */
 export async function requireJournalManager() {
   const profile = await getCurrentUserProfile();
@@ -18,7 +18,7 @@ export async function requireJournalManager() {
   if (!profile) {
     redirect("/inventory/login");
   }
-  if (profile.role !== "admin" && profile.role !== "superadmin") {
+  if (!profile.permissions.view_journal) {
     redirect("/inventory/dashboard");
   }
 
@@ -30,7 +30,7 @@ export async function requireJournalManager() {
 export async function assertJournalManager() {
   const profile = await getCurrentUserProfile();
 
-  if (!profile || (profile.role !== "admin" && profile.role !== "superadmin")) {
+  if (!profile || !profile.permissions.view_journal) {
     throw new Error("You do not have permission to manage the journal.");
   }
 

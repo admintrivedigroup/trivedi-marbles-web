@@ -21,6 +21,7 @@ import {
   type ArchitectLeadFormData,
 } from "@/app/inventory/_actions/architect-leads";
 import type { ArchitectLead } from "@/app/inventory/_lib/architect-leads";
+import { LeadsNavTabs } from "@/app/inventory/_components/leads-nav-tabs";
 import { cn } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -502,6 +503,8 @@ export function ArchitectLeads({ initialLeads }: ArchitectLeadsProps) {
   const [deleteTarget, setDeleteTarget] = useState<ArchitectLead | null>(null);
   const [isDeleting, startDelete] = useTransition();
   const [filterProjectType, setFilterProjectType] = useState<string>("all");
+  const [addedDateFrom, setAddedDateFrom] = useState("");
+  const [addedDateTo, setAddedDateTo] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
   const [isBulkDeleting, startBulkDelete] = useTransition();
@@ -528,6 +531,14 @@ export function ArchitectLeads({ initialLeads }: ArchitectLeadsProps) {
 
     if (filterProjectType !== "all") {
       list = list.filter((l) => l.project_type === filterProjectType);
+    }
+
+    if (addedDateFrom) {
+      list = list.filter((l) => l.created_at && l.created_at.slice(0, 10) >= addedDateFrom);
+    }
+
+    if (addedDateTo) {
+      list = list.filter((l) => l.created_at && l.created_at.slice(0, 10) <= addedDateTo);
     }
 
     if (search.trim()) {
@@ -557,7 +568,7 @@ export function ArchitectLeads({ initialLeads }: ArchitectLeadsProps) {
     });
 
     return list;
-  }, [leads, search, filterProjectType, sortKey, sortDir]);
+  }, [leads, search, filterProjectType, addedDateFrom, addedDateTo, sortKey, sortDir]);
 
   function handleDeleteConfirm() {
     if (!deleteTarget) return;
@@ -630,14 +641,17 @@ export function ArchitectLeads({ initialLeads }: ArchitectLeadsProps) {
             {leads.length} lead{leads.length !== 1 ? "s" : ""} total
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setDrawerLead("new")}
-          className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-700 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Add Lead
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <LeadsNavTabs active="architect" />
+          <button
+            type="button"
+            onClick={() => setDrawerLead("new")}
+            className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-700 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Add Lead
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -664,6 +678,35 @@ export function ArchitectLeads({ initialLeads }: ArchitectLeadsProps) {
             </option>
           ))}
         </select>
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-gray-500">Added:</label>
+          <input
+            type="date"
+            value={addedDateFrom}
+            onChange={(e) => setAddedDateFrom(e.target.value)}
+            className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-100"
+          />
+          <span className="text-sm text-gray-400">to</span>
+          <input
+            type="date"
+            value={addedDateTo}
+            onChange={(e) => setAddedDateTo(e.target.value)}
+            className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-100"
+          />
+          {addedDateFrom || addedDateTo ? (
+            <button
+              type="button"
+              onClick={() => {
+                setAddedDateFrom("");
+                setAddedDateTo("");
+              }}
+              className="text-sm text-gray-400 hover:text-gray-600"
+              title="Clear date range"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          ) : null}
+        </div>
         {filtered.length !== leads.length ? (
           <span className="text-sm text-gray-500">{filtered.length} shown</span>
         ) : null}

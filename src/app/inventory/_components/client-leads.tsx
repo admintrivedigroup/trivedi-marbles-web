@@ -25,6 +25,7 @@ import {
   type ClientLeadFormData,
 } from "@/app/inventory/_actions/client-leads";
 import type { ClientLead } from "@/app/inventory/_lib/client-leads";
+import { LeadsNavTabs } from "@/app/inventory/_components/leads-nav-tabs";
 import { cn } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -790,14 +791,17 @@ export function ClientLeads({ initialLeads }: ClientLeadsProps) {
             {leads.length} lead{leads.length !== 1 ? "s" : ""} total
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setDrawerLead("new")}
-          className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-700 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Add Lead
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <LeadsNavTabs active="client" />
+          <button
+            type="button"
+            onClick={() => setDrawerLead("new")}
+            className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-700 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Add Lead
+          </button>
+        </div>
       </div>
 
       {/* Filters */}

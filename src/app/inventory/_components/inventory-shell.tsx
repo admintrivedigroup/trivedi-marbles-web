@@ -74,7 +74,6 @@ type NavigationItem = {
   label: string;
   matchers: string[];
   permission?: keyof ResolvedPermissions;
-  roles?: Role[];
   tourId?: string;
   opensLeadsMenu?: boolean;
 };
@@ -88,6 +87,7 @@ const navigationItems: NavigationItem[] = [
     icon: LayoutDashboard,
     label: "Dashboard",
     matchers: ["/inventory/dashboard"],
+    permission: "view_dashboard",
     tourId: "tour-dashboard",
   },
   {
@@ -95,6 +95,7 @@ const navigationItems: NavigationItem[] = [
     icon: Package,
     label: "Inventory",
     matchers: ["/inventory/list", "/inventory/slab", "/inventory/lot"],
+    permission: "view_inventory",
     tourId: "tour-inventory",
   },
   {
@@ -118,6 +119,7 @@ const navigationItems: NavigationItem[] = [
     icon: ClipboardList,
     label: "Tasks",
     matchers: ["/inventory/tasks"],
+    permission: "view_tasks",
     tourId: "tour-tasks",
   },
   {
@@ -125,6 +127,7 @@ const navigationItems: NavigationItem[] = [
     icon: CalendarDays,
     label: "Task Calendar",
     matchers: ["/inventory/task-calendar"],
+    permission: "view_task_calendar",
     tourId: "tour-task-calendar",
   },
   {
@@ -132,6 +135,7 @@ const navigationItems: NavigationItem[] = [
     icon: Target,
     label: "KRA / KPI",
     matchers: ["/inventory/kra"],
+    permission: "view_kra",
     tourId: "tour-kra",
   },
   {
@@ -156,6 +160,7 @@ const navigationItems: NavigationItem[] = [
     icon: Eye,
     label: "Visualizer",
     matchers: ["/inventory/visualize"],
+    permission: "view_visualizer",
     tourId: "tour-visualizer",
   },
   {
@@ -163,7 +168,7 @@ const navigationItems: NavigationItem[] = [
     icon: BookOpen,
     label: "Journal",
     matchers: ["/inventory/journal"],
-    roles: ["admin", "superadmin"],
+    permission: "view_journal",
     tourId: "tour-journal",
   },
   {
@@ -179,7 +184,7 @@ const navigationItems: NavigationItem[] = [
     icon: ClipboardList,
     label: "Audit Log",
     matchers: ["/inventory/audit"],
-    roles: ["admin", "superadmin"],
+    permission: "view_audit_log",
     tourId: "tour-audit-log",
   },
   {
@@ -187,7 +192,7 @@ const navigationItems: NavigationItem[] = [
     icon: Archive,
     label: "Archive",
     matchers: ["/inventory/archive"],
-    roles: ["admin", "superadmin"],
+    permission: "view_archive",
     tourId: "tour-archive",
   },
   {
@@ -273,7 +278,6 @@ export function InventoryShell({
   }, []);
 
   const visibleItems = navigationItems.filter((item) => {
-    if (item.roles && !item.roles.includes(role)) return false;
     if (!item.permission) return true;
     if (!permissions) return false;
     return permissions[item.permission];

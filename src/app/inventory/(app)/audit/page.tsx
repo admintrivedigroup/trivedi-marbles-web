@@ -11,7 +11,7 @@ type AuditPageProps = {
 export default async function AuditPage({ searchParams }: AuditPageProps) {
   const profile = await getCurrentUserProfile();
 
-  if (!profile || (profile.role !== "admin" && profile.role !== "superadmin")) {
+  if (!profile || !profile.permissions.view_audit_log) {
     return (
       <div className="px-4 py-8 md:px-8">
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
