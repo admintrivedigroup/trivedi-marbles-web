@@ -21,6 +21,49 @@ export type NotificationsResult = {
   unreadCount: number;
 };
 
+// Not exported: a "use server" module may only export async functions, so
+// the page size travels in NotificationsPageResult instead of as a const.
+const NOTIFICATIONS_PAGE_SIZE = 25;
+
+export type NotificationsPageResult = {
+  items: NotificationItem[];
+  total: number;
+  pageSize: number;
+};
+
+/** Paginated history for the /inventory/notifications page — unlike
+ * getMyNotifications (capped at `limit` for the bell dropdown), this covers
+ * the full backlog via `.range()`. */
+export async function getMyNotificationsPage(page = 0): Promise<NotificationsPageResult> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { items: [], total: 0, pageSize: NOTIFICATIONS_PAGE_SIZE };
+
+  const from = page * NOTIFICATIONS_PAGE_SIZE;
+  const to = from + NOTIFICATIONS_PAGE_SIZE - 1;
+
+  const { data, count } = await supabase
+    .from("notifications")
+    .select("id, type, title, body, link, read_at, created_at", { count: "exact" })
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .range(from, to);
+
+  return {
+    items: (data ?? []).map((row) => ({
+      id: String(row.id),
+      type: row.type,
+      title: row.title,
+      body: row.body,
+      link: row.link,
+      readAt: row.read_at,
+      createdAt: row.created_at,
+    })),
+    total: count ?? 0,
+    pageSize: NOTIFICATIONS_PAGE_SIZE,
+  };
+}
+
 export async function getMyNotifications(limit = 20): Promise<NotificationsResult> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
