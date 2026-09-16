@@ -1,0 +1,17 @@
+-- Removes an undocumented CHECK constraint on notifications.type that isn't
+-- tracked in any prior migration here (it must have been added by hand in
+-- the Supabase SQL editor). It silently rejected inserts for any type
+-- outside whatever set it was written with — confirmed by testing an
+-- insert with type = 'task_assigned' (added in
+-- 20260915_task_notifications.sql) and getting back:
+--   error 23514, "new row for relation \"notifications\" violates check
+--   constraint \"notifications_type_check\""
+-- Since the insert path (createAdminClient(), fire-and-forget with
+-- `.catch(() => {})`) never checks the Postgrest response's `.error` field,
+-- this failed completely silently — the assignee just never got notified.
+--
+-- 20260915_stock_movement_notifications.sql already documents the intended
+-- design: "notifications.type has no CHECK constraint (plain TEXT)". This
+-- migration makes the live schema match that, so adding a new notification
+-- type never needs a schema change again.
+ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check;

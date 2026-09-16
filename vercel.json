@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/reservation-reminders",
       "schedule": "30 2 * * *"
+    },
+    {
+      "path": "/api/cron/task-reminders",
+      "schedule": "35 2 * * *"
     }
   ]
 }

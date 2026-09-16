@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { TaskStatus, TaskPriority } from "@/app/inventory/_lib/tasks";
 import { requireUser, requireAdmin } from "@/app/inventory/_lib/action-auth";
+import { notifyTaskAssigned } from "@/app/inventory/_lib/task-notify";
 
 export type TaskFormData = {
   title: string;
@@ -67,6 +68,16 @@ export async function createTask(
 
   const taskId = row.id as string;
 
+  const assignedTo = nullIfEmpty(data.assigned_to);
+  if (assignedTo) {
+    notifyTaskAssigned({
+      taskId,
+      title: data.title,
+      assignedTo,
+      actorUserId: user?.id ?? null,
+    }).catch(() => {});
+  }
+
   if (checklistItems.length > 0) {
     await supabase.from("task_checklist_items").insert(
       checklistItems
@@ -95,12 +106,25 @@ export async function updateTask(
   const access = await assertTaskOwnerOrAdmin(supabase, id);
   if (!access.ok) return { success: false, error: access.error };
 
+  const { data: existing } = await supabase.from("tasks").select("assigned_to").eq("id", id).maybeSingle();
+
   const { error } = await supabase
     .from("tasks")
     .update({ ...sanitize(data, null), updated_at: new Date().toISOString() })
     .eq("id", id);
 
   if (error) return { success: false, error: error.message };
+
+  const newAssignee = nullIfEmpty(data.assigned_to);
+  if (newAssignee && newAssignee !== existing?.assigned_to) {
+    const { data: { user } } = await supabase.auth.getUser();
+    notifyTaskAssigned({
+      taskId: id,
+      title: data.title,
+      assignedTo: newAssignee,
+      actorUserId: user?.id ?? null,
+    }).catch(() => {});
+  }
 
   revalidatePath("/inventory/tasks");
   return { success: true, id };
