@@ -968,13 +968,15 @@ export function TasksManager({ initialTasks, users, taskCategories, currentUserI
           ) : null}
         </div>
 
-        <select value={filterAssigned} onChange={(e) => setFilterAssigned(e.target.value)}
-          className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600 focus:border-blue-400 focus:outline-none">
-          <option value="">All Assigned</option>
-          {users.map((u) => (
-            <option key={u.userId} value={u.userId}>{u.displayName ?? u.email}</option>
-          ))}
-        </select>
+        {isAdmin ? (
+          <select value={filterAssigned} onChange={(e) => setFilterAssigned(e.target.value)}
+            className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600 focus:border-blue-400 focus:outline-none">
+            <option value="">All Assigned</option>
+            {users.map((u) => (
+              <option key={u.userId} value={u.userId}>{u.displayName ?? u.email}</option>
+            ))}
+          </select>
+        ) : null}
 
         {isAdmin ? (
           <button
