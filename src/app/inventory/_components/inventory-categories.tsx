@@ -3,7 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Download, Package, Search, X } from "lucide-react";
+import { Download, Package, Ruler, Search, X } from "lucide-react";
 import { ActivitySpinner } from "@/components/ui/activity-spinner";
 
 import type { CategoryFolder } from "@/app/inventory/_lib/category-overview";
@@ -65,6 +65,14 @@ export function InventoryCategories({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Link
+            href="/inventory/list/search"
+            className="flex items-center gap-2 rounded-xl border border-border px-4 py-3 font-medium text-muted-foreground transition-colors hover:bg-muted"
+            title="Search slabs by category and size"
+          >
+            <Ruler className="h-4 w-4" />
+            Advanced Search
+          </Link>
           <a
             href="/inventory/export"
             className="flex items-center gap-2 rounded-xl border border-border px-4 py-3 font-medium text-muted-foreground transition-colors hover:bg-muted"
