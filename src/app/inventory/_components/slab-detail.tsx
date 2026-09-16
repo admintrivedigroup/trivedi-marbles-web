@@ -217,6 +217,19 @@ export function SlabDetail({ images, movements, reservationHistory, slab, isInTr
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showReserveDialog, setShowReserveDialog] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showOriginal, setShowOriginal] = useState(false);
+  const [lastActiveIndex, setLastActiveIndex] = useState(activeImageIndex);
+
+  if (lastActiveIndex !== activeImageIndex) {
+    setLastActiveIndex(activeImageIndex);
+    setShowOriginal(false);
+  }
+
+  const activeImage = images[activeImageIndex] as SlabImage | undefined;
+  const hasOriginal = Boolean(activeImage?.originalUrl);
+  const activeImageSrc = activeImage
+    ? withCloudinaryTransforms(showOriginal && activeImage.originalUrl ? activeImage.originalUrl : activeImage.imageUrl)
+    : "";
 
   useEffect(() => {
     if (!isFullscreen) return;
@@ -306,18 +319,33 @@ export function SlabDetail({ images, movements, reservationHistory, slab, isInTr
             {/* Main photo */}
             <div className="overflow-hidden rounded-2xl border border-border bg-muted shadow-sm">
               {images.length > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => setIsFullscreen(true)}
-                  className="relative w-full cursor-zoom-in"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={withCloudinaryTransforms(images[activeImageIndex].imageUrl)}
-                    alt={`Slab ${slab.slabCode ?? ""}`}
-                    className="aspect-9/8 w-full object-cover"
-                  />
-                </button>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsFullscreen(true)}
+                    className="relative block w-full cursor-zoom-in"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={activeImageSrc}
+                      alt={`Slab ${slab.slabCode ?? ""}`}
+                      className="aspect-9/8 w-full object-cover"
+                    />
+                  </button>
+                  {hasOriginal && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowOriginal((v) => !v);
+                      }}
+                      className="absolute right-2 top-2 z-10 flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/80"
+                    >
+                      <ArrowLeftRight className="h-3.5 w-3.5" />
+                      {showOriginal ? "Cropped" : "Compare"}
+                    </button>
+                  )}
+                </div>
               ) : (
                 <div className="flex aspect-9/8 items-center justify-center">
                   <Package className="h-16 w-16 text-muted-foreground" />
@@ -406,7 +434,7 @@ export function SlabDetail({ images, movements, reservationHistory, slab, isInTr
                 <SpecRow
                   icon={<Calendar className="h-4 w-4" />}
                   label="Added"
-                  value={formatDate(slab.createdAt) ?? "-"}
+                  value={formatDateTime(slab.createdAt)}
                 />
                 <SpecRow
                   icon={<FileText className="h-4 w-4" />}
@@ -648,10 +676,25 @@ export function SlabDetail({ images, movements, reservationHistory, slab, isInTr
             </button>
           )}
 
+          {/* Compare toggle */}
+          {hasOriginal && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowOriginal((v) => !v);
+              }}
+              className="absolute left-4 top-4 z-10 flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/20"
+            >
+              <ArrowLeftRight className="h-3.5 w-3.5" />
+              {showOriginal ? "Cropped" : "Compare"}
+            </button>
+          )}
+
           {/* Image */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={withCloudinaryTransforms(images[activeImageIndex].imageUrl)}
+            src={activeImageSrc}
             alt={`Slab ${slab.slabCode ?? ""}`}
             className="max-h-screen max-w-full object-contain"
             onClick={(e) => e.stopPropagation()}

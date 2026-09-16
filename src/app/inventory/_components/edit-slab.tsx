@@ -12,12 +12,13 @@ import { ArrowLeft, ChevronLeft, ChevronRight, ImagePlus, LoaderCircle, Save, X 
 
 import { updateSlab } from "@/app/inventory/_actions/update-slab";
 import {
+  cleanupCloudinaryImages,
   deleteSlabImage,
   saveSlabImages,
 } from "@/app/inventory/_actions/slab-images";
 import { reorderSlabImages } from "@/app/inventory/_actions/reorder-slab-images";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
-import { compressImage } from "@/lib/cloudinary/compress";
+import { SlabCropDialog, type SlabCropResult } from "@/app/inventory/_components/slab-crop-dialog";
 import type { SlabEditImage, SlabForEdit } from "@/app/inventory/_lib/slab-edit";
 
 function calcSqft(length: string, width: string) {
@@ -44,6 +45,7 @@ export function EditSlab({ slab }: { slab: SlabForEdit }) {
   const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<string>>(new Set());
   const [imageError, setImageError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [cropDialogFile, setCropDialogFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function handleChange(
@@ -107,27 +109,54 @@ export function EditSlab({ slab }: { slab: SlabForEdit }) {
     if (result.error) setImageError(result.error);
   }
 
-  async function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
+  function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = "";
+    setCropDialogFile(file);
+  }
+
+  async function handleCropConfirm(result: SlabCropResult) {
+    setCropDialogFile(null);
     setImageError(null);
     setIsUploading(true);
     try {
-      const compressed = await compressImage(file);
-      const { secureUrl, publicId } = await uploadToCloudinary(compressed);
+      const { secureUrl, publicId } = await uploadToCloudinary(result.croppedFile);
+      let originalUrl: string | null = null;
+      let originalPublicId: string | null = null;
+      if (result.originalFile) {
+        const original = await uploadToCloudinary(result.originalFile);
+        originalUrl = original.secureUrl;
+        originalPublicId = original.publicId;
+      }
       const nextSortOrder = images.length > 0
         ? Math.max(...images.map((img) => img.sortOrder)) + 1
         : 0;
-      const result = await saveSlabImages([
-        { imageUrl: secureUrl, publicId, slabId: slab.id, sortOrder: nextSortOrder },
+      const saveResult = await saveSlabImages([
+        {
+          imageUrl: secureUrl,
+          publicId,
+          slabId: slab.id,
+          sortOrder: nextSortOrder,
+          originalUrl,
+          originalPublicId,
+          cropBox: result.cropBox,
+        },
       ]);
-      if (result.error) {
-        setImageError(result.error);
+      if (saveResult.error) {
+        const cleanupIds = originalPublicId ? [publicId, originalPublicId] : [publicId];
+        cleanupCloudinaryImages(cleanupIds).catch(() => {});
+        setImageError(saveResult.error);
       } else {
         setImages((prev) => [
           ...prev,
-          { id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, imageUrl: secureUrl, publicId, sortOrder: nextSortOrder, fileSize: compressed.size },
+          {
+            id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            imageUrl: secureUrl,
+            publicId,
+            sortOrder: nextSortOrder,
+            fileSize: result.croppedFile.size,
+          },
         ]);
       }
     } catch (err) {
@@ -406,6 +435,14 @@ export function EditSlab({ slab }: { slab: SlabForEdit }) {
           </button>
         </div>
       </form>
+
+      {cropDialogFile && (
+        <SlabCropDialog
+          file={cropDialogFile}
+          onCancel={() => setCropDialogFile(null)}
+          onConfirm={handleCropConfirm}
+        />
+      )}
     </>
   );
 }

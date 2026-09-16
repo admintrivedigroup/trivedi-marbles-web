@@ -24,8 +24,6 @@ export async function addSlabToLot(
   const rackNumber = String(formData.get("rackNumber") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
   const statusId = String(formData.get("statusId") ?? "").trim();
-  const categoryId = String(formData.get("categoryId") ?? "").trim();
-  const thicknessId = String(formData.get("thicknessId") ?? "").trim();
   const warehouseId = String(formData.get("warehouseId") ?? "").trim();
   const marbleName = String(formData.get("marbleName") ?? "").trim();
   const sellingPriceInput = String(formData.get("sellingPrice") ?? "").trim();
@@ -57,16 +55,13 @@ export async function addSlabToLot(
     .from("slabs")
     .insert({
       slab_code: slabCode,
-      marble_name: marbleName || null,
       length,
       width,
       sqft,
       rack_number: rackNumber || null,
       notes: notes || null,
       lot_id: lotId,
-      category_id: categoryId || null,
       status_id: statusId || null,
-      thickness_id: thicknessId || null,
       warehouse_id: warehouseId || null,
       selling_price: toOptionalPrice(sellingPriceInput),
       dealer_price: toOptionalPrice(dealerPriceInput),

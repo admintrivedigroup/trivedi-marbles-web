@@ -18,8 +18,8 @@ import {
   saveSlabImages,
 } from "@/app/inventory/_actions/slab-images";
 import { uploadToCloudinary } from "@/lib/cloudinary/upload";
-import { compressImage } from "@/lib/cloudinary/compress";
 import { useLookupOptions } from "@/app/inventory/_components/lookup-options-context";
+import { SlabCropDialog, type SlabCropResult } from "@/app/inventory/_components/slab-crop-dialog";
 
 type LotMeta = {
   id: string;
@@ -46,8 +46,9 @@ export function AddSlabToLotForm({ lot }: { lot: LotMeta }) {
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [photo, setPhoto] = useState<SlabCropResult | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [cropDialogFile, setCropDialogFile] = useState<File | null>(null);
   const previewUrlRef = useRef<string | null>(null);
 
   // Revoke object URL on unmount to avoid memory leaks
@@ -80,17 +81,23 @@ export function AddSlabToLotForm({ lot }: { lot: LotMeta }) {
 
   function handleImageChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0] ?? null;
+    e.target.value = "";
+    if (file) setCropDialogFile(file);
+  }
+
+  function handleCropConfirm(result: SlabCropResult) {
     if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
-    const url = file ? URL.createObjectURL(file) : null;
+    const url = URL.createObjectURL(result.croppedFile);
     previewUrlRef.current = url;
-    setImageFile(file);
     setImagePreviewUrl(url);
+    setPhoto(result);
+    setCropDialogFile(null);
   }
 
   function removeImage() {
     if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
     previewUrlRef.current = null;
-    setImageFile(null);
+    setPhoto(null);
     setImagePreviewUrl(null);
   }
 
@@ -124,17 +131,32 @@ export function AddSlabToLotForm({ lot }: { lot: LotMeta }) {
       const slabId = result.slabId!;
 
       // Upload photo if one was selected
-      if (imageFile) {
+      if (photo) {
         setStatusMessage("Uploading photo...");
         try {
-          const compressed = await compressImage(imageFile);
-          const { secureUrl, publicId } = await uploadToCloudinary(compressed);
+          const { secureUrl, publicId } = await uploadToCloudinary(photo.croppedFile);
+          let originalUrl: string | null = null;
+          let originalPublicId: string | null = null;
+          if (photo.originalFile) {
+            const original = await uploadToCloudinary(photo.originalFile);
+            originalUrl = original.secureUrl;
+            originalPublicId = original.publicId;
+          }
           const saveResult = await saveSlabImages([
-            { slabId, imageUrl: secureUrl, publicId, sortOrder: 0 },
+            {
+              slabId,
+              imageUrl: secureUrl,
+              publicId,
+              sortOrder: 0,
+              originalUrl,
+              originalPublicId,
+              cropBox: photo.cropBox,
+            },
           ]);
           if (saveResult.error) {
             // Photo failed to save — clean up Cloudinary and warn but still navigate
-            cleanupCloudinaryImages([publicId]).catch(() => {});
+            const cleanupIds = originalPublicId ? [publicId, originalPublicId] : [publicId];
+            cleanupCloudinaryImages(cleanupIds).catch(() => {});
             setError(`Slab saved, but photo could not be recorded. ${saveResult.error}`);
             return;
           }
@@ -374,6 +396,14 @@ export function AddSlabToLotForm({ lot }: { lot: LotMeta }) {
           </Link>
         </div>
       </form>
+
+      {cropDialogFile && (
+        <SlabCropDialog
+          file={cropDialogFile}
+          onCancel={() => setCropDialogFile(null)}
+          onConfirm={handleCropConfirm}
+        />
+      )}
     </div>
   );
 }

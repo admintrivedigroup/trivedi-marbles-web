@@ -29,7 +29,7 @@ export async function permanentDeleteSlab(slabId: string): Promise<PermanentDele
 
   const { data: images } = await supabase
     .from("slab_images")
-    .select("public_id")
+    .select("public_id, original_public_id")
     .eq("slab_id", slabId);
 
   await supabase.from("transfer_request_items").delete().eq("slab_id", slabId);
@@ -40,7 +40,7 @@ export async function permanentDeleteSlab(slabId: string): Promise<PermanentDele
   if (error) return { error: `Unable to delete slab. ${error.message}` };
 
   const publicIds = (images ?? [])
-    .map((img) => img.public_id)
+    .flatMap((img) => [img.public_id, img.original_public_id])
     .filter((id): id is string => typeof id === "string" && id.length > 0);
   if (publicIds.length > 0) cleanupCloudinaryImages(publicIds).catch(() => {});
 
@@ -86,11 +86,11 @@ export async function permanentDeleteLot(lotId: string): Promise<PermanentDelete
   if (slabIds.length > 0) {
     const { data: images } = await supabase
       .from("slab_images")
-      .select("public_id")
+      .select("public_id, original_public_id")
       .in("slab_id", slabIds);
 
     publicIds = (images ?? [])
-      .map((img) => img.public_id)
+      .flatMap((img) => [img.public_id, img.original_public_id])
       .filter((id): id is string => typeof id === "string" && id.length > 0);
 
     await supabase.from("transfer_request_items").delete().in("slab_id", slabIds);

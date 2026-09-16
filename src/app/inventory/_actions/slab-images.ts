@@ -11,6 +11,9 @@ export type SlabImageInput = {
   publicId: string;
   slabId: string;
   sortOrder: number;
+  originalUrl?: string | null;
+  originalPublicId?: string | null;
+  cropBox?: { x: number; y: number; width: number; height: number } | null;
 };
 
 export type SaveSlabImagesResult = {
@@ -58,6 +61,9 @@ export async function saveSlabImages(
           image_url: img.imageUrl,
           public_id: img.publicId,
           sort_order: img.sortOrder,
+          original_url: img.originalUrl ?? null,
+          original_public_id: img.originalPublicId ?? null,
+          crop_box: img.cropBox ?? null,
         })),
       )
       .select("id");
@@ -116,6 +122,12 @@ export async function deleteSlabImage(
       .eq("id", slabId)
       .single();
 
+    const { data: imageRow } = await supabase
+      .from("slab_images")
+      .select("original_public_id")
+      .eq("id", imageId)
+      .single();
+
     const { error } = await supabase
       .from("slab_images")
       .delete()
@@ -138,7 +150,10 @@ export async function deleteSlabImage(
     revalidatePath(`/inventory/slab/${slabId}`);
     revalidatePath(`/inventory/edit/${slabId}`);
 
-    cleanupCloudinaryImages([publicId]).catch(() => {});
+    const originalPublicId =
+      typeof imageRow?.original_public_id === "string" ? imageRow.original_public_id : null;
+    const cleanupIds = originalPublicId ? [publicId, originalPublicId] : [publicId];
+    cleanupCloudinaryImages(cleanupIds).catch(() => {});
 
     return { error: null };
   } catch (err) {

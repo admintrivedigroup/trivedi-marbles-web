@@ -148,6 +148,7 @@ export type SlabImage = {
   imageUrl: string;
   publicId: string;
   sortOrder: number;
+  originalUrl: string | null;
 };
 
 export async function getSlabImages(slabId: string): Promise<SlabImage[]> {
@@ -155,7 +156,7 @@ export async function getSlabImages(slabId: string): Promise<SlabImage[]> {
     const supabase = createAdminClient();
     const { data, error } = await supabase
       .from("slab_images")
-      .select("id, image_url, public_id, sort_order")
+      .select("id, image_url, public_id, sort_order, original_url")
       .eq("slab_id", slabId)
       .order("sort_order", { ascending: true });
 
@@ -166,6 +167,7 @@ export async function getSlabImages(slabId: string): Promise<SlabImage[]> {
       imageUrl: String(row.image_url ?? ""),
       publicId: String(row.public_id ?? ""),
       sortOrder: typeof row.sort_order === "number" ? row.sort_order : 0,
+      originalUrl: typeof row.original_url === "string" && row.original_url ? row.original_url : null,
     }));
   } catch {
     return [];

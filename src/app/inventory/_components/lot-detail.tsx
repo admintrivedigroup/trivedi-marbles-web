@@ -43,6 +43,7 @@ import { toggleLotWebsite } from "@/app/inventory/_actions/toggle-lot-website";
 import {
   formatNumber as fmtNum,
   formatDate as fmtDate,
+  formatDateTime as fmtDateTime,
   formatThickness as fmtThickness,
   formatSize as fmtSize,
   getStatusColor,
@@ -411,7 +412,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
   }
 
   const thickness = fmtThickness(lot.thicknessName);
-  const addedDate = fmtDate(lot.createdAt);
+  const addedDate = lot.createdAt ? fmtDateTime(lot.createdAt) : null;
   const purchaseDate = fmtDate(lot.purchaseDate);
 
   return (
