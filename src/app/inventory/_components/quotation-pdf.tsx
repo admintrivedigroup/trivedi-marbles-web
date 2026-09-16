@@ -9,25 +9,24 @@ import {
   View,
 } from "@react-pdf/renderer";
 
-// ── Update these with your actual company details ────────────────────────────
+// ── Update phone/bank fields once available ───────────────────────────────────
 const COMPANY = {
-  name: "Trivedi Grani Marmo",
-  address: "Your Address, City, State - PIN Code",
-  phone: "+91 XXXXX XXXXX",
+  name: "Trivedi Marbles Pvt. Ltd.",
+  address: "1, Kumbharita Road, Ambaji, Banaskantha, Gujarat - 385110",
+  phone: "",
   email: "admin@trivedigranimarmo.com",
-  gst: "GSTIN: XXXXXXXXXXXX",
-  bankName: "Your Bank Name",
-  accountNo: "XXXXXXXXXXXX",
-  ifsc: "XXXXXX0000000",
-  accountHolder: "Trivedi Grani Marmo",
+  gst: "GSTIN: 24AAACT5711G1ZP",
+  bankName: "",
+  accountNo: "",
+  ifsc: "",
+  accountHolder: "",
 };
 
 const TERMS = [
   "Measurements are approximate estimates; final billing on actual sqft.",
   "This quotation is valid for 15 days from the date of issue.",
-  "50% advance is required to confirm the order.",
-  "Transportation and installation charges are not included.",
-  "GST as applicable will be charged on actuals.",
+  "100% advance is required to confirm the order.",
+  "Transportation and installation charges are not included."
 ];
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -184,6 +183,7 @@ export function QuotationDocument({
   grandTotal,
 }: QuotationPdfProps) {
   const hasCustomer = customerName || customerPhone || customerEmail;
+  const hasBankDetails = COMPANY.bankName || COMPANY.accountNo || COMPANY.ifsc;
 
   return (
     <Document title={`Quotation ${quotationNumber}`} author={COMPANY.name} creator={COMPANY.name}>
@@ -193,7 +193,9 @@ export function QuotationDocument({
           <View>
             <Text style={s.companyName}>{COMPANY.name}</Text>
             <Text style={s.companyDetail}>{COMPANY.address}</Text>
-            <Text style={s.companyDetail}>{COMPANY.phone} · {COMPANY.email}</Text>
+            <Text style={s.companyDetail}>
+              {COMPANY.phone ? `${COMPANY.phone} · ${COMPANY.email}` : COMPANY.email}
+            </Text>
             <Text style={s.companyDetail}>{COMPANY.gst}</Text>
           </View>
           <View>
@@ -307,7 +309,7 @@ export function QuotationDocument({
 
         {/* ── Footer (fixed) ── */}
         <View style={s.footer} fixed>
-          <View style={{ flex: 1, marginRight: 16 }}>
+          <View style={{ flex: 1, marginRight: hasBankDetails ? 16 : 0 }}>
             <Text style={s.footerLabel}>Terms & Conditions</Text>
             {TERMS.map((t, i) => (
               <Text key={i} style={s.footerText}>
@@ -315,13 +317,21 @@ export function QuotationDocument({
               </Text>
             ))}
           </View>
-          <View style={{ width: 160 }}>
-            <Text style={s.footerLabel}>Bank Details</Text>
-            <Text style={s.footerText}>Bank: {COMPANY.bankName}</Text>
-            <Text style={s.footerText}>A/C No.: {COMPANY.accountNo}</Text>
-            <Text style={s.footerText}>IFSC: {COMPANY.ifsc}</Text>
-            <Text style={s.footerText}>Name: {COMPANY.accountHolder}</Text>
-          </View>
+          {hasBankDetails ? (
+            <View style={{ width: 160 }}>
+              <Text style={s.footerLabel}>Bank Details</Text>
+              {COMPANY.bankName ? (
+                <Text style={s.footerText}>Bank: {COMPANY.bankName}</Text>
+              ) : null}
+              {COMPANY.accountNo ? (
+                <Text style={s.footerText}>A/C No.: {COMPANY.accountNo}</Text>
+              ) : null}
+              {COMPANY.ifsc ? <Text style={s.footerText}>IFSC: {COMPANY.ifsc}</Text> : null}
+              {COMPANY.accountHolder ? (
+                <Text style={s.footerText}>Name: {COMPANY.accountHolder}</Text>
+              ) : null}
+            </View>
+          ) : null}
         </View>
 
         <Text
