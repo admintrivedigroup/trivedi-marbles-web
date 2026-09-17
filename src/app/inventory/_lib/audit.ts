@@ -2,7 +2,7 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 
-export type AuditTargetType = "slab" | "lot" | "user" | "transfer" | "quotation";
+export type AuditTargetType = "slab" | "lot" | "user" | "transfer" | "quotation" | "proposal";
 
 type AuditParams = {
   userId: string | null;

@@ -30,6 +30,8 @@ export const ACTION_LABELS: Record<string, string> = {
   // Quotation
   "quotation.pdf_downloaded": "Quotation PDF Downloaded",
   "quotation.whatsapp_shared": "Quotation Shared via WhatsApp",
+  // Proposal
+  "proposal.created": "Product Proposal Created",
   // User
   "user.invited": "User Invited",
   "user.role_changed": "User Role Changed",

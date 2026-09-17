@@ -3,7 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, ArrowUpDown, ChevronLeft, ChevronRight, Download, Filter, Package, Search, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowUpDown, ChevronLeft, ChevronRight, Download, FileText, Filter, Package, Search, Trash2 } from "lucide-react";
 import { ActivitySpinner } from "@/components/ui/activity-spinner";
 
 import { useLookupOptions } from "@/app/inventory/_components/lookup-options-context";
@@ -11,6 +11,7 @@ import { LOT_FOLDER_SORT_OPTIONS, LOTS_PER_PAGE, getLotFolderHref, type LotFolde
 import { batchDeleteLots } from "@/app/inventory/_actions/batch-delete-lots";
 import { LotFolderCard } from "@/app/inventory/_components/lot-folder-card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { CreateProposalDialog } from "@/app/inventory/_components/create-proposal-dialog";
 
 type CategoryLotGridProps = {
   error: string | null;
@@ -61,6 +62,7 @@ export function CategoryLotGrid({
   const [selectedLotIds, setSelectedLotIds] = useState<Set<string>>(new Set());
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [proposalDialogOpen, setProposalDialogOpen] = useState(false);
 
   const warehouseId = searchParams.get("warehouse") ?? "";
   const statusId = searchParams.get("status") ?? "";
@@ -372,6 +374,15 @@ export function CategoryLotGrid({
               <button
                 type="button"
                 disabled={isPending}
+                onClick={() => setProposalDialogOpen(true)}
+                className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+              >
+                <FileText className="h-3.5 w-3.5" />
+                Create Proposal ({selectedCount})
+              </button>
+              <button
+                type="button"
+                disabled={isPending}
                 onClick={() => { setActionError(null); setShowDeleteConfirm(true); }}
                 className="flex items-center gap-1.5 rounded-lg bg-destructive px-3 py-2 text-sm font-semibold text-destructive-foreground transition-colors hover:bg-destructive/90 disabled:opacity-50"
               >
@@ -389,6 +400,12 @@ export function CategoryLotGrid({
           </div>
         </div>
       )}
+
+      <CreateProposalDialog
+        open={proposalDialogOpen}
+        onOpenChange={setProposalDialogOpen}
+        lotIds={Array.from(selectedLotIds)}
+      />
 
       <ConfirmDialog
         open={showDeleteConfirm}

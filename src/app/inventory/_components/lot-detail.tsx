@@ -39,6 +39,7 @@ import { deleteSlab } from "@/app/inventory/_actions/delete-slab";
 import { deleteLot } from "@/app/inventory/_actions/delete-lot";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ReserveDialog, type ReservationData } from "@/app/inventory/_components/reserve-dialog";
+import { CreateProposalDialog } from "@/app/inventory/_components/create-proposal-dialog";
 import { toggleLotWebsite } from "@/app/inventory/_actions/toggle-lot-website";
 import {
   formatNumber as fmtNum,
@@ -181,6 +182,7 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
   const [showOnWebsite, setShowOnWebsite] = useState(lot.showOnWebsite);
   const [cloneLotNumber, setCloneLotNumber] = useState("");
   const [isTogglingWebsite, setIsTogglingWebsite] = useState(false);
+  const [proposalDialogOpen, setProposalDialogOpen] = useState(false);
 
   // --- Selection state ---
   const [isSelectMode, setIsSelectMode] = useState(false);
@@ -202,6 +204,9 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
   const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
 
   const totalSqft = slabs.reduce((sum, s) => sum + (s.sqft ?? 0), 0);
+  const availableSqft = slabs
+    .filter((s) => s.statusName === "Available")
+    .reduce((sum, s) => sum + (s.sqft ?? 0), 0);
 
   // Derived selection data
   const selectedSlabs = slabs.filter((s) => selectedIds.has(s.id));
@@ -876,6 +881,15 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
               <FileText className="h-4 w-4" />
               Create Quotation
             </Link>
+            <button
+              type="button"
+              onClick={() => setProposalDialogOpen(true)}
+              disabled={availableSqft === 0}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-border px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <FileText className="h-4 w-4" />
+              Create Proposal
+            </button>
             <a
               href={`/inventory/lot/${lot.id}/labels`}
               target="_blank"
@@ -976,6 +990,12 @@ export function LotDetail({ lot, slabs }: LotDetailProps) {
           </div>
         </div>
       )}
+
+      <CreateProposalDialog
+        open={proposalDialogOpen}
+        onOpenChange={setProposalDialogOpen}
+        lotIds={[lot.id]}
+      />
 
       {/* Individual slab reserve */}
       <ReserveDialog
