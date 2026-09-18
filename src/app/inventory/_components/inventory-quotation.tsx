@@ -3,11 +3,10 @@
 import { useMemo, useState, useEffect } from "react";
 import {
   Check,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
-  ChevronUp,
   Download,
+  ListChecks,
   Package,
   Plus,
   Search,
@@ -17,6 +16,7 @@ import {
 
 import type { InventoryListSlab } from "@/app/inventory/_lib/inventory-list";
 import { logQuotation } from "@/app/inventory/_actions/log-quotation";
+import { LotSlabPickerModal } from "./lot-slab-picker-modal";
 
 type QuotationItem = {
   dbId: string;
@@ -30,7 +30,7 @@ type QuotationItem = {
   thumbnailUrl: string | null;
 };
 
-type LotGroup = {
+export type LotGroup = {
   key: string;
   lotId: string | null;
   lotNumber: string | null;
@@ -63,11 +63,18 @@ function slabToItem(slab: InventoryListSlab): QuotationItem {
 }
 
 export function InventoryQuotation({ slabs, initialLotId, initialSlabId }: InventoryQuotationProps) {
+  const [companyName, setCompanyName] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
+  const [customerAddress, setCustomerAddress] = useState("");
+  const [customerCity, setCustomerCity] = useState("");
+  const [customerState, setCustomerState] = useState("");
+  const [customerPincode, setCustomerPincode] = useState("");
+  const [customerGstin, setCustomerGstin] = useState("");
+  const [customerPan, setCustomerPan] = useState("");
   const [quotationItems, setQuotationItems] = useState<QuotationItem[]>([]);
-  const [expandedLotKey, setExpandedLotKey] = useState<string | null>(null);
+  const [pickerGroup, setPickerGroup] = useState<LotGroup | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeMarble, setActiveMarble] = useState<string | null>(null);
   const [activeWarehouse, setActiveWarehouse] = useState<string | null>(null);
@@ -78,7 +85,7 @@ export function InventoryQuotation({ slabs, initialLotId, initialSlabId }: Inven
   // per-lot custom price override (keyed by group.key, value is the raw input string)
   const [lotPriceInputs, setLotPriceInputs] = useState<Record<string, string>>({});
 
-  const PAGE_SIZE = 8;
+  const PAGE_SIZE = 20;
 
   useEffect(() => {
     if (initialLotId) {
@@ -211,24 +218,6 @@ export function InventoryQuotation({ slabs, initialLotId, initialSlabId }: Inven
     return fallback ?? 0;
   };
 
-  const addSlab = (slab: InventoryListSlab, priceOverride?: number) => {
-    if (addedIds.has(slab.id)) return;
-    setQuotationItems((prev) => [
-      ...prev,
-      {
-        dbId: slab.id,
-        slabCode: slab.slabCode ?? "-",
-        marbleName: slab.marbleName ?? "Unknown",
-        length: slab.length,
-        width: slab.width,
-        sqft: slab.sqft ?? 0,
-        pricePerSqft: priceOverride ?? slab.sellingPrice ?? 0,
-        lotNumber: slab.lotNumber,
-        thumbnailUrl: slab.thumbnailUrl ?? null,
-      },
-    ]);
-  };
-
   const addLot = (group: LotGroup) => {
     const toAdd = group.slabs.filter((s) => !addedIds.has(s.id));
     if (toAdd.length === 0) return;
@@ -245,6 +234,25 @@ export function InventoryQuotation({ slabs, initialLotId, initialSlabId }: Inven
         pricePerSqft: price,
         lotNumber: slab.lotNumber,
         thumbnailUrl: group.thumbnailUrl ?? slab.thumbnailUrl ?? null,
+      })),
+    ]);
+  };
+
+  const handleAddSelected = (selections: { slab: InventoryListSlab; price: number }[]) => {
+    const fresh = selections.filter(({ slab }) => !addedIds.has(slab.id));
+    if (fresh.length === 0) return;
+    setQuotationItems((prev) => [
+      ...prev,
+      ...fresh.map(({ slab, price }) => ({
+        dbId: slab.id,
+        slabCode: slab.slabCode ?? "-",
+        marbleName: slab.marbleName ?? "Unknown",
+        length: slab.length,
+        width: slab.width,
+        sqft: slab.sqft ?? 0,
+        pricePerSqft: price,
+        lotNumber: slab.lotNumber,
+        thumbnailUrl: slab.thumbnailUrl ?? null,
       })),
     ]);
   };
@@ -285,14 +293,23 @@ export function InventoryQuotation({ slabs, initialLotId, initialSlabId }: Inven
         year: "numeric",
       });
       const qtNum = `QT-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${Math.floor(1000 + Math.random() * 9000)}`;
+      const logoUrl = `${window.location.origin}/images/vijay-trivedi-logo-email.png`;
+      const cityStatePin = [customerCity.trim(), customerState.trim()].filter(Boolean).join(", ")
+        + (customerPincode.trim() ? ` - ${customerPincode.trim()}` : "");
+      const formattedAddress = [customerAddress.trim(), cityStatePin].filter(Boolean).join("\n");
 
       const blob = await pdf(
         <QuotationDocument
           quotationNumber={qtNum}
           date={date}
+          customerCompany={companyName.trim()}
           customerName={customerName}
           customerPhone={customerPhone}
           customerEmail={customerEmail}
+          customerAddress={formattedAddress}
+          customerGstin={customerGstin.trim()}
+          customerPan={customerPan.trim()}
+          logoUrl={logoUrl}
           items={quotationItems.map((item) => ({
             slabCode: item.slabCode,
             marbleName: item.marbleName,
@@ -347,10 +364,18 @@ export function InventoryQuotation({ slabs, initialLotId, initialSlabId }: Inven
     lines.push("*Trivedi Marbles — Quotation*");
     lines.push("");
 
+    if (companyName) lines.push(`*Company:* ${companyName}`);
     if (customerName) lines.push(`*Customer:* ${customerName}`);
     if (customerPhone) lines.push(`*Phone:* ${customerPhone}`);
     if (customerEmail) lines.push(`*Email:* ${customerEmail}`);
-    if (customerName || customerPhone || customerEmail) lines.push("");
+    const cityStatePin = [customerCity, customerState].filter(Boolean).join(", ")
+      + (customerPincode ? ` - ${customerPincode}` : "");
+    const fullAddress = [customerAddress, cityStatePin].filter(Boolean).join(", ");
+    if (fullAddress) lines.push(`*Address:* ${fullAddress}`);
+    if (customerGstin) lines.push(`*GSTIN:* ${customerGstin}`);
+    if (customerPan) lines.push(`*PAN:* ${customerPan}`);
+    if (companyName || customerName || customerPhone || customerEmail || fullAddress || customerGstin || customerPan)
+      lines.push("");
 
     lines.push("*Items:*");
     for (const item of quotationItems) {
@@ -403,55 +428,157 @@ export function InventoryQuotation({ slabs, initialLotId, initialSlabId }: Inven
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:gap-8 lg:grid-cols-3">
-        {/* ── Left column ─────────────────────────────────────── */}
-        <div className="space-y-4 md:space-y-6 lg:col-span-2">
-          {/* Customer Information */}
-          <section className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:rounded-2xl md:p-8">
-            <h2 className="mb-4 text-lg font-bold text-gray-900 md:mb-6 md:text-xl">
+        {/* Customer Information */}
+        <section className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:rounded-2xl md:p-6 lg:col-span-2 lg:row-start-1">
+            <h2 className="mb-3 text-lg font-bold text-gray-900 md:text-xl">
               Customer Information
             </h2>
-            <div className="flex flex-col gap-4 sm:grid sm:grid-cols-3">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">
-                  Customer Name
-                </label>
-                <input
-                  type="text"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800"
-                  placeholder="Mr. Patel"
-                />
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">
-                  Phone Number
-                </label>
-                <input
-                  type="tel"
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800"
-                  placeholder="+91 98765 43210"
-                />
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={customerEmail}
-                  onChange={(e) => setCustomerEmail(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 px-4 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800"
-                  placeholder="customer@email.com"
-                />
+
+            {/* Contact */}
+            <div className="mb-4">
+              <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                Contact
+              </h3>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-700">
+                    Company Name
+                  </label>
+                  <input
+                    type="text"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800"
+                    placeholder="Patel Interiors Pvt. Ltd. (optional)"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-700">
+                    Contact Person
+                  </label>
+                  <input
+                    type="text"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800"
+                    placeholder="Mr. Patel"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-700">
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800"
+                    placeholder="+91 98765 43210"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-700">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    value={customerEmail}
+                    onChange={(e) => setCustomerEmail(e.target.value)}
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800"
+                    placeholder="customer@email.com"
+                  />
+                </div>
               </div>
             </div>
-          </section>
 
-          {/* Marketplace — Lots */}
-          <section className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:rounded-2xl md:p-8">
+            {/* Billing & Tax Details */}
+            <div>
+              <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                Billing &amp; Tax Details
+              </h3>
+              <div className="grid grid-cols-1 gap-3">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-700">
+                    Address
+                  </label>
+                  <input
+                    type="text"
+                    value={customerAddress}
+                    onChange={(e) => setCustomerAddress(e.target.value)}
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800"
+                    placeholder="Street, area (optional)"
+                  />
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-gray-700">
+                      City
+                    </label>
+                    <input
+                      type="text"
+                      value={customerCity}
+                      onChange={(e) => setCustomerCity(e.target.value)}
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800"
+                      placeholder="Ahmedabad"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-gray-700">
+                      State
+                    </label>
+                    <input
+                      type="text"
+                      value={customerState}
+                      onChange={(e) => setCustomerState(e.target.value)}
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800"
+                      placeholder="Gujarat"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-gray-700">
+                      Pincode
+                    </label>
+                    <input
+                      type="text"
+                      value={customerPincode}
+                      onChange={(e) => setCustomerPincode(e.target.value)}
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800"
+                      placeholder="380001"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-gray-700">
+                      GSTIN
+                    </label>
+                    <input
+                      type="text"
+                      value={customerGstin}
+                      onChange={(e) => setCustomerGstin(e.target.value.toUpperCase())}
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-mono uppercase focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800"
+                      placeholder="24AAACT5711G1ZP"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-gray-700">
+                      PAN
+                    </label>
+                    <input
+                      type="text"
+                      value={customerPan}
+                      onChange={(e) => setCustomerPan(e.target.value.toUpperCase())}
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-mono uppercase focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800"
+                      placeholder="AAACT5711G"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+        </section>
+
+        {/* Marketplace — Lots (full width) */}
+        <section className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm md:rounded-2xl md:p-6 lg:col-span-3 lg:row-start-2">
             {/* Header */}
             <div className="mb-4 flex items-center justify-between md:mb-5">
               <h2 className="text-lg font-bold text-gray-900 md:text-xl">
@@ -573,9 +700,8 @@ export function InventoryQuotation({ slabs, initialLotId, initialSlabId }: Inven
                   : "No lots match your search or filters"}
               </p>
             ) : (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
                 {paginatedLotGroups.map((group) => {
-                  const isExpanded = expandedLotKey === group.key;
                   const allAdded = group.slabs.every((s) =>
                     addedIds.has(s.id),
                   );
@@ -583,179 +709,97 @@ export function InventoryQuotation({ slabs, initialLotId, initialSlabId }: Inven
                     addedIds.has(s.id),
                   ).length;
 
-                  const priceLabel =
-                    group.minPrice === null
-                      ? null
-                      : group.minPrice === group.maxPrice
-                        ? `Rs. ${group.minPrice.toLocaleString("en-IN")}/sqft (estimate)`
-                        : `Rs. ${group.minPrice.toLocaleString("en-IN")}–${group.maxPrice!.toLocaleString("en-IN")}/sqft (estimate)`;
-
                   return (
                     <div
                       key={group.key}
-                      className="overflow-hidden rounded-xl border border-gray-200 bg-white transition-shadow hover:shadow-md"
+                      className="group overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md"
                     >
                       {/* Thumbnail */}
-                      <div className="relative aspect-3/2 w-full bg-gray-100">
+                      <div className="relative aspect-4/3 w-full overflow-hidden bg-gray-100">
                         {group.thumbnailUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={group.thumbnailUrl}
                             alt={group.marbleName ?? "Marble slab"}
-                            className="h-full w-full object-cover"
+                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                           />
                         ) : (
                           <div className="flex h-full items-center justify-center">
-                            <Package className="h-12 w-12 text-gray-300" />
+                            <Package className="h-8 w-8 text-gray-300" />
                           </div>
                         )}
                         {group.lotNumber && (
-                          <span className="absolute left-2 top-2 rounded-md bg-black/60 px-2 py-0.5 font-mono text-xs text-white">
+                          <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-0.5 font-mono text-[10px] text-white backdrop-blur-sm">
                             {group.lotNumber}
                           </span>
                         )}
                         {addedCount > 0 && (
-                          <span className="absolute right-2 top-2 rounded-md bg-green-600 px-2 py-0.5 text-xs font-medium text-white">
-                            {addedCount}/{group.slabs.length} added
+                          <span className="absolute right-2 top-2 rounded-full bg-green-600 px-2 py-0.5 text-[10px] font-medium text-white">
+                            {addedCount}/{group.slabs.length}
                           </span>
                         )}
                       </div>
 
                       {/* Card body */}
-                      <div className="p-4">
-                        <p className="mb-1 text-base font-bold text-gray-900">
+                      <div className="p-3">
+                        <p className="truncate text-sm font-bold text-gray-900" title={group.marbleName ?? "Unknown Marble"}>
                           {group.marbleName ?? "Unknown Marble"}
                         </p>
-                        <div className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-gray-500">
-                          <span>
-                            {group.slabs.length} slab
-                            {group.slabs.length !== 1 ? "s" : ""}
-                          </span>
-                          <span>·</span>
-                          <span>{Math.round(group.totalSqft)} sqft <span className="font-light text-gray-400">(estimate)</span></span>
-                          {priceLabel && (
-                            <>
-                              <span>·</span>
-                              <span className="font-medium text-gray-700">
-                                {priceLabel}
-                              </span>
-                            </>
-                          )}
-                        </div>
+                        <p className="mb-2.5 text-xs text-gray-500">
+                          {group.slabs.length} slab{group.slabs.length !== 1 ? "s" : ""} · {Math.round(group.totalSqft)} sqft
+                        </p>
 
                         {/* Price override input */}
-                        <div className="mb-3">
-                          <label className="mb-1 block text-xs font-medium text-gray-500">
-                            Price / sqft (Rs.)
-                          </label>
-                          <input
-                            type="number"
-                            min={0}
-                            step={1}
-                            value={lotPriceInputs[group.key] ?? ""}
-                            onChange={(e) =>
-                              setLotPriceInputs((prev) => ({
-                                ...prev,
-                                [group.key]: e.target.value,
-                              }))
-                            }
-                            placeholder={
-                              group.minPrice !== null
-                                ? group.minPrice === group.maxPrice
-                                  ? String(group.minPrice)
-                                  : `${group.minPrice}–${group.maxPrice}`
-                                : "Enter price"
-                            }
-                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-800"
-                          />
-                        </div>
+                        <input
+                          type="number"
+                          min={0}
+                          step={1}
+                          value={lotPriceInputs[group.key] ?? ""}
+                          onChange={(e) =>
+                            setLotPriceInputs((prev) => ({
+                              ...prev,
+                              [group.key]: e.target.value,
+                            }))
+                          }
+                          placeholder={
+                            group.minPrice !== null
+                              ? group.minPrice === group.maxPrice
+                                ? `Rs. ${group.minPrice}/sqft`
+                                : `Rs. ${group.minPrice}–${group.maxPrice}`
+                              : "Price/sqft"
+                          }
+                          className="mb-2.5 w-full rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs focus:border-transparent focus:outline-none focus:ring-1 focus:ring-gray-800"
+                        />
 
                         {/* Actions */}
-                        <div className="flex gap-2">
+                        <div className="flex flex-col gap-1.5">
                           <button
                             type="button"
                             onClick={() => addLot(group)}
                             disabled={allAdded}
-                            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+                            className="flex items-center justify-center gap-1 rounded-lg bg-gray-900 px-2 py-1.5 text-xs font-medium text-white transition-colors hover:bg-gray-700 disabled:cursor-not-allowed disabled:bg-gray-300"
                           >
                             {allAdded ? (
                               <>
-                                <Check className="h-4 w-4" />
+                                <Check className="h-3 w-3" />
                                 All Added
                               </>
                             ) : (
                               <>
-                                <Plus className="h-4 w-4" />
+                                <Plus className="h-3 w-3" />
                                 Add All
                               </>
                             )}
                           </button>
                           <button
                             type="button"
-                            onClick={() =>
-                              setExpandedLotKey(
-                                isExpanded ? null : group.key,
-                              )
-                            }
-                            className="flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                            onClick={() => setPickerGroup(group)}
+                            className="flex items-center justify-center gap-1 rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50"
                           >
-                            {isExpanded ? (
-                              <ChevronUp className="h-4 w-4" />
-                            ) : (
-                              <ChevronDown className="h-4 w-4" />
-                            )}
-                            Slabs
+                            <ListChecks className="h-3 w-3" />
+                            Select Slabs
                           </button>
                         </div>
-
-                        {/* Expanded slab list */}
-                        {isExpanded && (
-                          <div className="mt-3 divide-y divide-gray-100 overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
-                            {group.slabs.map((slab) => {
-                              const isAdded = addedIds.has(slab.id);
-                              const amount =
-                                (slab.sqft ?? 0) * (slab.sellingPrice ?? 0);
-                              return (
-                                <div
-                                  key={slab.id}
-                                  className="flex items-center justify-between px-3 py-2.5"
-                                >
-                                  <div className="min-w-0 flex-1">
-                                    <p className="truncate font-mono text-xs font-medium text-gray-800">
-                                      {slab.slabCode ?? "-"}
-                                    </p>
-                                    <p className="text-xs text-gray-500">
-                                      {slab.sqft ?? 0} sqft <span className="font-light text-gray-400">(estimate)</span>
-                                      {slab.sellingPrice
-                                        ? ` · Rs. ${amount.toLocaleString("en-IN")}`
-                                        : ""}
-                                    </p>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      isAdded
-                                        ? removeSlab(slab.id)
-                                        : addSlab(slab, parseLotPrice(group.key, slab.sellingPrice))
-                                    }
-                                    className={`ml-2 flex shrink-0 items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                                      isAdded
-                                        ? "bg-green-100 text-green-700 hover:bg-red-100 hover:text-red-600"
-                                        : "bg-gray-900 text-white hover:bg-gray-700"
-                                    }`}
-                                  >
-                                    {isAdded ? (
-                                      <Check className="h-3 w-3" />
-                                    ) : (
-                                      <Plus className="h-3 w-3" />
-                                    )}
-                                    {isAdded ? "Added" : "Add"}
-                                  </button>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
                       </div>
                     </div>
                   );
@@ -830,10 +874,9 @@ export function InventoryQuotation({ slabs, initialLotId, initialSlabId }: Inven
               </div>
             )}
           </section>
-        </div>
 
         {/* ── Right sidebar (shown first on mobile) ────────────── */}
-        <div className="order-first lg:order-none lg:sticky lg:top-4 lg:self-start">
+        <div className="order-first lg:order-none lg:sticky lg:top-4 lg:col-start-3 lg:row-start-1 lg:self-start">
           <section className="rounded-xl border border-gray-100 bg-white shadow-sm md:rounded-2xl">
             {/* Sidebar header */}
             <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
@@ -1018,6 +1061,15 @@ export function InventoryQuotation({ slabs, initialLotId, initialSlabId }: Inven
           </section>
         </div>
       </div>
+
+      <LotSlabPickerModal
+        open={pickerGroup !== null}
+        group={pickerGroup}
+        addedIds={addedIds}
+        defaultPrice={pickerGroup ? parseLotPrice(pickerGroup.key, pickerGroup.minPrice) : null}
+        onClose={() => setPickerGroup(null)}
+        onAddSelected={handleAddSelected}
+      />
     </div>
   );
 }
