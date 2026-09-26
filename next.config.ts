@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "10mb",
     },
   },
-  allowedDevOrigins: ["192.168.31.110"],
+  allowedDevOrigins: ["192.168.31.110", "192.168.31.108"],
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
