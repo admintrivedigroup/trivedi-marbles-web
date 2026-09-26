@@ -22,7 +22,8 @@ const ACTION_META: Record<string, { label: string; badgeColor: string; rowAccent
   "slab.created":             { label: "Slab Added",           badgeColor: "bg-green-100 text-green-700",   rowAccent: "border-green-400" },
   "slab.edited":              { label: "Slab Edited",          badgeColor: "bg-blue-100 text-blue-700",     rowAccent: "border-blue-400" },
   "slab.status_changed":      { label: "Status Changed",       badgeColor: "bg-purple-100 text-purple-700", rowAccent: "border-purple-400" },
-  "slab.deleted":             { label: "Slab Deleted",         badgeColor: "bg-red-100 text-red-700",       rowAccent: "border-red-400" },
+  "slab.reservation_expired": { label: "Reservation Expired",  badgeColor: "bg-amber-100 text-amber-700",   rowAccent: "border-amber-400" },
+  "slab.deleted":             { label: "Slab Deleted",        badgeColor: "bg-red-100 text-red-700",       rowAccent: "border-red-400" },
   "slab.archived":            { label: "Slab Archived",        badgeColor: "bg-orange-100 text-orange-700", rowAccent: "border-orange-400" },
   "slab.restored":            { label: "Slab Restored",        badgeColor: "bg-green-100 text-green-700",   rowAccent: "border-green-400" },
   "slab.permanently_deleted": { label: "Permanently Deleted",  badgeColor: "bg-red-600 text-white",         rowAccent: "border-red-600" },
@@ -99,6 +100,7 @@ function getSummary(entry: AuditLogEntry): string | null {
       return "Photo removed";
 
     case "slab.status_changed":
+    case "slab.reservation_expired":
       return `${str(d.before)} → ${str(d.after)}`;
 
     case "slab.edited": {

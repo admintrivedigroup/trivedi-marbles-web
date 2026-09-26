@@ -7,6 +7,7 @@ export const ACTION_LABELS: Record<string, string> = {
   "slab.created": "Slab Added",
   "slab.edited": "Slab Edited",
   "slab.status_changed": "Status Changed",
+  "slab.reservation_expired": "Reservation Expired (auto-released)",
   "slab.deleted": "Slab Deleted",
   "slab.archived": "Slab Archived",
   "slab.restored": "Slab Restored",

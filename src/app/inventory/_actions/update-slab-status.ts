@@ -8,6 +8,14 @@ import { requirePermission } from "@/app/inventory/_lib/action-auth";
 import { SLAB_STATUS } from "@/app/inventory/_lib/slab-status";
 import { notifyLowStockForSlabIds } from "@/app/inventory/_lib/low-stock";
 import { notifyStatusChange } from "@/app/inventory/_lib/stock-movement-notify";
+import { getInTransitSlabIds } from "@/app/inventory/_lib/transfers";
+import {
+  checkSlabTransition,
+  hasWarehouseAccess,
+  reservationColumns,
+  validateReservation,
+} from "@/app/inventory/_lib/slab-transitions";
+import { relName } from "@/app/inventory/_lib/normalize";
 
 // Subset of SLAB_STATUS values that can be set manually via this action.
 // "In Transit" is excluded — that status is managed by the transfer workflow.
@@ -29,6 +37,11 @@ export async function updateSlabStatus(
 ): Promise<UpdateSlabStatusResult> {
   const auth = await requirePermission("edit_stock");
   if (!auth.ok) return { error: auth.error };
+
+  if (statusName === SLAB_STATUS.RESERVED) {
+    const reservationError = validateReservation(reservationData);
+    if (reservationError) return { error: reservationError };
+  }
 
   const supabase = await createClient();
 
@@ -55,36 +68,55 @@ export async function updateSlabStatus(
 
   const { data: currentSlab } = await supabase
     .from("slabs")
-    .select("slab_code, lot_id, slab_statuses(name)")
+    .select("slab_code, lot_id, warehouse_id, status_id, reserved_for, slab_statuses(name)")
     .eq("id", numericId)
-    .single();
+    .is("deleted_at", null)
+    .maybeSingle();
 
-  const rawStatus = currentSlab?.slab_statuses as unknown as { name?: string } | { name?: string }[] | null;
-  const oldStatusName = Array.isArray(rawStatus)
-    ? (rawStatus[0]?.name ?? null)
-    : (rawStatus?.name ?? null);
-
-  const updatePayload: Record<string, unknown> = { status_id: statusData.id };
-
-  if (statusName === SLAB_STATUS.RESERVED && reservationData) {
-    updatePayload.reserved_for = reservationData.reservedFor;
-    updatePayload.reserved_until = reservationData.reservedUntil;
-  } else if (statusName === SLAB_STATUS.AVAILABLE) {
-    updatePayload.reserved_for = null;
-    updatePayload.reserved_until = null;
+  if (!currentSlab) {
+    return { error: "Slab not found." };
   }
 
-  const { error } = await supabase
+  const warehouseId = currentSlab.warehouse_id != null ? String(currentSlab.warehouse_id) : null;
+  if (!hasWarehouseAccess(auth.profile.warehouseIds, warehouseId)) {
+    return { error: "You don't have access to this slab's warehouse." };
+  }
+
+  const oldStatusName = relName(currentSlab.slab_statuses);
+  const slabCode =
+    typeof currentSlab.slab_code === "string" ? currentSlab.slab_code : slabId;
+
+  const inTransitIds = await getInTransitSlabIds();
+  const transitionError = checkSlabTransition({
+    slabLabel: slabCode,
+    currentStatus: oldStatusName,
+    currentReservedFor: currentSlab.reserved_for ?? null,
+    target: statusName,
+    reservation: reservationData,
+    inTransit: inTransitIds.has(String(slabId)),
+  });
+  if (transitionError) return { error: transitionError };
+
+  const updatePayload = {
+    status_id: statusData.id,
+    ...reservationColumns(statusName, reservationData),
+  };
+
+  // Only write if the slab still has the status we validated against, so two people
+  // acting on the same slab at once can't both succeed.
+  const { data: updatedRows, error } = await supabase
     .from("slabs")
     .update(updatePayload)
-    .eq("id", numericId);
+    .eq("id", numericId)
+    .eq("status_id", currentSlab.status_id)
+    .select("id");
 
   if (error) {
     return { error: `Unable to update status. ${error.message}` };
   }
-
-  const slabCode =
-    typeof currentSlab?.slab_code === "string" ? currentSlab.slab_code : slabId;
+  if (!updatedRows || updatedRows.length === 0) {
+    return { error: `${slabCode} was changed by someone else — refresh and try again.` };
+  }
 
   logAudit({
     userId: user.id,
@@ -94,7 +126,7 @@ export async function updateSlabStatus(
     targetId: slabId,
     targetLabel: slabCode,
     diff: {
-      lotId: currentSlab?.lot_id != null ? String(currentSlab.lot_id) : null,
+      lotId: currentSlab.lot_id != null ? String(currentSlab.lot_id) : null,
       before: oldStatusName,
       after: statusName,
       ...(statusName === SLAB_STATUS.RESERVED && reservationData

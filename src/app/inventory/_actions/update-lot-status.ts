@@ -6,7 +6,10 @@ import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/app/inventory/_lib/audit";
 import { requirePermission } from "@/app/inventory/_lib/action-auth";
 import { SLAB_STATUS } from "@/app/inventory/_lib/slab-status";
+import { notifyLowStockForSlabIds } from "@/app/inventory/_lib/low-stock";
 import { notifyStatusChange } from "@/app/inventory/_lib/stock-movement-notify";
+import { getInTransitSlabIds } from "@/app/inventory/_lib/transfers";
+import { hasWarehouseAccess, validateReservation } from "@/app/inventory/_lib/slab-transitions";
 import type { ReservationData } from "@/app/inventory/_actions/update-slab-status";
 
 export type UpdateLotStatusResult = {
@@ -46,6 +49,11 @@ export async function updateLotSlabsStatus(
     return { error: "Please sign in again before updating status.", updatedCount: 0 };
   }
 
+  if (action === "Reserved") {
+    const reservationError = validateReservation(reservationData);
+    if (reservationError) return { error: reservationError, updatedCount: 0 };
+  }
+
   const config = ACTION_CONFIG[action];
 
   const { data: statusData, error: statusError } = await supabase
@@ -71,36 +79,53 @@ export async function updateLotSlabsStatus(
 
   const { data: slabRows, error: slabFetchError } = await supabase
     .from("slabs")
-    .select("id")
+    .select("id, warehouse_id")
     .eq("lot_id", lotId)
-    .in("status_id", eligibleStatusIds);
+    .in("status_id", eligibleStatusIds)
+    .is("deleted_at", null);
 
   if (slabFetchError) {
     return { error: `Unable to load slabs. ${slabFetchError.message}`, updatedCount: 0 };
   }
 
-  if (!slabRows || slabRows.length === 0) {
+  // Slabs in a pending transfer or in a warehouse this user can't access are left alone.
+  const inTransitIds = await getInTransitSlabIds();
+  const eligibleRows = (slabRows ?? []).filter(
+    (s: { id: unknown; warehouse_id: unknown }) =>
+      !inTransitIds.has(String(s.id)) &&
+      hasWarehouseAccess(auth.profile.warehouseIds, s.warehouse_id != null ? String(s.warehouse_id) : null),
+  );
+
+  if (eligibleRows.length === 0) {
     return { error: config.emptyError, updatedCount: 0 };
   }
 
-  const slabIds = slabRows.map((s: { id: unknown }) => s.id);
+  const slabIds = eligibleRows.map((s: { id: unknown }) => s.id);
 
   const updatePayload: Record<string, unknown> = { status_id: targetStatusId };
   if (action === "Reserved" && reservationData) {
-    updatePayload.reserved_for = reservationData.reservedFor;
+    updatePayload.reserved_for = reservationData.reservedFor.trim();
     updatePayload.reserved_until = reservationData.reservedUntil;
-  } else if (action === "Sold" || action === "UnreserveLot" || action === "UnsellLot") {
+  } else {
     updatePayload.reserved_for = null;
     updatePayload.reserved_until = null;
   }
 
-  const { error: updateError } = await supabase
+  // Only rows still in an eligible status are written, so a concurrent change isn't overwritten.
+  const { data: updatedRows, error: updateError } = await supabase
     .from("slabs")
     .update(updatePayload)
-    .in("id", slabIds);
+    .in("id", slabIds)
+    .in("status_id", eligibleStatusIds)
+    .select("id");
 
   if (updateError) {
     return { error: `Unable to update slabs. ${updateError.message}`, updatedCount: 0 };
+  }
+
+  const updatedSlabIds = (updatedRows ?? []).map((r: { id: unknown }) => r.id);
+  if (updatedSlabIds.length === 0) {
+    return { error: config.emptyError, updatedCount: 0 };
   }
 
   const { data: lotRow } = await supabase
@@ -122,15 +147,19 @@ export async function updateLotSlabsStatus(
     diff: {
       action,
       after: config.targetStatus,
-      slabCount: slabIds.length,
+      slabCount: updatedSlabIds.length,
       ...(action === "Reserved" && reservationData
         ? { reservedFor: reservationData.reservedFor, reservedUntil: reservationData.reservedUntil }
         : {}),
     },
   }).catch(() => {});
 
+  if (config.targetStatus === SLAB_STATUS.RESERVED || config.targetStatus === SLAB_STATUS.SOLD) {
+    notifyLowStockForSlabIds(updatedSlabIds.map(String)).catch(() => {});
+  }
+
   notifyStatusChange({
-    slabIds: slabIds.map(String),
+    slabIds: updatedSlabIds.map(String),
     statusName: config.targetStatus as "Available" | "Reserved" | "Sold",
     actorUserId: user.id,
     contextLabel: lotLabel,
@@ -141,5 +170,5 @@ export async function updateLotSlabsStatus(
   revalidatePath("/inventory/list");
   revalidatePath("/inventory/dashboard");
 
-  return { error: null, updatedCount: slabIds.length };
+  return { error: null, updatedCount: updatedSlabIds.length };
 }

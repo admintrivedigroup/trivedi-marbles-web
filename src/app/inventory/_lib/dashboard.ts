@@ -3,6 +3,8 @@ import "server-only";
 import { getInventorySlabs } from "@/app/inventory/_lib/inventory-list";
 import { getIncomingTransfers } from "@/app/inventory/_lib/transfers";
 import { SLAB_STATUS } from "@/app/inventory/_lib/slab-status";
+import { classifyReservation, todayInIndia } from "@/app/inventory/_lib/slab-transitions";
+import { buildSlowMovingLots } from "@/app/inventory/_lib/stock-ageing";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type { Role } from "@/app/inventory/_lib/permissions";
@@ -17,7 +19,7 @@ export type DashboardStats = {
   expiringSoonCount: number;
   typeData: { name: string; count: number }[];
   recentActivity: { id: string; text: string; time: string }[];
-  alerts: { id: string; severity: "low" | "medium" | "high"; text: string }[];
+  alerts: { id: string; severity: "low" | "medium" | "high"; text: string; href?: string }[];
   incomingTransfersCount: number;
   expiringTodaySlabs: { id: string; slabCode: string | null; marbleName: string | null; reservedFor: string | null; reservedUntil: string }[];
   taskSummary: { total: number; inProgress: number; pendingApproval: number; overdue: number };
@@ -42,7 +44,7 @@ export async function getDashboardStats(
   currentUserId?: string,
   dateRange: { from: Date; to: Date } | null = null,
 ): Promise<DashboardStats> {
-  const { slabs } = await getInventorySlabs({ warehouseId: "", statusId: "", sortBy: "newest", allowedWarehouseIds });
+  const { slabs, truncated } = await getInventorySlabs({ warehouseId: "", statusId: "", sortBy: "newest", allowedWarehouseIds });
 
   // Slabs added within the selected date filter (falls back to all slabs when no filter is active).
   // Only used for metrics that are meaningful as "added in period" — current-state snapshots
@@ -76,15 +78,18 @@ export async function getDashboardStats(
   const reservedSlabs = slabs.filter((s) => s.statusName === SLAB_STATUS.RESERVED);
   const reservedCount = reservedSlabs.length;
 
-  const expiredReservationCount = reservedSlabs.filter((s) => {
-    if (!s.reservedUntil) return false;
-    return new Date(s.reservedUntil) < now;
-  }).length;
+  // Reservations are calendar dates: one running until today is still valid for today
+  // and only expires once that date has passed (matching the daily reminder and release).
+  const today = todayInIndia(now);
+  const inThreeDays = todayInIndia(threeDaysFromNow);
+
+  const expiredReservationCount = reservedSlabs.filter(
+    (s) => classifyReservation(s.reservedUntil, today) === "expired",
+  ).length;
 
   const expiringSoonCount = reservedSlabs.filter((s) => {
-    if (!s.reservedUntil) return false;
-    const d = new Date(s.reservedUntil);
-    return d >= now && d <= threeDaysFromNow;
+    const state = classifyReservation(s.reservedUntil, today);
+    return (state === "expiring_today" || state === "active") && s.reservedUntil!.slice(0, 10) <= inThreeDays;
   }).length;
 
   const startOfToday = new Date(now);
@@ -92,11 +97,7 @@ export async function getDashboardStats(
   const endOfToday = new Date(now);
   endOfToday.setHours(23, 59, 59, 999);
   const expiringTodaySlabs = reservedSlabs
-    .filter((s) => {
-      if (!s.reservedUntil) return false;
-      const d = new Date(s.reservedUntil);
-      return d >= startOfToday && d <= endOfToday;
-    })
+    .filter((s) => classifyReservation(s.reservedUntil, today) === "expiring_today")
     .map((s) => ({
       id: s.id,
       slabCode: s.slabCode,
@@ -150,6 +151,14 @@ export async function getDashboardStats(
 
   const alerts: DashboardStats["alerts"] = [];
 
+  if (truncated) {
+    alerts.push({
+      id: "inventory-truncated",
+      severity: "high",
+      text: "Inventory is too large to load in full — totals on this page are incomplete.",
+    });
+  }
+
   if (expiredReservationCount > 0) {
     alerts.push({
       id: "expired-reservations",
@@ -194,6 +203,19 @@ export async function getDashboardStats(
       severity: "medium",
       text: `${lotsWithNoAvailable} lot${lotsWithNoAvailable === 1 ? "" : "s"} with no available slabs — all sold or reserved.`,
     });
+  }
+
+  // Only admins can open the slow-moving report, so only they get the nudge.
+  if (role === "admin" || role === "superadmin") {
+    const staleLots = buildSlowMovingLots(slabs, { minDays: 180, now }).length;
+    if (staleLots > 0) {
+      alerts.push({
+        id: "slow-moving-lots",
+        severity: "medium",
+        text: `${staleLots} lot${staleLots === 1 ? " has" : "s have"} had unsold slabs for over 6 months.`,
+        href: "/inventory/reports/slow-moving?min=180",
+      });
+    }
   }
 
   if (slabs.length === 0) {

@@ -1,7 +1,11 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
-import { toNum, toStr, relName, relId, relLot, relLotNumber } from "@/app/inventory/_lib/normalize";
+import { toNum, toStr, relName, relId, relLot } from "@/app/inventory/_lib/normalize";
+import { fetchAllPages } from "@/app/inventory/_lib/fetch-all";
+import { DB_SORT, sortByMarbleName, sortsByName, type SortBy } from "@/app/inventory/_lib/slab-sort";
+
+export type { SortBy };
 
 type SlabImageRelation =
   | Array<{ image_url?: unknown; sort_order?: unknown }>
@@ -60,30 +64,24 @@ export type InventoryListSlab = {
   width: number | null;
 };
 
-export type SortBy = "newest" | "oldest" | "name_asc" | "name_desc" | "sqft_desc" | "sqft_asc";
-
 export type InventoryListFilters = {
   warehouseId: string;
   statusId: string;
   sortBy: SortBy;
   search?: string;
   allowedWarehouseIds: string[] | null;
-  /** When set, enables server-side lot pagination. Omit for callers that need all slabs. */
-  page?: number;
 };
 
 export type InventoryListResult = {
   error: string | null;
   slabs: InventoryListSlab[];
-  totalLots: number;
-  totalPages: number;
-  totalSlabs: number;
+  /** True when the inventory is larger than MAX_SLAB_ROWS and `slabs` is incomplete. */
+  truncated: boolean;
 };
 
-export const LOTS_PER_PAGE = 20;
-
-// Safety cap for the non-paginated path (dashboard, export, movement, quotations).
-const MAX_SLAB_ROWS = 5000;
+// Upper bound on slabs loaded in one call (fetched 1000 at a time). Hitting it is
+// reported through `truncated` rather than silently dropping rows.
+export const MAX_SLAB_ROWS = 20000;
 
 const SLAB_SELECT = `
   id,
@@ -102,15 +100,6 @@ const SLAB_SELECT = `
   marble_lots(lot_number, marble_name, marble_categories(id, name), thickness_options(name)),
   slab_images(image_url, sort_order)
 `;
-
-const SORT_MAP: Record<SortBy, { column: string; ascending: boolean }> = {
-  newest:    { column: "created_at",  ascending: false },
-  oldest:    { column: "created_at",  ascending: true  },
-  name_asc:  { column: "marble_name", ascending: true  },
-  name_desc: { column: "marble_name", ascending: false },
-  sqft_desc: { column: "sqft",        ascending: false },
-  sqft_asc:  { column: "sqft",        ascending: true  },
-};
 
 function normalizeInventorySlab(row: InventorySlabRow): InventoryListSlab | null {
   const id =
@@ -170,136 +159,9 @@ export async function getInventorySlabs(
 ): Promise<InventoryListResult> {
   try {
     const supabase = await createClient();
-    const { column, ascending } = SORT_MAP[filters.sortBy] ?? SORT_MAP.newest;
-    const safeSearch = filters.search ? sanitizeSearch(filters.search) : null;
+    const { column, ascending } = DB_SORT[filters.sortBy] ?? DB_SORT.newest;
 
-    if (filters.page !== undefined) {
-      // ── Server-side paginated path ──────────────────────────────────────────
-      //
-      // Step 1: Lightweight query — only id + lot_id, all filters applied.
-      // This lets us deduplicate lot keys in sort order without transferring
-      // full slab data. One row per slab but only two columns.
-
-      let idQuery = supabase
-        .from("slabs")
-        .select("id, lot_id")
-        .is("deleted_at", null);
-
-      if (filters.allowedWarehouseIds !== null && filters.allowedWarehouseIds.length > 0) {
-        idQuery = idQuery.in("warehouse_id", filters.allowedWarehouseIds);
-      }
-      if (filters.warehouseId) idQuery = idQuery.eq("warehouse_id", filters.warehouseId);
-      if (filters.statusId) idQuery = idQuery.eq("status_id", filters.statusId);
-      if (safeSearch) {
-        const { data: matchingLots } = await supabase
-          .from("marble_lots")
-          .select("id")
-          .ilike("marble_name", `%${safeSearch}%`);
-        const matchingLotIds = (matchingLots ?? []).map((r) => String(r.id));
-        if (matchingLotIds.length > 0) {
-          idQuery = idQuery.or(`slab_code.ilike.%${safeSearch}%,lot_id.in.(${matchingLotIds.join(",")})`);
-        } else {
-          idQuery = idQuery.ilike("slab_code", `%${safeSearch}%`);
-        }
-      }
-
-      idQuery = idQuery.order(column, { ascending }).limit(MAX_SLAB_ROWS);
-
-      const { data: idRows, error: idError } = await idQuery;
-      if (idError) {
-        return { error: `Unable to load inventory. ${idError.message}`, slabs: [], totalLots: 0, totalPages: 0, totalSlabs: 0 };
-      }
-
-      // Deduplicate lot_ids in sort order.
-      // Slabs with no lot_id ("orphan slabs") each count as their own lot.
-      const seen = new Set<string>();
-      const orderedKeys: string[] = [];
-      for (const row of idRows ?? []) {
-        const key = row.lot_id != null ? String(row.lot_id) : `__slab_${String(row.id)}`;
-        if (!seen.has(key)) {
-          seen.add(key);
-          orderedKeys.push(key);
-        }
-      }
-
-      const totalSlabs = (idRows ?? []).length;
-      const totalLots = orderedKeys.length;
-      const totalPages = Math.max(1, Math.ceil(totalLots / LOTS_PER_PAGE));
-      const clampedPage = Math.min(Math.max(1, filters.page), totalPages);
-      const pageKeys = orderedKeys.slice(
-        (clampedPage - 1) * LOTS_PER_PAGE,
-        clampedPage * LOTS_PER_PAGE,
-      );
-
-      if (pageKeys.length === 0) {
-        return { error: null, slabs: [], totalLots, totalPages, totalSlabs };
-      }
-
-      // Separate real lot ids from orphan slab ids (kept as strings to support UUID keys).
-      const lotIds = pageKeys.filter((k) => !k.startsWith("__slab_"));
-      const orphanIds = pageKeys.filter((k) => k.startsWith("__slab_")).map((k) => k.slice(7));
-
-      // Step 2: Full slab data for this page's lots only.
-      let slabQuery = supabase
-        .from("slabs")
-        .select(SLAB_SELECT)
-        .is("deleted_at", null);
-
-      if (lotIds.length > 0 && orphanIds.length > 0) {
-        slabQuery = slabQuery.or(`lot_id.in.(${lotIds.join(",")}),id.in.(${orphanIds.join(",")})`);
-      } else if (lotIds.length > 0) {
-        slabQuery = slabQuery.in("lot_id", lotIds);
-      } else {
-        slabQuery = slabQuery.in("id", orphanIds);
-      }
-
-      // Re-apply warehouse / status / search so only matching slabs appear within lots
-      // (preserves current behaviour where filters act at the slab level, not lot level).
-      if (filters.allowedWarehouseIds !== null && filters.allowedWarehouseIds.length > 0) {
-        slabQuery = slabQuery.in("warehouse_id", filters.allowedWarehouseIds);
-      }
-      if (filters.warehouseId) slabQuery = slabQuery.eq("warehouse_id", filters.warehouseId);
-      if (filters.statusId) slabQuery = slabQuery.eq("status_id", filters.statusId);
-      if (safeSearch) {
-        slabQuery = slabQuery.or(`marble_name.ilike.%${safeSearch}%,slab_code.ilike.%${safeSearch}%`);
-      }
-
-      slabQuery = slabQuery.order(column, { ascending });
-
-      const { data: slabData, error: slabError } = await slabQuery;
-      if (slabError) {
-        return { error: `Unable to load inventory. ${slabError.message}`, slabs: [], totalLots: 0, totalPages: 0, totalSlabs: 0 };
-      }
-
-      return {
-        error: null,
-        slabs: ((slabData as InventorySlabRow[] | null) ?? [])
-          .map(normalizeInventorySlab)
-          .filter((row): row is InventoryListSlab => row !== null),
-        totalLots,
-        totalPages,
-        totalSlabs,
-      };
-    }
-
-    // ── Non-paginated path ──────────────────────────────────────────────────
-    // Used by dashboard, export, movement, and quotations — they need all slabs.
-
-    let query = supabase
-      .from("slabs")
-      .select(SLAB_SELECT);
-
-    query = query.is("deleted_at", null);
-
-    if (filters.allowedWarehouseIds !== null && filters.allowedWarehouseIds.length > 0) {
-      query = query.in("warehouse_id", filters.allowedWarehouseIds);
-    }
-    if (filters.warehouseId) {
-      query = query.eq("warehouse_id", filters.warehouseId);
-    }
-    if (filters.statusId) {
-      query = query.eq("status_id", filters.statusId);
-    }
+    let searchClause: string | null = null;
     if (filters.search) {
       const safe = sanitizeSearch(filters.search);
       if (safe) {
@@ -308,47 +170,55 @@ export async function getInventorySlabs(
           .select("id")
           .ilike("marble_name", `%${safe}%`);
         const matchingLotIds = (matchingLots ?? []).map((r) => String(r.id));
-        if (matchingLotIds.length > 0) {
-          query = query.or(`slab_code.ilike.%${safe}%,lot_id.in.(${matchingLotIds.join(",")})`);
-        } else {
-          query = query.ilike("slab_code", `%${safe}%`);
-        }
+        searchClause =
+          matchingLotIds.length > 0
+            ? `slab_code.ilike.%${safe}%,lot_id.in.(${matchingLotIds.join(",")})`
+            : `slab_code.ilike.%${safe}%`;
       }
     }
 
-    query = query.order(column, { ascending }).limit(MAX_SLAB_ROWS);
+    const { rows, error, truncated } = await fetchAllPages<InventorySlabRow>(
+      (from, to) => {
+        let query = supabase.from("slabs").select(SLAB_SELECT).is("deleted_at", null);
 
-    const { data, error } = await query;
+        if (filters.allowedWarehouseIds !== null && filters.allowedWarehouseIds.length > 0) {
+          query = query.in("warehouse_id", filters.allowedWarehouseIds);
+        }
+        if (filters.warehouseId) query = query.eq("warehouse_id", filters.warehouseId);
+        if (filters.statusId) query = query.eq("status_id", filters.statusId);
+        if (searchClause) query = query.or(searchClause);
+
+        // id is a tiebreaker so ranges over equal sort keys never repeat or skip rows.
+        return query
+          .order(column, { ascending })
+          .order("id", { ascending: true })
+          .range(from, to) as unknown as PromiseLike<{
+          data: InventorySlabRow[] | null;
+          error: { message: string } | null;
+        }>;
+      },
+      { maxRows: MAX_SLAB_ROWS },
+    );
 
     if (error) {
-      return {
-        error: `Unable to load inventory. ${error.message}`,
-        slabs: [],
-        totalLots: 0,
-        totalPages: 0,
-        totalSlabs: 0,
-      };
+      return { error: `Unable to load inventory. ${error}`, slabs: [], truncated: false };
     }
 
-    return {
-      error: null,
-      slabs: ((data as InventorySlabRow[] | null) ?? [])
-        .map(normalizeInventorySlab)
-        .filter((row): row is InventoryListSlab => row !== null),
-      totalLots: 0,
-      totalPages: 0,
-      totalSlabs: 0,
-    };
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Please try again.";
+    if (truncated) {
+      console.warn(`getInventorySlabs: inventory exceeds ${MAX_SLAB_ROWS} slabs; results are incomplete.`);
+    }
 
-    return {
-      error: `Unable to load inventory. ${message}`,
-      slabs: [],
-      totalLots: 0,
-      totalPages: 0,
-      totalSlabs: 0,
-    };
+    let slabs = rows
+      .map(normalizeInventorySlab)
+      .filter((row): row is InventoryListSlab => row !== null);
+
+    if (sortsByName(filters.sortBy)) {
+      slabs = sortByMarbleName(slabs, filters.sortBy === "name_asc" ? "asc" : "desc");
+    }
+
+    return { error: null, slabs, truncated };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Please try again.";
+    return { error: `Unable to load inventory. ${message}`, slabs: [], truncated: false };
   }
 }

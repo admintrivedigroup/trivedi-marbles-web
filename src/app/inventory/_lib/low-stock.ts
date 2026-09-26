@@ -55,9 +55,9 @@ function pairsFromSlabRows(
 
 /** Call fire-and-forget (no await) after a write that could push a
  * category's available count in a warehouse down — a status change away
- * from Available, or a slab delete. Not wired into stock increases (new
- * lots, restores, transfers) or warehouse transfers yet; see low-stock.ts
- * for the current trigger points. */
+ * from Available, a slab delete, or (via notifyLowStockForMovedSlabs) a
+ * slab leaving a warehouse. Stock increases (new lots, restores) never
+ * need a check. */
 export async function notifyLowStockForSlabIds(slabIds: string[]): Promise<void> {
   if (slabIds.length === 0) return;
   const admin = createAdminClient();
@@ -68,6 +68,36 @@ export async function notifyLowStockForSlabIds(slabIds: string[]): Promise<void>
     .in("id", slabIds);
 
   await checkLowStockPairs(admin, pairsFromSlabRows(data ?? []));
+}
+
+/** For slabs that just left a warehouse (direct move or a received transfer): the
+ * check has to run against the warehouse they came from, which the slab row no longer
+ * holds, so callers pass it in. */
+export async function notifyLowStockForMovedSlabs(
+  moved: { slabId: string; fromWarehouseId: string | null }[],
+): Promise<void> {
+  const withSource = moved.filter((m) => m.fromWarehouseId);
+  if (withSource.length === 0) return;
+  const admin = createAdminClient();
+
+  const { data } = await admin
+    .from("slabs")
+    .select("id, marble_lots(category_id)")
+    .in("id", withSource.map((m) => m.slabId));
+
+  const categoryBySlab = new Map<string, string>();
+  for (const row of data ?? []) {
+    const lot = Array.isArray(row.marble_lots) ? row.marble_lots[0] : row.marble_lots;
+    if (lot?.category_id != null) categoryBySlab.set(String(row.id), String(lot.category_id));
+  }
+
+  const pairs = dedupePairs(
+    withSource.map((m) => ({
+      categoryId: categoryBySlab.get(m.slabId) ?? "",
+      warehouseId: String(m.fromWarehouseId),
+    })),
+  );
+  await checkLowStockPairs(admin, pairs);
 }
 
 /** Same as notifyLowStockForSlabIds, but for a whole-lot removal where we

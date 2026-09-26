@@ -302,7 +302,12 @@ function InventoryAgeCard({
           </div>
         ))}
       </div>
-      <p className="mt-4 text-xs text-muted-foreground">Active slabs by days since added</p>
+      <div className="mt-4 flex items-baseline justify-between gap-2">
+        <p className="text-xs text-muted-foreground">Active slabs by days since added</p>
+        <Link href="/inventory/reports/slow-moving" className="text-xs font-medium text-muted-foreground hover:text-foreground">
+          Slow-moving lots →
+        </Link>
+      </div>
     </article>
   );
 }
@@ -439,7 +444,17 @@ function AlertsCard({ alerts }: { alerts: DashboardStats["alerts"] }) {
             return (
               <div key={alert.id} className={`flex items-start gap-3 rounded-xl p-4 ${toneClass}`}>
                 <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
-                <p className="text-sm text-foreground">{alert.text}</p>
+                <p className="text-sm text-foreground">
+                  {alert.text}
+                  {alert.href && (
+                    <>
+                      {" "}
+                      <Link href={alert.href} className="font-medium underline underline-offset-2">
+                        View
+                      </Link>
+                    </>
+                  )}
+                </p>
               </div>
             );
           })}

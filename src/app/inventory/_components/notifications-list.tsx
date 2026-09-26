@@ -23,6 +23,8 @@ const TYPE_LABEL: Record<string, { label: string; className: string }> = {
   low_stock: { label: "Low stock", className: "bg-orange-100 text-orange-700" },
   stock_movement: { label: "Stock movement", className: "bg-blue-100 text-blue-700" },
   reservation_reminder: { label: "Reservation", className: "bg-purple-100 text-purple-700" },
+  reservation_released: { label: "Reservation expired", className: "bg-amber-100 text-amber-700" },
+  slow_stock: { label: "Slow-moving stock", className: "bg-red-100 text-red-700" },
   task_assigned: { label: "Task assigned", className: "bg-teal-100 text-teal-700" },
   task_due_reminder: { label: "Task due", className: "bg-rose-100 text-rose-700" },
 };

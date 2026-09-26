@@ -7,6 +7,10 @@ import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/app/inventory/_lib/audit";
 import { requirePermission } from "@/app/inventory/_lib/action-auth";
 import { notifyTransfer } from "@/app/inventory/_lib/stock-movement-notify";
+import { notifyLowStockForMovedSlabs } from "@/app/inventory/_lib/low-stock";
+import { getInTransitSlabIds } from "@/app/inventory/_lib/transfers";
+import { hasWarehouseAccess } from "@/app/inventory/_lib/slab-transitions";
+import { receiveTransferSlabs } from "@/app/inventory/_lib/transfer-receive";
 
 export type SaveMovementResult = {
   error: string | null;
@@ -39,10 +43,19 @@ export async function saveMovement(
     .from("slabs")
     .select("id, slab_code, warehouse_id, warehouses(name)")
     .eq("id", slabId)
+    .is("deleted_at", null)
     .single();
 
   if (slabError || !slab) {
     return { error: "Slab not found.", status: "error" };
+  }
+
+  if (!hasWarehouseAccess(auth.profile.warehouseIds, slab.warehouse_id != null ? String(slab.warehouse_id) : null)) {
+    return { error: "You do not have access to this slab's warehouse.", status: "error" };
+  }
+
+  if ((await getInTransitSlabIds()).has(String(slab.id))) {
+    return { error: "This slab is in a pending transfer - receive or cancel it first.", status: "error" };
   }
 
   const { data: targetWarehouse, error: warehouseError } = await supabase
@@ -64,6 +77,20 @@ export async function saveMovement(
       ? String((slab.warehouses as { name: unknown }).name ?? "")
       : null;
 
+  // Move first, then log; if the log can't be written the move is undone so a slab never
+  // changes warehouse without a history entry.
+  const { error: updateError } = await supabase
+    .from("slabs")
+    .update({ warehouse_id: toWarehouseId })
+    .eq("id", slabId);
+
+  if (updateError) {
+    return {
+      error: `Failed to update slab location. ${updateError.message}`,
+      status: "error",
+    };
+  }
+
   const { error: movementError } = await createAdminClient()
     .from("slab_movements")
     .insert({
@@ -75,20 +102,9 @@ export async function saveMovement(
     });
 
   if (movementError) {
+    await supabase.from("slabs").update({ warehouse_id: slab.warehouse_id }).eq("id", slabId);
     return {
-      error: `Failed to record movement. ${movementError.message}`,
-      status: "error",
-    };
-  }
-
-  const { error: updateError } = await supabase
-    .from("slabs")
-    .update({ warehouse_id: toWarehouseId })
-    .eq("id", slabId);
-
-  if (updateError) {
-    return {
-      error: `Movement recorded but failed to update slab location. ${updateError.message}`,
+      error: `Failed to record movement, so the slab was not moved. ${movementError.message}`,
       status: "error",
     };
   }
@@ -106,6 +122,10 @@ export async function saveMovement(
       notes: notes || null,
     },
   }).catch(() => {});
+
+  notifyLowStockForMovedSlabs([
+    { slabId, fromWarehouseId: slab.warehouse_id != null ? String(slab.warehouse_id) : null },
+  ]).catch(() => {});
 
   notifyTransfer({
     slabIds: [slabId],
@@ -155,10 +175,22 @@ export async function saveBatchMovement(
   const { data: slabs, error: slabsError } = await supabase
     .from("slabs")
     .select("id, warehouse_id, warehouses(name)")
-    .in("id", slabIds);
+    .in("id", slabIds)
+    .is("deleted_at", null);
 
   if (slabsError || !slabs) {
     return { error: "Failed to fetch slab data.", status: "error", transferred: 0 };
+  }
+  if (slabs.length !== new Set(slabIds).size) {
+    return { error: "Some selected slabs no longer exist - refresh and try again.", status: "error", transferred: 0 };
+  }
+
+  const inTransitBatch = await getInTransitSlabIds();
+  if (slabs.some((s) => inTransitBatch.has(String(s.id)))) {
+    return { error: "Some selected slabs are in a pending transfer - receive or cancel it first.", status: "error", transferred: 0 };
+  }
+  if (slabs.some((s) => !hasWarehouseAccess(auth.profile.warehouseIds, s.warehouse_id != null ? String(s.warehouse_id) : null))) {
+    return { error: "You do not have access to one of the selected slabs' warehouses.", status: "error", transferred: 0 };
   }
 
   const { data: targetWarehouse, error: warehouseError } = await supabase
@@ -197,26 +229,37 @@ export async function saveBatchMovement(
     };
   });
 
-  const { error: movementError } = await createAdminClient()
-    .from("slab_movements")
-    .insert(movementRows);
+  const moveIds = slabsToMove.map((s) => String(s.id));
 
-  if (movementError) {
+  const { error: updateError } = await supabase
+    .from("slabs")
+    .update({ warehouse_id: toWarehouseId })
+    .in("id", moveIds);
+
+  if (updateError) {
     return {
-      error: `Failed to record movements. ${movementError.message}`,
+      error: `Failed to update slab locations. ${updateError.message}`,
       status: "error",
       transferred: 0,
     };
   }
 
-  const { error: updateError } = await supabase
-    .from("slabs")
-    .update({ warehouse_id: toWarehouseId })
-    .in("id", slabsToMove.map((s) => String(s.id)));
+  const { error: movementError } = await createAdminClient()
+    .from("slab_movements")
+    .insert(movementRows);
 
-  if (updateError) {
+  if (movementError) {
+    // Undo per source warehouse so no slab moves without a history entry.
+    const bySource = new Map<string, string[]>();
+    for (const slab of slabsToMove) {
+      const key = String(slab.warehouse_id);
+      bySource.set(key, [...(bySource.get(key) ?? []), String(slab.id)]);
+    }
+    for (const [warehouseId, ids] of bySource) {
+      await supabase.from("slabs").update({ warehouse_id: warehouseId }).in("id", ids);
+    }
     return {
-      error: `Movements recorded but failed to update slab locations. ${updateError.message}`,
+      error: `Failed to record movements, so no slabs were moved. ${movementError.message}`,
       status: "error",
       transferred: 0,
     };
@@ -243,6 +286,13 @@ export async function saveBatchMovement(
       notes: notes || null,
     },
   }).catch(() => {});
+
+  notifyLowStockForMovedSlabs(
+    slabsToMove.map((s) => ({
+      slabId: String(s.id),
+      fromWarehouseId: s.warehouse_id != null ? String(s.warehouse_id) : null,
+    })),
+  ).catch(() => {});
 
   notifyTransfer({
     slabIds: slabsToMove.map((s) => String(s.id)),
@@ -286,10 +336,14 @@ export async function createTransferRequest(
   const { data: slabs, error: slabsError } = await supabase
     .from("slabs")
     .select("id, warehouse_id, warehouses(name)")
-    .in("id", slabIds);
+    .in("id", slabIds)
+    .is("deleted_at", null);
 
   if (slabsError || !slabs || slabs.length === 0) {
     return { error: "Failed to fetch slab data.", status: "error", transferred: 0 };
+  }
+  if (slabs.length !== new Set(slabIds).size) {
+    return { error: "Some selected slabs no longer exist - refresh and try again.", status: "error", transferred: 0 };
   }
 
   const slabsToTransfer = slabs.filter(
@@ -304,7 +358,31 @@ export async function createTransferRequest(
     };
   }
 
+  // A transfer request has one source warehouse; recording slabs from several under the
+  // first slab's warehouse would attribute them to the wrong place.
+  const sourceWarehouseIds = new Set(slabsToTransfer.map((s) => String(s.warehouse_id)));
+  if (sourceWarehouseIds.size > 1) {
+    return {
+      error: "Selected slabs are in different warehouses - create one transfer per source warehouse.",
+      status: "error",
+      transferred: 0,
+    };
+  }
   const fromWarehouseId = String(slabsToTransfer[0].warehouse_id);
+
+  if (!hasWarehouseAccess(auth.profile.warehouseIds, fromWarehouseId)) {
+    return { error: "You do not have access to the source warehouse.", status: "error", transferred: 0 };
+  }
+
+  const inTransitNow = await getInTransitSlabIds();
+  const alreadyMoving = slabsToTransfer.filter((s) => inTransitNow.has(String(s.id)));
+  if (alreadyMoving.length > 0) {
+    return {
+      error: `${alreadyMoving.length} selected slab(s) are already in a pending transfer.`,
+      status: "error",
+      transferred: 0,
+    };
+  }
 
   const { data: toWarehouse } = await supabase
     .from("warehouses")
@@ -341,6 +419,8 @@ export async function createTransferRequest(
     .insert(items);
 
   if (itemsError) {
+    // Do not leave an empty transfer request behind.
+    await createAdminClient().from("transfer_requests").delete().eq("id", transferRequest.id);
     return {
       error: `Failed to add slabs to transfer. ${itemsError.message}`,
       status: "error",
@@ -447,6 +527,9 @@ export async function receiveTransfer(
   }
 
   const toWarehouseId = String(transfer.to_warehouse_id);
+  if (!hasWarehouseAccess(auth.profile.warehouseIds, toWarehouseId)) {
+    return { error: "You do not have access to the destination warehouse.", status: "error" };
+  }
   const toWarehouseName =
     transfer.to_warehouse && typeof transfer.to_warehouse === "object" && !Array.isArray(transfer.to_warehouse)
       ? String((transfer.to_warehouse as { name: unknown }).name ?? "")
@@ -462,7 +545,8 @@ export async function receiveTransfer(
   const { data: slabRows, error: slabFetchError } = await supabase
     .from("slabs")
     .select("id")
-    .in("id", slabIds);
+    .in("id", slabIds)
+    .is("deleted_at", null);
 
   if (slabFetchError) {
     return { error: `Failed to verify slabs. ${slabFetchError.message}`, status: "error" };
@@ -477,21 +561,21 @@ export async function receiveTransfer(
     };
   }
 
-  for (const item of items) {
-    const slabIdStr = String(item.slab_id);
-    const rack = itemData[slabIdStr]?.rackNumber?.trim() || null;
-    const notes = itemData[slabIdStr]?.notes?.trim() || null;
-
-    const slabUpdate: Record<string, unknown> = { warehouse_id: toWarehouseId };
-    if (rack) slabUpdate.rack_number = rack;
-    await supabase.from("slabs").update(slabUpdate).eq("id", item.slab_id);
-
-    if (rack || notes) {
-      await supabase
-        .from("transfer_request_items")
-        .update({ new_rack_number: rack, received_notes: notes })
-        .eq("id", item.id);
-    }
+  const receiveOutcome = await receiveTransferSlabs(supabase, {
+    transferId,
+    toWarehouseId,
+    slabs: items.map((item) => {
+      const slabIdStr = String(item.slab_id);
+      return {
+        itemId: item.id,
+        slabId: slabIdStr,
+        rackNumber: itemData[slabIdStr]?.rackNumber?.trim() || null,
+        notes: itemData[slabIdStr]?.notes?.trim() || null,
+      };
+    }),
+  });
+  if (receiveOutcome.error) {
+    return { error: receiveOutcome.error, status: "error" };
   }
 
   if ((slabRows ?? []).length > 0) {
@@ -509,15 +593,6 @@ export async function receiveTransfer(
     }
   }
 
-  const { error: updateError } = await supabase
-    .from("transfer_requests")
-    .update({ status: "received", received_at: new Date().toISOString() })
-    .eq("id", transferId);
-
-  if (updateError) {
-    return { error: `Failed to mark transfer as received. ${updateError.message}`, status: "error" };
-  }
-
   logAudit({
     userId: user?.id ?? null,
     userEmail: user?.email ?? null,
@@ -531,6 +606,13 @@ export async function receiveTransfer(
       to: toWarehouseName,
     },
   }).catch(() => {});
+
+  notifyLowStockForMovedSlabs(
+    (slabRows ?? []).map((s) => ({
+      slabId: String(s.id),
+      fromWarehouseId: transfer.from_warehouse_id != null ? String(transfer.from_warehouse_id) : null,
+    })),
+  ).catch(() => {});
 
   notifyTransfer({
     slabIds: (slabRows ?? []).map((s) => String(s.id)),
