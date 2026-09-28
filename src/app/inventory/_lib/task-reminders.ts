@@ -2,7 +2,7 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { appUrl, getTaskEmailRecipients, sendAppEmail } from "@/app/inventory/_lib/email";
-import { buildTaskDigestEmail, type DigestTask } from "@/app/inventory/_lib/task-email-templates";
+import { buildTaskDigestEmail, formatDueDate, type DigestTask } from "@/app/inventory/_lib/task-email-templates";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 type Milestone = "day_before" | "due_day" | "overdue";
@@ -79,7 +79,7 @@ export async function checkTaskDueReminders(
     digests.set(raw.assigned_to!, list);
   }
 
-  const emailed = await sendDigests(admin, digests);
+  const emailed = await sendDigests(admin, digests, formatDueDate(today));
   const sent = [...digests.values()].reduce((n, list) => n + list.length, 0);
   return { sent, checked: assigned.length, emailed };
 }
@@ -114,7 +114,11 @@ async function notifyOne(admin: AdminClient, task: DueTask, milestone: Milestone
   return true;
 }
 
-async function sendDigests(admin: AdminClient, digests: Map<string, DigestTask[]>): Promise<number> {
+async function sendDigests(
+  admin: AdminClient,
+  digests: Map<string, DigestTask[]>,
+  dateLabel: string,
+): Promise<number> {
   if (digests.size === 0) return 0;
   const recipients = await getTaskEmailRecipients(admin, [...digests.keys()]);
 
@@ -124,9 +128,11 @@ async function sendDigests(admin: AdminClient, digests: Map<string, DigestTask[]
     if (!recipient) continue;
     const email = buildTaskDigestEmail({
       recipientName: recipient.name,
+      dateLabel,
       tasks,
       taskUrl: (id) => appUrl(`/inventory/tasks/${id}`),
       tasksUrl: appUrl("/inventory/tasks"),
+      settingsUrl: appUrl("/inventory/settings"),
     });
     if (await sendAppEmail({ to: recipient.email, ...email })) emailed += 1;
   }

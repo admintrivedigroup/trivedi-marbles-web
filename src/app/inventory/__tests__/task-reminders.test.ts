@@ -63,7 +63,7 @@ describe("checkTaskDueReminders", () => {
     const email = sendAppEmail.mock.calls[0][0];
     expect(email.to).toBe("alice@example.com");
     expect(email.subject).toBe("Task reminder: 1 overdue, 1 due today, 1 due tomorrow");
-    expect(email.html).toContain("Hi Alice");
+    expect(email.html).toContain("Dear Alice,");
     expect(email.html).toContain("26 Sep 2026, 10:00 AM");
   });
 

@@ -26,19 +26,25 @@ describe("task emails", () => {
       dueDate: null,
       priority: "high",
       assignedByName: "Ravi",
+      recipientName: "Anil",
       taskUrl: "https://example.com/inventory/tasks/1",
+      settingsUrl: "https://example.com/inventory/settings",
     });
 
     expect(subject).toBe("New task: Polish <b>slab</b> & ship");
     expect(html).toContain("Polish &lt;b&gt;slab&lt;/b&gt; &amp; ship");
     expect(html).not.toContain("<script>");
-    expect(html).toContain("No due date · High priority");
-    expect(html).toContain("assigned a task by Ravi");
+    expect(html).toContain("Dear Anil,");
+    expect(html).toContain("assigned to you by Ravi");
+    expect(html).toContain("Not set");
+    expect(html).toContain(">High</span>");
   });
 
   it("orders digest sections overdue → today → tomorrow", () => {
     const { html } = buildTaskDigestEmail({
       recipientName: null,
+      dateLabel: "28 Sep 2026",
+      settingsUrl: "/s",
       tasks: [
         { id: "a", title: "Tomorrow task", dueDate: "2026-09-29", section: "day_before" },
         { id: "b", title: "Late task", dueDate: "2026-09-26", section: "overdue" },
@@ -49,5 +55,7 @@ describe("task emails", () => {
 
     expect(html.indexOf("Overdue (1)")).toBeLessThan(html.indexOf("Due tomorrow (1)"));
     expect(html).not.toContain("Due today (");
+    expect(html).toContain("Hello,");
+    expect(html).toContain("Daily Task Summary · 28 Sep 2026");
   });
 });
