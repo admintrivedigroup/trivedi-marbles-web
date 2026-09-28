@@ -1,10 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { TaskStatus, TaskPriority } from "@/app/inventory/_lib/tasks";
 import { requireUser, requireAdmin } from "@/app/inventory/_lib/action-auth";
-import { notifyTaskAssigned } from "@/app/inventory/_lib/task-notify";
+import { notifyTaskAssigned, notifyTaskCompleted } from "@/app/inventory/_lib/task-notify";
 
 export type TaskFormData = {
   title: string;
@@ -70,12 +71,19 @@ export async function createTask(
 
   const assignedTo = nullIfEmpty(data.assigned_to);
   if (assignedTo) {
-    notifyTaskAssigned({
-      taskId,
-      title: data.title,
-      assignedTo,
-      actorUserId: user?.id ?? null,
-    }).catch(() => {});
+    // after(): runs once the response is sent, but unlike a bare un-awaited
+    // promise it isn't cut off when the serverless function returns.
+    after(() =>
+      notifyTaskAssigned({
+        taskId,
+        title: data.title,
+        assignedTo,
+        actorUserId: user?.id ?? null,
+        description: nullIfEmpty(data.description),
+        dueDate: nullIfEmpty(data.due_date),
+        priority: data.priority,
+      }).catch(() => {}),
+    );
   }
 
   if (checklistItems.length > 0) {
@@ -106,7 +114,11 @@ export async function updateTask(
   const access = await assertTaskOwnerOrAdmin(supabase, id);
   if (!access.ok) return { success: false, error: access.error };
 
-  const { data: existing } = await supabase.from("tasks").select("assigned_to").eq("id", id).maybeSingle();
+  const { data: existing } = await supabase
+    .from("tasks")
+    .select("assigned_to, status, created_by")
+    .eq("id", id)
+    .maybeSingle();
 
   const { error } = await supabase
     .from("tasks")
@@ -115,15 +127,33 @@ export async function updateTask(
 
   if (error) return { success: false, error: error.message };
 
+  const { data: { user } } = await supabase.auth.getUser();
+  const actorUserId = user?.id ?? null;
+
   const newAssignee = nullIfEmpty(data.assigned_to);
   if (newAssignee && newAssignee !== existing?.assigned_to) {
-    const { data: { user } } = await supabase.auth.getUser();
-    notifyTaskAssigned({
-      taskId: id,
-      title: data.title,
-      assignedTo: newAssignee,
-      actorUserId: user?.id ?? null,
-    }).catch(() => {});
+    after(() =>
+      notifyTaskAssigned({
+        taskId: id,
+        title: data.title,
+        assignedTo: newAssignee,
+        actorUserId,
+        description: nullIfEmpty(data.description),
+        dueDate: nullIfEmpty(data.due_date),
+        priority: data.priority,
+      }).catch(() => {}),
+    );
+  }
+
+  if (data.status === "completed" && existing && existing.status !== "completed") {
+    after(() =>
+      notifyTaskCompleted({
+        taskId: id,
+        title: data.title,
+        createdBy: existing.created_by ?? null,
+        actorUserId,
+      }).catch(() => {}),
+    );
   }
 
   revalidatePath("/inventory/tasks");
@@ -140,11 +170,28 @@ export async function updateTaskStatus(
 
   const supabase = await createClient();
 
+  const { data: existing } = await supabase
+    .from("tasks")
+    .select("title, status, created_by")
+    .eq("id", id)
+    .maybeSingle();
+
   const patch: Record<string, unknown> = { status, updated_at: new Date().toISOString() };
   if (status === "completed") patch.progress = 100;
 
   const { error } = await supabase.from("tasks").update(patch).eq("id", id);
   if (error) return { success: false, error: error.message };
+
+  if (status === "completed" && existing && existing.status !== "completed") {
+    after(() =>
+      notifyTaskCompleted({
+        taskId: id,
+        title: existing.title,
+        createdBy: existing.created_by ?? null,
+        actorUserId: auth.profile.userId,
+      }).catch(() => {}),
+    );
+  }
 
   revalidatePath("/inventory/tasks");
   return { success: true };

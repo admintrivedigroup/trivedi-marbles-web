@@ -196,6 +196,25 @@ export async function updateReservationReminderPreference(
   return { error: null };
 }
 
+export async function updateTaskEmailPreference(
+  enabled: boolean,
+): Promise<NotificationActionResult> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "You must be signed in." };
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("user_profiles")
+    .update({ task_emails_enabled: enabled })
+    .eq("user_id", user.id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/inventory/settings");
+  return { error: null };
+}
+
 export async function updateLowStockThreshold(value: number): Promise<NotificationActionResult> {
   const profile = await getCurrentUserProfile();
   if (!profile || (profile.role !== "admin" && profile.role !== "superadmin")) {

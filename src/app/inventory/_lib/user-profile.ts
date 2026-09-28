@@ -24,6 +24,7 @@ export type UserProfile = {
   lowStockAlertsEnabled: boolean;
   stockMovementAlertsEnabled: boolean;
   reservationRemindersEnabled: boolean;
+  taskEmailsEnabled: boolean;
   darkModeEnabled: boolean;
   onboardingCompletedAt: string | null;
 };
@@ -52,7 +53,7 @@ export const getCurrentUserProfile = cache(async (): Promise<UserProfile | null>
   const [profileRes, permissionsRes, warehouseRes] = await Promise.all([
     supabase
       .from("user_profiles")
-      .select("role, display_name, avatar_url, created_at, last_seen_at, low_stock_alerts_enabled, stock_movement_alerts_enabled, reservation_reminders_enabled, dark_mode_enabled, onboarding_completed_at")
+      .select("role, display_name, avatar_url, created_at, last_seen_at, low_stock_alerts_enabled, stock_movement_alerts_enabled, reservation_reminders_enabled, task_emails_enabled, dark_mode_enabled, onboarding_completed_at")
       .eq("user_id", user.id)
       .maybeSingle(),
     supabase
@@ -85,6 +86,7 @@ export const getCurrentUserProfile = cache(async (): Promise<UserProfile | null>
     lowStockAlertsEnabled: profileRes.data?.low_stock_alerts_enabled ?? true,
     stockMovementAlertsEnabled: profileRes.data?.stock_movement_alerts_enabled ?? false,
     reservationRemindersEnabled: profileRes.data?.reservation_reminders_enabled ?? false,
+    taskEmailsEnabled: profileRes.data?.task_emails_enabled ?? true,
     darkModeEnabled: profileRes.data?.dark_mode_enabled ?? false,
     onboardingCompletedAt: profileRes.data?.onboarding_completed_at ?? null,
   };

@@ -14,6 +14,7 @@ import { updateOwnProfile } from "@/app/inventory/_actions/profile";
 import {
   updateLowStockThreshold,
   updateNotificationPreference,
+  updateTaskEmailPreference,
   updateStockMovementAlertPreference,
   updateReservationReminderPreference,
 } from "@/app/inventory/_actions/notifications";
@@ -331,6 +332,9 @@ function NotificationsSection({
   );
   const [isSavingReminderPreference, setIsSavingReminderPreference] = useState(false);
 
+  const [taskEmailsEnabled, setTaskEmailsEnabled] = useState(profile?.taskEmailsEnabled ?? true);
+  const [isSavingTaskEmailPreference, setIsSavingTaskEmailPreference] = useState(false);
+
   const canEditThreshold = profile?.role === "admin" || profile?.role === "superadmin";
   const [threshold, setThreshold] = useState(String(initialLowStockThreshold ?? 5));
   const [thresholdFeedback, setThresholdFeedback] = useState<FeedbackState>(null);
@@ -366,6 +370,17 @@ function NotificationsSection({
     setIsSavingReminderPreference(false);
     if (res.error) {
       setReservationRemindersEnabled(!next);
+    }
+  }
+
+  async function handleToggleTaskEmails() {
+    const next = !taskEmailsEnabled;
+    setTaskEmailsEnabled(next);
+    setIsSavingTaskEmailPreference(true);
+    const res = await updateTaskEmailPreference(next);
+    setIsSavingTaskEmailPreference(false);
+    if (res.error) {
+      setTaskEmailsEnabled(!next);
     }
   }
 
@@ -436,6 +451,19 @@ function NotificationsSection({
             checked={stockMovementAlertsEnabled}
             onClick={handleToggleStockMovement}
             disabled={isSavingMovementPreference}
+          />
+        </div>
+        <div className="flex items-center justify-between border-t border-border pt-4">
+          <div>
+            <p className="font-medium text-foreground">Task Emails</p>
+            <p className="text-sm text-muted-foreground">
+              Get an email when you are assigned a task, when it is due or overdue, and when a task you created is completed
+            </p>
+          </div>
+          <Toggle
+            checked={taskEmailsEnabled}
+            onClick={handleToggleTaskEmails}
+            disabled={isSavingTaskEmailPreference}
           />
         </div>
 

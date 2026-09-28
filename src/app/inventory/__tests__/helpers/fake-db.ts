@@ -1,9 +1,9 @@
 // A tiny in-memory stand-in for the Supabase query builder, covering just the calls the
 // inventory code makes (select / insert / update / delete / upsert with eq, neq, in, lt,
-// is filters). Rows are plain objects, so embedded relations such as `slab_statuses(name)`
+// gte, is filters). Rows are plain objects, so embedded relations such as `slab_statuses(name)`
 // are seeded directly on the row. `failWhen` lets a test make a specific write fail.
 type Row = Record<string, unknown>;
-type Filter = { kind: "eq" | "neq" | "in" | "lt" | "is"; column: string; value: unknown };
+type Filter = { kind: "eq" | "neq" | "in" | "lt" | "gte" | "is"; column: string; value: unknown };
 type Op = "select" | "insert" | "update" | "delete" | "upsert";
 
 export type FailContext = { table: string; op: Op; payload: unknown; filters: Filter[] };
@@ -24,6 +24,8 @@ function matches(row: Row, filter: Filter): boolean {
       return (filter.value as unknown[]).map(String).includes(String(v));
     case "lt":
       return v != null && String(v) < String(filter.value);
+    case "gte":
+      return v != null && String(v) >= String(filter.value);
     case "is":
       return filter.value === null ? v == null : v === filter.value;
   }
@@ -112,6 +114,10 @@ export function createFakeDb(seed: Record<string, Row[]>, options: FakeDbOptions
       },
       lt(column: string, value: unknown) {
         filters.push({ kind: "lt", column, value });
+        return builder;
+      },
+      gte(column: string, value: unknown) {
+        filters.push({ kind: "gte", column, value });
         return builder;
       },
       is(column: string, value: unknown) {

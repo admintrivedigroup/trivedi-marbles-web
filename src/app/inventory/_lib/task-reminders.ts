@@ -1,9 +1,11 @@
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { appUrl, getTaskEmailRecipients, sendAppEmail } from "@/app/inventory/_lib/email";
+import { buildTaskDigestEmail, type DigestTask } from "@/app/inventory/_lib/task-email-templates";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
-type Milestone = "day_before" | "due_day";
+type Milestone = "day_before" | "due_day" | "overdue";
 
 type DueTask = {
   id: string;
@@ -12,12 +14,17 @@ type DueTask = {
   due_date: string;
 };
 
+// A task that went overdue is reminded once. Looking back a few days (rather
+// than only "due yesterday") lets a missed cron run catch up, without mailing
+// everyone about tasks that have been overdue for months when this ships.
+const OVERDUE_LOOKBACK_DAYS = 3;
+
 // due_date carries a time component (a datetime-local input, stored as
 // entered with no timezone offset — see tasks-manager.tsx), so "today" has
 // to be evaluated in the business's own timezone rather than UTC, or a
 // task due mid-morning IST could fall on the wrong side of the boundary.
-function todayIso(): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
+function todayIso(now: Date): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(now);
 }
 
 function addDaysIso(iso: string, days: number): string {
@@ -26,34 +33,55 @@ function addDaysIso(iso: string, days: number): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
 }
 
+function milestoneFor(dueDate: string, today: string): Milestone {
+  if (dueDate < today) return "overdue";
+  return dueDate === today ? "due_day" : "day_before";
+}
+
+const BELL_TITLES: Record<Milestone, (title: string) => string> = {
+  overdue: (t) => `"${t}" is overdue`,
+  due_day: (t) => `"${t}" is due today`,
+  day_before: (t) => `"${t}" is due tomorrow`,
+};
+
 /** Called daily by the /api/cron/task-reminders route. Finds assigned,
- * not-yet-completed tasks whose due_date falls today or tomorrow and
- * notifies the assignee, deduped per (task, milestone, due date) via
- * task_reminder_log so re-running the same day is a no-op. */
-export async function checkTaskDueReminders(): Promise<{ sent: number; checked: number }> {
-  const admin = createAdminClient();
-  const today = todayIso();
-  const tomorrow = addDaysIso(today, 1);
+ * not-yet-completed tasks that are overdue (within the lookback), due today
+ * or due tomorrow. Each crossing gets a bell notification, deduped per
+ * (task, milestone, due date) via task_reminder_log so re-running the same
+ * day is a no-op; then each assignee gets one email listing all of theirs. */
+export async function checkTaskDueReminders(
+  admin: AdminClient = createAdminClient(),
+  now: Date = new Date(),
+): Promise<{ sent: number; checked: number; emailed: number }> {
+  const today = todayIso(now);
+  const windowStart = addDaysIso(today, -OVERDUE_LOOKBACK_DAYS);
   const dayAfterTomorrow = addDaysIso(today, 2);
 
   const { data: tasks } = await admin
     .from("tasks")
     .select("id, title, assigned_to, due_date")
-    .gte("due_date", `${today}T00:00:00`)
+    .gte("due_date", `${windowStart}T00:00:00`)
     .lt("due_date", `${dayAfterTomorrow}T00:00:00`)
-    .not("assigned_to", "is", null)
-    .neq("status", "completed");
+    .neq("status", "completed")
+    .neq("status", "draft");
 
-  if (!tasks || tasks.length === 0) return { sent: 0, checked: 0 };
+  const assigned = ((tasks ?? []) as DueTask[]).filter((t) => t.assigned_to);
+  if (assigned.length === 0) return { sent: 0, checked: 0, emailed: 0 };
 
-  let sent = 0;
-  for (const raw of tasks as DueTask[]) {
+  const digests = new Map<string, DigestTask[]>();
+  for (const raw of assigned) {
     const dueDate = raw.due_date.slice(0, 10);
-    const milestone: Milestone = dueDate === today ? "due_day" : "day_before";
+    const milestone = milestoneFor(dueDate, today);
     const notified = await notifyOne(admin, { ...raw, due_date: dueDate }, milestone);
-    if (notified) sent += 1;
+    if (!notified) continue;
+    const list = digests.get(raw.assigned_to!) ?? [];
+    list.push({ id: raw.id, title: raw.title, dueDate: raw.due_date, section: milestone });
+    digests.set(raw.assigned_to!, list);
   }
-  return { sent, checked: tasks.length };
+
+  const emailed = await sendDigests(admin, digests);
+  const sent = [...digests.values()].reduce((n, list) => n + list.length, 0);
+  return { sent, checked: assigned.length, emailed };
 }
 
 async function notifyOne(admin: AdminClient, task: DueTask, milestone: Milestone): Promise<boolean> {
@@ -76,15 +104,31 @@ async function notifyOne(admin: AdminClient, task: DueTask, milestone: Milestone
     due_date: task.due_date,
   });
 
-  const title =
-    milestone === "due_day" ? `"${task.title}" is due today` : `"${task.title}" is due tomorrow`;
-
   await admin.from("notifications").insert({
     user_id: task.assigned_to,
-    type: "task_due_reminder",
-    title,
+    type: milestone === "overdue" ? "task_overdue" : "task_due_reminder",
+    title: BELL_TITLES[milestone](task.title),
     body: `Due ${task.due_date}`,
     link: `/inventory/tasks/${task.id}`,
   });
   return true;
+}
+
+async function sendDigests(admin: AdminClient, digests: Map<string, DigestTask[]>): Promise<number> {
+  if (digests.size === 0) return 0;
+  const recipients = await getTaskEmailRecipients(admin, [...digests.keys()]);
+
+  let emailed = 0;
+  for (const [userId, tasks] of digests) {
+    const recipient = recipients.get(userId);
+    if (!recipient) continue;
+    const email = buildTaskDigestEmail({
+      recipientName: recipient.name,
+      tasks,
+      taskUrl: (id) => appUrl(`/inventory/tasks/${id}`),
+      tasksUrl: appUrl("/inventory/tasks"),
+    });
+    if (await sendAppEmail({ to: recipient.email, ...email })) emailed += 1;
+  }
+  return emailed;
 }

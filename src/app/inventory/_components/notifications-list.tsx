@@ -27,6 +27,8 @@ const TYPE_LABEL: Record<string, { label: string; className: string }> = {
   slow_stock: { label: "Slow-moving stock", className: "bg-red-100 text-red-700" },
   task_assigned: { label: "Task assigned", className: "bg-teal-100 text-teal-700" },
   task_due_reminder: { label: "Task due", className: "bg-rose-100 text-rose-700" },
+  task_overdue: { label: "Task overdue", className: "bg-red-100 text-red-700" },
+  task_completed: { label: "Task completed", className: "bg-emerald-100 text-emerald-700" },
 };
 
 export function NotificationsList({ items: initialItems, total, page, pageSize }: NotificationsListProps) {
