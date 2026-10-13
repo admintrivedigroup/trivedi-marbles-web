@@ -1,7 +1,7 @@
 // Client-side only — Canvas API required.
 
 import { decodeMask, unionMasks, loadImage } from "./maskUtils";
-import type { TextureSettings, SlabSettings, RenderMode, PipelineSegment } from "./types";
+import type { TextureSettings, SlabSettings, RenderMode, PipelineSegment, SlabSizeFt } from "./types";
 
 // ── Canvas helper ─────────────────────────────────────────────────────────────
 
@@ -154,11 +154,15 @@ export type RenderJob = {
   textureDataUrl:    string;
   surfaceMaskBases:  string[];  // union → surface region
   occluderMaskBases: string[];  // union → preserve original pixels
+  /** SAM 2 segment masks — perspectiveRenderer snaps the floor/occluder masks to their edges (segmentVote.ts). */
+  refineMaskBases?:   string[];
   settings:          TextureSettings;
   width:             number;
   height:            number;
   renderMode?:        RenderMode;    // "slab" (default) | "repeat"
   slabSettings?:      SlabSettings;
+  /** The slab's real size in feet; perspectiveRenderer lays slabs at this physical size. */
+  slabSizeFt?:        SlabSizeFt | null;
   /** Debug: replace texture with (U=red, V=green) gradient to verify UV mapping. */
   debugUV?:           boolean;
   /** Debug: replace texture with 8×8 checkerboard drawn from raw UV — no scale/rotation — to verify perspective compression is visible. */

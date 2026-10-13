@@ -4,18 +4,21 @@
 // cache the expensive half (mask decode/union, largest-CC, quad, homography) across slab
 // swaps and texture-setting changes.
 //
-// Algorithm (unchanged):
+// Algorithm:
 //   1. Find the largest connected component of the floor mask (BFS)
-//   2. Row-scan the CC to extract a perspective quadrilateral
-//   3. Solve the 8-DOF homography (image pixels → normalised UV) via Gaussian elimination
+//   2. Estimate the floor's perspective from the photo's vanishing points (floorCamera.ts)
+//   3. Build the homography (image pixels → UV) from that camera
 //   4. For each floor pixel: map to UV, tile with scale/rotation, bilinear-sample the texture
 //   5. Preserve occluder pixels on top
 //   6. Build a debug overlay showing the CC tint, quad outline, and corner labels
 
+import { estimateFloorHomography } from "./floorCamera";
+import { computeFloorReflection, type FloorReflection } from "./floorReflection";
 import { decodeMask, unionMasks, loadImage } from "./maskUtils";
+import { refineMasksWithSegments } from "./segmentVote";
 import type { RenderJob } from "./renderUtils";
 import type { PipelineSegment, SlabSettings } from "./types";
-import { DEFAULT_SLAB_SETTINGS } from "./types";
+import { DEFAULT_SLAB_SETTINGS, DEFAULT_SLAB_SIZE_FT } from "./types";
 
 // ── Canvas helper ────────────────────────────────────────────────────────────
 
@@ -53,6 +56,17 @@ function makeSlabRng(col: number, row: number): () => number {
   };
 }
 
+// Joint colour that belongs to the slab: its average colour, darkened — reads as a shadow
+// line between slabs on light and dark stone alike.
+function autoJointColor(texPx: Uint8ClampedArray): [number, number, number] {
+  const n = texPx.length >> 2;
+  if (n === 0) return [120, 116, 110];
+  const step = Math.max(1, Math.floor(n / 4096));
+  let r = 0, g = 0, b = 0, count = 0;
+  for (let i = 0; i < n; i += step) { r += texPx[i * 4]!; g += texPx[i * 4 + 1]!; b += texPx[i * 4 + 2]!; count++; }
+  return [(r / count) * 0.55, (g / count) * 0.55, (b / count) * 0.55];
+}
+
 function hexToRgb(hex: string): [number, number, number] {
   const n = parseInt(hex.replace(/^#/, ""), 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
@@ -79,21 +93,21 @@ function computeSlabParams(col: number, row: number, randomize: boolean, bookmat
   const r0 = rng(), r1 = rng(), r2 = rng(), r3 = rng(), r4 = rng(), r5 = rng();
 
   if (bookmatch) {
-    // Deterministic mirror by column parity — adjacent columns are horizontal
-    // mirror images of each other, so veins meet symmetrically at each vertical
-    // seam. Offset/rotation must stay off (any of it would throw the mirrored
-    // veins out of alignment); brightness jitter alone can't break the mirror,
-    // so it still honors randomize when both are on.
+    // Four-way mirror: adjacent columns are horizontal mirror images and adjacent rows
+    // vertical ones, so veins and tone run straight across every seam in both
+    // directions. Offset, rotation and brightness jitter all stay off — any of them
+    // would put a visible step at the joint, which is the thing bookmatching removes.
     const colParity = ((col % 2) + 2) % 2;
+    const rowParity = ((row % 2) + 2) % 2;
     return {
       offsetU:    0,
       offsetV:    0,
       flipH:      colParity === 1,
-      flipV:      false,
+      flipV:      rowParity === 1,
       cosA:       1,
       sinA:       0,
       hasRot:     false,
-      brightness: randomize ? 0.9 + r5 * 0.2 : 1.0,
+      brightness: 1.0,
     };
   }
 
@@ -171,6 +185,10 @@ export type FloorGeometry = {
   edgeAlpha: Float32Array;
   /** Art-directed glossy highlight anchored near a detected light source — see computeSpecularHighlight. Null when no window/fixture segment is found. */
   specular: SpecularHighlight | null;
+  /** Mirror image of the room in the floor, from the photo — see floorReflection.ts. */
+  reflection: FloorReflection;
+  /** Real-world length of one UV unit in feet (see ASSUMED_CAMERA_HEIGHT_FT); null if the camera could not be estimated. */
+  uvUnitFt: number | null;
 };
 
 // ── Step 1: Largest connected component (BFS) ────────────────────────────────
@@ -207,52 +225,6 @@ function findLargestCC(mask: Uint8Array, W: number, H: number): Uint8Array {
   const result = new Uint8Array(n);
   for (const i of best) result[i] = 255;
   return result;
-}
-
-// ── Step 2: Row-scan quadrilateral ───────────────────────────────────────────
-
-function extractFloorQuad(cc: Uint8Array, W: number, H: number): FloorQuad | null {
-  const rowLeft  = new Int32Array(H).fill(-1);
-  const rowRight = new Int32Array(H).fill(-1);
-
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      if ((cc[y * W + x] ?? 0) > 128) {
-        if (rowLeft[y] === -1) rowLeft[y] = x;
-        rowRight[y] = x;
-      }
-    }
-  }
-
-  let yMin = H, yMax = -1;
-  for (let y = 0; y < H; y++) {
-    if (rowLeft[y] !== -1) {
-      if (y < yMin) yMin = y;
-      if (y > yMax) yMax = y;
-    }
-  }
-  if (yMax < 0 || yMax - yMin < 5) return null;
-
-  const band = Math.max(2, Math.round((yMax - yMin) * 0.2));
-
-  const rowMedian = (ys: number[], side: "left" | "right"): number => {
-    const vals = ys
-      .map((y) => (side === "left" ? rowLeft[y]! : rowRight[y]!))
-      .filter((v) => v !== -1)
-      .sort((a, b) => a - b);
-    if (vals.length === 0) return side === "left" ? 0 : W - 1;
-    return vals[Math.floor(vals.length / 2)]!;
-  };
-
-  const topYs = Array.from({ length: band }, (_, k) => yMin + k).filter((y) => y <= yMax);
-  const botYs = Array.from({ length: band }, (_, k) => yMax - k).filter((y) => y >= yMin);
-
-  return {
-    tl: { x: rowMedian(topYs, "left"),  y: yMin },
-    tr: { x: rowMedian(topYs, "right"), y: yMin },
-    br: { x: rowMedian(botYs, "right"), y: yMax },
-    bl: { x: rowMedian(botYs, "left"),  y: yMax },
-  };
 }
 
 // ── 3×3 matrix inverse ────────────────────────────────────────────────────────
@@ -376,54 +348,7 @@ function logHomographyMath(h: number[], quad: FloorQuad) {
   console.log(`  → v = V/W = ${cV.toFixed(6)} / ${cW.toFixed(6)} = ${(cV / cW).toFixed(6)}`);
 }
 
-// ── Step 3: Homography via Gaussian elimination ──────────────────────────────
-//
-// Solves A·h = b for h ∈ ℝ⁸ where h22 = 1 (DLT).
-// Maps image pixels → normalised UV coords.
-
-function gaussianElim(A: number[][], b: number[]): number[] | null {
-  const n = b.length;
-  // Build augmented [A | b]
-  const M: number[][] = A.map((row, i) => [...row, b[i]!]);
-
-  for (let col = 0; col < n; col++) {
-    // Partial pivot
-    let maxRow = col;
-    for (let r = col + 1; r < n; r++) {
-      if (Math.abs(M[r]![col]!) > Math.abs(M[maxRow]![col]!)) maxRow = r;
-    }
-    [M[col], M[maxRow]] = [M[maxRow]!, M[col]!];
-
-    const pivot = M[col]![col]!;
-    if (Math.abs(pivot) < 1e-10) return null;
-
-    for (let r = 0; r < n; r++) {
-      if (r === col) continue;
-      const f = M[r]![col]! / pivot;
-      for (let j = col; j <= n; j++) M[r]![j]! -= f * M[col]![j]!;
-    }
-  }
-
-  return M.map((row, i) => row[n]! / row[i]!);
-}
-
-// Computes homography H mapping imgPts → uvPts using 4-point DLT.
-function computeH(
-  imgPts: [FloorPoint, FloorPoint, FloorPoint, FloorPoint],
-  uvPts:  [FloorPoint, FloorPoint, FloorPoint, FloorPoint],
-): number[] | null {
-  const A: number[][] = [];
-  const b: number[]   = [];
-  for (let i = 0; i < 4; i++) {
-    const { x, y } = imgPts[i]!;
-    const { x: u, y: v } = uvPts[i]!;
-    A.push([x, y, 1, 0, 0, 0, -x * u, -y * u]);
-    b.push(u);
-    A.push([0, 0, 0, x, y, 1, -x * v, -y * v]);
-    b.push(v);
-  }
-  return gaussianElim(A, b);
-}
+// ── Step 3: Apply the homography (image pixels → UV), h22 fixed at 1 ─────────
 
 function applyH(h: number[], x: number, y: number): FloorPoint {
   const w = h[6]! * x + h[7]! * y + 1;
@@ -525,7 +450,12 @@ const HIGHLIGHT_STRENGTH = 0;     // high-freq layer carries the OLD floor's own
                                    // floor's pattern onto the new slab. Disabled — lowMul (blurred, pattern-free
                                    // ambient shadow) plus the art-directed specular hotspot carry realism instead.
 const LOW_MUL_MIN = 0.4, LOW_MUL_MAX = 1.75; // clamp so deep shadows/hot spots don't crush or blow out the texture
-const FEATHER_PX_FRAC = 1 / 250; // floor-boundary feather width as a fraction of min(W,H)
+// The camera estimate measures the floor in multiples of the camera's own height, so one
+// assumed number turns that into feet. Room photos are taken hand-held or at eye level,
+// roughly 4.5–5.5 ft up; being off by 10% makes slabs 10% too big or small.
+const ASSUMED_CAMERA_HEIGHT_FT = 5;
+const REFLECTION_MATTE = 0.12, REFLECTION_GLOSS = 0.28; // peak share of the mirrored room shown over the slab
+const FEATHER_PX_FRAC = 1 / 900; // floor-boundary feather width as a fraction of min(W,H)
 
 function computeLightingLayers(
   origPx: Uint8ClampedArray,
@@ -554,7 +484,17 @@ function computeLightingLayers(
   const diag   = found ? Math.hypot(xMax - xMin, yMax - yMin) : Math.min(W, H);
   const radius = Math.max(10, Math.min(90, Math.round(diag / 7)));
 
-  const low = boxBlur3(lum, W, H, radius);
+  // Mask-normalised blur: only floor pixels contribute, so a bright sofa or a dark cabinet
+  // next to the floor doesn't lighten/darken the slab around it.
+  const floorLum = new Float32Array(n);
+  const floorBin = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    if ((surfMask[i] ?? 0) > 128) { floorLum[i] = lum[i]!; floorBin[i] = 1; }
+  }
+  const lumBlur = boxBlur3(floorLum, W, H, radius);
+  const binBlur = boxBlur3(floorBin, W, H, radius);
+  const low = new Float32Array(n);
+  for (let i = 0; i < n; i++) low[i] = binBlur[i]! > 1e-3 ? lumBlur[i]! / binBlur[i]! : lum[i]!;
 
   let sum = 0, count = 0;
   for (let i = 0; i < n; i++) {
@@ -574,22 +514,23 @@ function computeLightingLayers(
   return { lowMul, highRes };
 }
 
-// Soft alpha, 1 deep inside the floor mask, ramping to 0 over a few pixels at
-// the mask boundary — replaces the current hard binary cutline at the floor/wall
-// (and floor/baseboard) edge.
-function computeEdgeAlpha(surfMask: Uint8Array, W: number, H: number): Float32Array {
-  const n   = W * H;
-  const bin = new Float32Array(n);
-  for (let i = 0; i < n; i++) bin[i] = (surfMask[i] ?? 0) > 128 ? 1 : 0;
+// Soft alpha, 1 inside the floor mask, easing off over about a pixel where the floor meets
+// a wall or skirting. Any fade shows the OLD floor through the new slab, so it is kept to
+// an anti-aliasing width, and edges against occluders (furniture) are not faded at all —
+// the pixel next door is already the original photo, a hard cut is correct there.
+export function computeEdgeAlpha(surfMask: Uint8Array, occMask: Uint8Array, W: number, H: number): Float32Array {
+  const n     = W * H;
+  const solid = new Float32Array(n);
+  for (let i = 0; i < n; i++) solid[i] = (surfMask[i] ?? 0) > 128 || (occMask[i] ?? 0) > 128 ? 1 : 0;
 
-  const featherPx = Math.max(2, Math.round(Math.min(W, H) * FEATHER_PX_FRAC));
+  const featherPx = Math.max(1, Math.round(Math.min(W, H) * FEATHER_PX_FRAC));
   const tmp     = new Float32Array(n);
   const blurred = new Float32Array(n);
-  boxBlurPass(bin, tmp, W, H, featherPx, true);
+  boxBlurPass(solid, tmp, W, H, featherPx, true);
   boxBlurPass(tmp, blurred, W, H, featherPx, false);
 
   // Only fade inward from the mask edge — never extend alpha past the original mask.
-  for (let i = 0; i < n; i++) blurred[i] = bin[i]! > 0 ? Math.min(1, blurred[i]!) : 0;
+  for (let i = 0; i < n; i++) blurred[i] = (surfMask[i] ?? 0) > 128 ? Math.min(1, blurred[i]!) : 0;
   return blurred;
 }
 
@@ -597,27 +538,40 @@ const CONTACT_SHADOW_STRENGTH   = 0.45;  // 0..1 — how dark the rim gets right
 const CONTACT_SHADOW_PX_FRAC    = 1 / 130; // rim width as a fraction of min(W,H) — a physical-width contact
                                             // shadow, so it doesn't scale with how big the object itself is
 
-// Per-pixel multiplier (1 = unaffected) that darkens the floor texture in a soft rim just
-// outside each occluder's mask boundary, fading back to 1 a few pixels out — makes furniture
-// read as resting on the floor rather than pasted over it. The occluder's own cutout stays
-// hard-edged: this only ever touches floor-side pixels (occBin === 0), the compositing
-// decision of what counts as "occluder" is untouched, so there's nothing here that could
-// soften that boundary — only darken the texture just beyond it.
+const CONTACT_SHADOW_REACH       = 3;     // shadow extends this many rim-widths below the occluder
+
+// Per-pixel multiplier (1 = unaffected) that darkens the floor texture where furniture
+// meets it, fading back to 1 a few pixels out — makes furniture read as resting on the
+// floor rather than pasted over it. The shadow falls below and beside an occluder (the
+// floor in front of it, where it actually touches down) and not above it: floor seen over
+// the top of a sofa is behind the sofa, not under it. The occluder's own cutout stays
+// hard-edged: this only ever touches floor-side pixels (occBin === 0).
 export function computeContactShadow(occMask: Uint8Array, W: number, H: number): Float32Array {
   const n = W * H;
   const occBin = new Float32Array(n);
   for (let i = 0; i < n; i++) occBin[i] = (occMask[i] ?? 0) > 128 ? 1 : 0;
 
-  const radius  = Math.max(2, Math.round(Math.min(W, H) * CONTACT_SHADOW_PX_FRAC));
-  const tmp     = new Float32Array(n);
-  const blurred = new Float32Array(n);
+  const radius = Math.max(2, Math.round(Math.min(W, H) * CONTACT_SHADOW_PX_FRAC));
+  const reach  = radius * CONTACT_SHADOW_REACH;
+  const tmp    = new Float32Array(n);
   boxBlurPass(occBin, tmp, W, H, radius, true);
-  boxBlurPass(tmp, blurred, W, H, radius, false);
+
+  // One-sided vertical mean: how much occluder sits in the `reach` rows above this pixel.
+  const above = new Float32Array(n);
+  const norm  = 1 / (reach + 1);
+  for (let x = 0; x < W; x++) {
+    let sum = 0;
+    for (let y = 0; y < H; y++) {
+      sum += tmp[y * W + x]!;
+      if (y > reach) sum -= tmp[(y - reach - 1) * W + x]!;
+      above[y * W + x] = sum * norm;
+    }
+  }
 
   const mul = new Float32Array(n);
   for (let i = 0; i < n; i++) {
     if (occBin[i]! > 0) { mul[i] = 1; continue; } // occluder pixels aren't rendered — value unused
-    const closeness = Math.min(1, blurred[i]!);
+    const closeness = Math.min(1, above[i]!);
     mul[i] = 1 - closeness * CONTACT_SHADOW_STRENGTH;
   }
   return mul;
@@ -875,9 +829,9 @@ async function makeDebugOverlay(
 const MAX_DIM = 1280;
 
 export async function computeFloorGeometry(
-  job: Pick<RenderJob, "originalDataUrl" | "surfaceMaskBases" | "occluderMaskBases" | "width" | "height" | "segments" | "depthBase64">,
+  job: Pick<RenderJob, "originalDataUrl" | "surfaceMaskBases" | "occluderMaskBases" | "refineMaskBases" | "width" | "height" | "segments" | "depthBase64">,
 ): Promise<FloorGeometry> {
-  const { originalDataUrl, surfaceMaskBases, occluderMaskBases, width, height, segments, depthBase64 } = job;
+  const { originalDataUrl, surfaceMaskBases, occluderMaskBases, refineMaskBases, width, height, segments, depthBase64 } = job;
 
   // Cap resolution
   const scl = Math.min(1, MAX_DIM / Math.max(width || 1, height || 1));
@@ -895,54 +849,50 @@ export async function computeFloorGeometry(
     Promise.all(surfaceMaskBases.map((b) => decodeMask(b, W, H))),
     Promise.all(occluderMaskBases.map((b) => decodeMask(b, W, H))),
   ]);
-  const surfMask = unionMasks(surfMasks);
-  const occMask  = unionMasks(occMasks);
+  let surfMask = unionMasks(surfMasks);
+  let occMask  = unionMasks(occMasks);
 
-  // Largest connected component + quad
-  const cc   = findLargestCC(surfMask, W, H);
-  const quad = extractFloorQuad(cc, W, H);
-
-  // ── Homography: image pixel → normalised UV [0,1]²
-  // Correspondence: tl→(0,0)  tr→(1,0)  br→(1,1)  bl→(0,1)
-  let h: number[] | null = null;
-  if (quad) {
-    h = computeH(
-      [quad.tl, quad.tr, quad.br, quad.bl],
-      [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }],
-    );
-
-    // ── Diagnostic logging ────────────────────────────────────────────────
-    console.group("[PerspectiveRenderer] Homography diagnostics");
-    console.log("Quad (image px):", {
-      tl: quad.tl, tr: quad.tr, br: quad.br, bl: quad.bl,
-      width_top:    quad.tr.x - quad.tl.x,
-      width_bottom: quad.br.x - quad.bl.x,
-      height:       quad.bl.y - quad.tl.y,
-    });
-
-    if (h) {
-      logHomographyMath(h, quad);
-
-      // UV range across floor pixels (quick scan every 10th pixel)
-      let uMin = Infinity, uMax = -Infinity, vMin = Infinity, vMax = -Infinity;
-      for (let i = 0; i < W * H; i += 10) {
-        if ((surfMask[i] ?? 0) > 128) {
-          const { x: u, y: v } = applyH(h, i % W, (i / W) | 0);
-          if (u < uMin) uMin = u; if (u > uMax) uMax = u;
-          if (v < vMin) vMin = v; if (v > vMax) vMax = v;
-        }
-      }
-      console.log(`\nUV range across ALL floor pixels (sampled): u=[${uMin.toFixed(4)}, ${uMax.toFixed(4)}]  v=[${vMin.toFixed(4)}, ${vMax.toFixed(4)}]`);
-    } else {
-      console.warn("Homography solve failed (degenerate quad?)");
-    }
-    console.groupEnd();
+  // Snap both masks to SAM 2's edge-accurate segments when they are available.
+  if (refineMaskBases && refineMaskBases.length > 0) {
+    const refineMasks = await Promise.all(refineMaskBases.map((b) => decodeMask(b, W, H)));
+    ({ surfMask, occMask } = refineMasksWithSegments(surfMask, occMask, refineMasks, W, H));
   }
+
+  // Largest connected component — debug overlay only
+  const cc = findLargestCC(surfMask, W, H);
+
+  // ── Homography: image pixel → UV, from the photo's vanishing points (floorCamera.ts).
+  // The mask only sets UV scale/origin: one UV unit = the visible floor's lateral extent.
+  const camera = estimateFloorHomography(origPx, surfMask, W, H, occMask);
+  const quad: FloorQuad | null = camera?.quad ?? null;
+  const h: number[] | null     = camera?.h ?? null;
+
+  // ── Diagnostic logging ──────────────────────────────────────────────────
+  console.group("[PerspectiveRenderer] Homography diagnostics");
+  if (camera && h) {
+    console.log(`Source: ${camera.source}  focal: ${camera.focalPx.toFixed(0)}px  vanishing points:`, camera.vanishingPoints);
+    if (quad) logHomographyMath(h, quad);
+
+    // UV range across floor pixels (quick scan every 10th pixel)
+    let uMin = Infinity, uMax = -Infinity, vMin = Infinity, vMax = -Infinity;
+    for (let i = 0; i < W * H; i += 10) {
+      if ((surfMask[i] ?? 0) > 128) {
+        const { x: u, y: v } = applyH(h, i % W, (i / W) | 0);
+        if (u < uMin) uMin = u; if (u > uMax) uMax = u;
+        if (v < vMin) vMin = v; if (v > vMax) vMax = v;
+      }
+    }
+    console.log(`
+UV range across ALL floor pixels (sampled): u=[${uMin.toFixed(4)}, ${uMax.toFixed(4)}]  v=[${vMin.toFixed(4)}, ${vMax.toFixed(4)}]`);
+  } else {
+    console.warn("Floor homography could not be estimated");
+  }
+  console.groupEnd();
 
   const debugUrl = await makeDebugOverlay(originalDataUrl, cc, quad, W, H);
 
   const { lowMul, highRes } = computeLightingLayers(origPx, surfMask, W, H);
-  const edgeAlpha = computeEdgeAlpha(surfMask, W, H);
+  const edgeAlpha = computeEdgeAlpha(surfMask, occMask, W, H);
 
   // Fold the contact shadow into the same ambient multiplier lowMul already applies —
   // conceptually the same kind of soft darkening, just sourced from occluder proximity
@@ -954,20 +904,23 @@ export async function computeFloorGeometry(
     ? await computeSpecularHighlight(segments ?? [], depthBase64 ?? null, surfMask, W, H, h)
     : null;
 
-  return { W, H, origPx, surfMask, occMask, cc, quad, h, debugUrl, lowMul, highRes, edgeAlpha, specular };
+  const reflection = computeFloorReflection(origPx, surfMask, W, H);
+  const uvUnitFt   = camera ? camera.unitCameraHeights * ASSUMED_CAMERA_HEIGHT_FT : null;
+
+  return { W, H, origPx, surfMask, occMask, cc, quad, h, debugUrl, lowMul, highRes, edgeAlpha, specular, reflection, uvUnitFt };
 }
 
 // ── Texture stage: geometry + slab texture + settings → composite ────────────
 
 export async function renderTextureFromGeometry(
   geometry: FloorGeometry,
-  job: Pick<RenderJob, "textureDataUrl" | "settings" | "renderMode" | "slabSettings" | "debugUV" | "debugCheckerboard" | "debugSlab">,
+  job: Pick<RenderJob, "textureDataUrl" | "settings" | "renderMode" | "slabSettings" | "slabSizeFt" | "debugUV" | "debugCheckerboard" | "debugSlab">,
 ): Promise<{ compositeUrl: string }> {
   const { textureDataUrl, settings } = job;
   const isUVDebug      = job.debugUV          === true;
   const isCheckerboard = job.debugCheckerboard === true;
 
-  const { W, H, origPx, surfMask, occMask, h, quad, lowMul, highRes, edgeAlpha, specular } = geometry;
+  const { W, H, origPx, surfMask, occMask, h, quad, lowMul, highRes, edgeAlpha, specular, reflection, uvUnitFt } = geometry;
 
   // ── Slab layout setup ────────────────────────────────────────────────────────
   const renderMode  = job.renderMode ?? "slab";
@@ -976,16 +929,6 @@ export async function renderTextureFromGeometry(
   const isSequential = renderMode === "sequential" && !isUVDebug && !isCheckerboard;
   const isSlabAny    = isSlab || isSequential;
   const isDebugSlab  = isSlabAny && job.debugSlab === true;
-
-  // Pre-compute slab constants (avoid divisions in the per-pixel loop)
-  const slabW      = slabCfg.slabWidth;
-  const slabH      = slabCfg.slabHeight;
-  const halfJointU = slabCfg.jointSize > 0 ? slabCfg.jointSize / slabW  / 2 : 0;
-  const halfJointV = slabCfg.jointSize > 0 ? slabCfg.jointSize / slabH  / 2 : 0;
-  const safeSpanU  = 1 - 2 * halfJointU;   // usable slab interior fraction in U
-  const safeSpanV  = 1 - 2 * halfJointV;
-  const jointRgb   = hexToRgb(slabCfg.jointColor);
-  const slabCache  = new Map<number, SlabCachedParams>();
 
   // Load texture (skip in debug-only modes — texture unused there)
   let texPx: Uint8ClampedArray = new Uint8ClampedArray(0);
@@ -999,6 +942,24 @@ export async function renderTextureFromGeometry(
     tCtx.drawImage(texImg, 0, 0);
     texPx = tCtx.getImageData(0, 0, texW, texH).data;
   }
+
+  // Slab size in UV units: the slab's real feet dimensions over the floor's real scale,
+  // long side along whichever way the slab photo is long. Falls back to the UV-fraction
+  // settings when the camera (and so the floor's scale) could not be estimated.
+  const sizeFt  = job.slabSizeFt ?? DEFAULT_SLAB_SIZE_FT;
+  const longFt  = Math.max(sizeFt.length, sizeFt.width);
+  const shortFt = Math.min(sizeFt.length, sizeFt.width);
+  const realSize = uvUnitFt != null && uvUnitFt > 0 && shortFt > 0;
+  const slabW = realSize ? (texW >= texH ? longFt : shortFt) / uvUnitFt : slabCfg.slabWidth;
+  const slabH = realSize ? (texW >= texH ? shortFt : longFt) / uvUnitFt : slabCfg.slabHeight;
+
+  // Pre-compute slab constants (avoid divisions in the per-pixel loop)
+  const halfJointU = slabCfg.jointSize > 0 ? slabCfg.jointSize / slabW  / 2 : 0;
+  const halfJointV = slabCfg.jointSize > 0 ? slabCfg.jointSize / slabH  / 2 : 0;
+  const safeSpanU  = 1 - 2 * halfJointU;   // usable slab interior fraction in U
+  const safeSpanV  = 1 - 2 * halfJointV;
+  const jointRgb   = slabCfg.jointColor === "auto" ? autoJointColor(texPx) : hexToRgb(slabCfg.jointColor);
+  const slabCache  = new Map<number, SlabCachedParams>();
 
   // Pre-compute rotation & scale constants
   const angRad = (settings.rotation * Math.PI) / 180;
@@ -1310,6 +1271,20 @@ export async function renderTextureFromGeometry(
     console.groupEnd();
   }
 
+  // ── Floor reflection ─────────────────────────────────────────────────────────
+  // Blended over the lit slab so furniture and walls mirror faintly in the new floor.
+  if (h && !isUVDebug && !isCheckerboard && !isDebugSlab) {
+    const strength = (settings.finish === "gloss" ? REFLECTION_GLOSS : REFLECTION_MATTE) * op;
+    for (let i = 0; i < W * H; i++) {
+      const a = reflection.alpha[i]! * edgeAlpha[i]! * strength;
+      if (a <= 0 || (occMask[i] ?? 0) > 128) continue;
+      const ri = i * 4, fi = i * 3;
+      result[ri]     = result[ri]!     * (1 - a) + reflection.rgb[fi]!     * a;
+      result[ri + 1] = result[ri + 1]! * (1 - a) + reflection.rgb[fi + 1]! * a;
+      result[ri + 2] = result[ri + 2]! * (1 - a) + reflection.rgb[fi + 2]! * a;
+    }
+  }
+
   // Composite to canvas
   const { c, ctx } = newCanvas(W, H);
   ctx.putImageData(new ImageData(result, W, H), 0, 0);
@@ -1410,28 +1385,6 @@ export async function renderTextureFromGeometry(
         );
       }
     }
-  }
-
-  // Gloss pass (skipped in UV debug mode)
-  if (!isUVDebug && settings.finish === "gloss") {
-    const { c: gC, ctx: gCtx } = newCanvas(W, H);
-    const grd = gCtx.createLinearGradient(0, 0, W * 0.65, H * 0.65);
-    grd.addColorStop(0,    "rgba(255,255,255,0.18)");
-    grd.addColorStop(0.45, "rgba(255,255,255,0.06)");
-    grd.addColorStop(1,    "rgba(255,255,255,0)");
-    gCtx.fillStyle = grd;
-    gCtx.fillRect(0, 0, W, H);
-
-    const alpha = new Uint8ClampedArray(W * H * 4);
-    for (let i = 0; i < W * H; i++) {
-      alpha[i * 4 + 3] = (surfMask[i] ?? 0) > 128 && (occMask[i] ?? 0) <= 128 ? 255 : 0;
-    }
-    const { c: mC, ctx: mCtx } = newCanvas(W, H);
-    mCtx.putImageData(new ImageData(alpha, W, H), 0, 0);
-    gCtx.globalCompositeOperation = "destination-in";
-    gCtx.drawImage(mC, 0, 0);
-    ctx.globalCompositeOperation  = "source-over";
-    ctx.drawImage(gC, 0, 0);
   }
 
   const compositeUrl = c.toDataURL("image/jpeg", 0.93);

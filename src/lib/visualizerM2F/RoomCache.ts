@@ -26,6 +26,8 @@ export type RoomCache = {
   selectedCategory:  string | null;
   surfaceMaskBases:  string[];
   occluderMaskBases: string[];
+  /** SAM 2 segment masks used to sharpen the floor boundary; empty when SAM was unavailable. */
+  refineMaskBases:   string[];
 
   /**
    * Floor geometry (largest CC / quad / homography / debug overlay).

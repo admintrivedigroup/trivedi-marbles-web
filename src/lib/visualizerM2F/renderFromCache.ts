@@ -9,7 +9,7 @@
  * null) — there's no quad-comparison edge case to get wrong here.
  */
 
-import type { TextureSettings, SlabSettings, RenderMode } from "./types";
+import type { TextureSettings, SlabSettings, RenderMode, SlabSizeFt } from "./types";
 import type { RoomCache } from "./RoomCache";
 import { roomCacheManagerM2F } from "./RoomCacheManager";
 import {
@@ -24,6 +24,7 @@ export async function renderFromCache(
   settings:       TextureSettings,
   renderMode:     RenderMode,
   slabSettings:   SlabSettings,
+  slabSizeFt:     SlabSizeFt | null,
   debugFlags?:    { debugUV?: boolean; debugCheckerboard?: boolean; debugSlab?: boolean },
 ): Promise<PerspectiveRenderResult> {
   if (!cache.geometry) {
@@ -33,6 +34,7 @@ export async function renderFromCache(
       originalDataUrl:   cache.photoUrl,
       surfaceMaskBases:  cache.surfaceMaskBases,
       occluderMaskBases: cache.occluderMaskBases,
+      refineMaskBases:   cache.refineMaskBases,
       width:             cache.imgWidth,
       height:            cache.imgHeight,
       segments:          cache.segResult.segments,
@@ -50,6 +52,7 @@ export async function renderFromCache(
     settings,
     renderMode,
     slabSettings,
+    slabSizeFt,
     debugUV:           debugFlags?.debugUV,
     debugCheckerboard: debugFlags?.debugCheckerboard,
     debugSlab:         debugFlags?.debugSlab,

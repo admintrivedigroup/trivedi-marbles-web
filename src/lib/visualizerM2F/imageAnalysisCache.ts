@@ -1,13 +1,13 @@
 "use client";
 
-// Persistent (IndexedDB) cache of Mask2Former + Depth Anything V2 results,
+// Persistent (IndexedDB) cache of Mask2Former + Depth Anything V2 + SAM 2 results,
 // keyed by a content hash of the uploaded room photo. When staff re-upload
 // a photo they've already analyzed (same visit, or a later session/reload),
 // the AI calls are skipped and the prior segmentation/depth results are
 // reused directly. Geometry (quad/homography) is still recomputed locally
 // per room — it's cheap and not an AI call, see RoomCache.ts.
 
-import type { PipelineSegResult, PipelineDepthResult } from "./types";
+import type { PipelineSegResult, PipelineDepthResult, PipelineSamResult } from "./types";
 
 const DB_NAME    = "visualizerM2FCache";
 const DB_VERSION = 1;
@@ -20,6 +20,8 @@ export type CachedAnalysis = {
   imgHeight:   number;
   segResult:   PipelineSegResult;
   depthResult: PipelineDepthResult;
+  /** Absent on entries cached before SAM 2 refinement existed. */
+  samResult?:  PipelineSamResult;
   createdAt:   number;
 };
 

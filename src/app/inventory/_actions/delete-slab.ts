@@ -28,9 +28,17 @@ export async function deleteSlab(slabId: string): Promise<DeleteSlabResult> {
 
   const { data: slab } = await supabase
     .from("slabs")
-    .select("lot_id, slab_code, marble_name, sqft, warehouses(name)")
+    .select("lot_id, slab_code, sqft, warehouses(name), marble_lots(marble_name)")
     .eq("id", slabId)
     .single();
+
+  const rawLot = slab?.marble_lots as unknown as
+    | { marble_name?: string | null }
+    | { marble_name?: string | null }[]
+    | null;
+  const marbleName = Array.isArray(rawLot)
+    ? (rawLot[0]?.marble_name ?? null)
+    : (rawLot?.marble_name ?? null);
 
   const lotId = slab?.lot_id != null ? String(slab.lot_id) : null;
   const slabCode = typeof slab?.slab_code === "string" ? slab.slab_code : slabId;
@@ -56,7 +64,7 @@ export async function deleteSlab(slabId: string): Promise<DeleteSlabResult> {
     targetId: slabId,
     targetLabel: slabCode,
     diff: {
-      marbleName: slab?.marble_name ?? null,
+      marbleName,
       sqft: slab?.sqft ?? null,
       warehouse: warehouseName,
       lotId,

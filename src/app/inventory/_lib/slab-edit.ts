@@ -36,7 +36,7 @@ export async function getSlabForEdit(slabId: string): Promise<SlabForEditResult>
       supabase
         .from("slabs")
         .select(
-          "id, updated_at, slab_code, marble_name, length, width, rack_number, notes, lot_id, marble_lots(lot_number)",
+          "id, updated_at, slab_code, length, width, rack_number, notes, lot_id, marble_lots(lot_number, marble_name)",
         )
         .eq("id", slabId)
         .single(),
@@ -61,16 +61,10 @@ export async function getSlabForEdit(slabId: string): Promise<SlabForEditResult>
       return String(v).trim();
     }
 
-    function lotNum(rel: unknown): string | null {
-      if (Array.isArray(rel)) {
-        const n = (rel[0] as Record<string, unknown> | undefined)?.lot_number;
-        return n ? String(n).trim() : null;
-      }
-      if (rel && typeof rel === "object") {
-        const n = (rel as Record<string, unknown>).lot_number;
-        return n ? String(n).trim() : null;
-      }
-      return null;
+    function lotField(rel: unknown, key: "lot_number" | "marble_name"): string | null {
+      const lot = (Array.isArray(rel) ? rel[0] : rel) as Record<string, unknown> | null | undefined;
+      const v = lot && typeof lot === "object" ? lot[key] : null;
+      return v ? String(v).trim() : null;
     }
 
     const id = row.id != null ? String(row.id) : null;
@@ -95,9 +89,9 @@ export async function getSlabForEdit(slabId: string): Promise<SlabForEditResult>
         width: row.width != null ? String(row.width) : "",
         rackNumber: str(row.rack_number),
         notes: str(row.notes),
-        marbleName: row.marble_name ? String(row.marble_name).trim() : null,
+        marbleName: lotField(row.marble_lots, "marble_name"),
         lotId: row.lot_id != null ? String(row.lot_id) : null,
-        lotNumber: lotNum(row.marble_lots),
+        lotNumber: lotField(row.marble_lots, "lot_number"),
         images,
       },
     };

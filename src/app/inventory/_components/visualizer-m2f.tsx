@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { runMask2Former }     from "@/lib/visualizerM2F/actions/runMask2Former";
 import { runDepthEstimation } from "@/lib/visualizerM2F/actions/runDepthEstimation";
+import { runSam2 }            from "@/lib/visualizerM2F/actions/runSam2";
+import { warmVisualizerModels } from "@/lib/visualizerM2F/actions/warmVisualizerModels";
 import { fetchTextureBase64 } from "@/lib/visualizerM2F/actions/fetchTextureBase64";
 import { getCategory, getLabelColor } from "@/lib/visualizerM2F/labelMap";
 import { generateSegOverlay, renderMarbleOnSurface } from "@/lib/visualizerM2F/renderUtils";
@@ -16,14 +18,15 @@ import {
 import type {
   PipelineSegResult,
   PipelineDepthResult,
+  PipelineSamResult,
   PipelineSegment,
   TextureSettings,
   SlabTexture,
   SlabSettings,
+  SlabSizeFt,
   RenderMode,
 } from "@/lib/visualizerM2F/types";
-import { TextureControls }  from "@/app/inventory/_components/visualizer-m2f/TextureControls";
-import { SlabControls }     from "@/app/inventory/_components/visualizer-m2f/SlabControls";
+import { LookControls }     from "@/app/inventory/_components/visualizer-m2f/LookControls";
 import { DebugPanels }      from "@/app/inventory/_components/visualizer-m2f/DebugPanels";
 import { TopBar }           from "@/app/inventory/_components/visualizer-m2f/TopBar";
 import { Sidebar }          from "@/app/inventory/_components/visualizer-m2f/Sidebar";
@@ -83,6 +86,35 @@ async function compressPhoto(file: File): Promise<File> {
     img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
     img.src = url;
   });
+}
+
+const WARM_KEY         = "visualizerM2F:lastWarm";
+const WARM_INTERVAL_MS = 4 * 60 * 1000; // models stay booted for a few minutes after a run
+
+// Boots the AI models in the background as soon as the visualizer opens — see
+// warmVisualizerModels. Throttled per browser tab so reopening the page doesn't re-fire it.
+function warmModelsOnce() {
+  try {
+    const last = Number(sessionStorage.getItem(WARM_KEY) ?? 0);
+    if (Date.now() - last < WARM_INTERVAL_MS) return;
+    sessionStorage.setItem(WARM_KEY, String(Date.now()));
+  } catch {
+    // Storage unavailable — warm anyway; an extra tiny prediction is harmless.
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = 256;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  ctx.fillStyle = "#808080";
+  ctx.fillRect(0, 0, 256, 256);
+  canvas.toBlob((blob) => {
+    if (blob) void warmVisualizerModels(new File([blob], "warm.jpg", { type: "image/jpeg" })).catch(() => {});
+  }, "image/jpeg", 0.6);
+}
+
+/** A slab's recorded feet dimensions, or null when inventory has none (renderer falls back to a default). */
+function slabSizeOf(slab: { length?: number | null; width?: number | null } | null): SlabSizeFt | null {
+  return slab?.length && slab?.width ? { length: slab.length, width: slab.width } : null;
 }
 
 function measureImage(url: string): Promise<{ w: number; h: number }> {
@@ -148,6 +180,10 @@ export function VisualizerM2F({ currentSlab, comparisons, exitHref }: Props) {
   // Room cache — Mask2Former + depth outputs and derived floor geometry,
   // computed once per photo and reused across slab/setting changes.
   const roomCacheRef = useRef<RoomCache | null>(null);
+  // SAM 2 runs alongside Mask2Former; the floor render waits on this so it never uses unrefined masks.
+  const samPromiseRef = useRef<Promise<PipelineSamResult> | null>(null);
+  // Only the most recent render may publish its result — settings can change mid-render.
+  const renderSeqRef = useRef(0);
 
   // Pre-select the slab this page was opened for, while still allowing free
   // choice via the sidebar.
@@ -174,6 +210,8 @@ export function VisualizerM2F({ currentSlab, comparisons, exitHref }: Props) {
   useEffect(() => {
     return () => { if (prevPhotoUrl.current) URL.revokeObjectURL(prevPhotoUrl.current); };
   }, []);
+
+  useEffect(() => { warmModelsOnce(); }, []);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
@@ -241,7 +279,14 @@ export function VisualizerM2F({ currentSlab, comparisons, exitHref }: Props) {
     const cached = imageHash ? await getCachedAnalysis(imageHash) : null;
     if (cached) console.log("[VisualizerM2F] Reusing cached AI results for this photo");
 
-    const [segR, depthR] = await Promise.all([
+    const samPromise: Promise<PipelineSamResult> = cached?.samResult
+      ? Promise.resolve(cached.samResult)
+      : runSam2(currentPhoto, W, H).catch((e): PipelineSamResult => ({
+          masksBase64: [], inferenceMs: 0, error: e instanceof Error ? e.message : String(e),
+        }));
+    samPromiseRef.current = samPromise;
+
+    const [segR, depthR, samR] = await Promise.all([
       (async (): Promise<PipelineSegResult> => {
         try {
           const r = cached?.segResult ?? await runMask2Former(currentPhoto, W, H);
@@ -280,15 +325,18 @@ export function VisualizerM2F({ currentSlab, comparisons, exitHref }: Props) {
           setDepthRunning(false);
         }
       })(),
+      samPromise,
     ]);
 
-    if (!cached && imageHash && !segR.error && segR.segments.length > 0) {
+    const samIsNew = !cached?.samResult && !samR.error;
+    if ((!cached || samIsNew) && imageHash && !segR.error && segR.segments.length > 0) {
       void saveCachedAnalysis({
         imageHash,
         imgWidth:  dims.w,
         imgHeight: dims.h,
         segResult: segR,
         depthResult: depthR,
+        ...(samR.error ? {} : { samResult: samR }),
         createdAt: Date.now(),
       });
     }
@@ -321,6 +369,7 @@ export function VisualizerM2F({ currentSlab, comparisons, exitHref }: Props) {
       const occluderSegs = segResult.segments.filter((s) => OCCLUDER_CATS.has(getCategory(s.label)));
       const surfaceMaskBases  = segs.map((s) => s.maskBase64);
       const occluderMaskBases = occluderSegs.map((s) => s.maskBase64);
+      const refineMaskBases   = (await samPromiseRef.current)?.masksBase64 ?? [];
 
       if (!roomCacheRef.current) {
         const room: RoomCache = {
@@ -334,6 +383,7 @@ export function VisualizerM2F({ currentSlab, comparisons, exitHref }: Props) {
           selectedCategory:  cat,
           surfaceMaskBases,
           occluderMaskBases,
+          refineMaskBases,
           geometry: null,
         };
         roomCacheManagerM2F.saveRoom(room);
@@ -356,6 +406,7 @@ export function VisualizerM2F({ currentSlab, comparisons, exitHref }: Props) {
     if (!photoUrl || !textureUrl || !segResult) return;
 
     const occluderSegs = segResult.segments.filter((s) => OCCLUDER_CATS.has(getCategory(s.label)));
+    const seq = ++renderSeqRef.current;
 
     setRenderRunning(true);
     setFloorDebugUrl(null);
@@ -368,7 +419,9 @@ export function VisualizerM2F({ currentSlab, comparisons, exitHref }: Props) {
           cfg,
           renderMode,
           slabSettings,
+          slabSizeOf(selectedSlab),
         );
+        if (seq !== renderSeqRef.current) return;
         setRenderUrl(compositeUrl);
         setFloorDebugUrl(debugUrl);
       } else {
@@ -381,24 +434,29 @@ export function VisualizerM2F({ currentSlab, comparisons, exitHref }: Props) {
           width:             imgDims.w,
           height:            imgDims.h,
         });
+        if (seq !== renderSeqRef.current) return;
         setRenderUrl(compositeUrl);
       }
     } catch (e) {
       console.error("[VisualizerM2F] Render error:", e);
     } finally {
-      setRenderRunning(false);
+      if (seq === renderSeqRef.current) setRenderRunning(false);
     }
   }
 
-  function handleApply() {
-    if (selectedCat) void applyTexture(selectedCat, selectedSegs, settings);
-  }
+  // Live preview: any change to the slab or its look re-renders the selected surface.
+  // Debounced so dragging a slider renders once it settles, not on every tick.
+  useEffect(() => {
+    if (!selectedCat || selectedCat === "stairs") return;
+    const timer = setTimeout(() => { void applyTexture(selectedCat, selectedSegs, settings); }, 120);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [textureUrl, selectedSlab, settings, renderMode, slabSettings]);
 
   function handleReset() {
     setSettings(DEFAULT_TEXTURE_SETTINGS);
     setSlabSettings(DEFAULT_SLAB_SETTINGS);
     setRenderMode("slab");
-    if (selectedCat) void applyTexture(selectedCat, selectedSegs, DEFAULT_TEXTURE_SETTINGS);
   }
 
   function handleSelectSlabFromSidebar(slab: SlabTexture, b64: string) {
@@ -419,6 +477,7 @@ export function VisualizerM2F({ currentSlab, comparisons, exitHref }: Props) {
         settings,
         renderMode,
         slabSettings,
+        slabSizeOf(comparisons.find((c) => c.id === slab.id) ?? null),
       );
       setCompareRightUrl(compositeUrl);
     } finally {
@@ -436,45 +495,20 @@ export function VisualizerM2F({ currentSlab, comparisons, exitHref }: Props) {
     : null;
   const currentSlabSize = formatSlabDimensions(selectedSlab?.length ?? null, selectedSlab?.width ?? null);
 
-  const moreSettings = (
-    <div className="max-h-[50vh] space-y-5 overflow-y-auto text-left">
-      {selectedCat === "floor" && textureUrl && (
-        <div>
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-stone-400">Render mode</p>
-          <div className="flex gap-2">
-            {(["slab", "sequential", "repeat"] as RenderMode[]).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => setRenderMode(mode)}
-                className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  renderMode === mode
-                    ? "border-[#c8a96a] bg-[#c8a96a]/10 text-stone-900"
-                    : "border-stone-200 bg-white text-stone-500 hover:border-[#c8a96a]/50"
-                }`}
-              >
-                {mode === "slab" ? "Random Slabs" : mode === "sequential" ? "Sequential Slabs" : "Texture Repeat"}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {selectedCat === "floor" && (renderMode === "slab" || renderMode === "sequential") && textureUrl && (
-        <div className="rounded-xl border border-stone-200 bg-stone-50 p-4">
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-stone-400">Slab layout</p>
-          <SlabControls settings={slabSettings} onChange={setSlabSettings} renderMode={renderMode} />
-        </div>
-      )}
-
-      {textureUrl && (
-        <div>
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-stone-400">Texture</p>
-          <TextureControls settings={settings} onChange={setSettings} onApply={handleApply} rendering={renderRunning} />
-        </div>
-      )}
-    </div>
-  );
+  const settingsPanel = textureUrl ? (
+    <LookControls
+      isFloor={selectedCat === "floor"}
+      sizeLabel={currentSlabSize}
+      renderMode={renderMode}
+      slabSettings={slabSettings}
+      settings={settings}
+      onChange={(next) => {
+        setRenderMode(next.renderMode);
+        setSlabSettings(next.slabSettings);
+        setSettings(next.settings);
+      }}
+    />
+  ) : undefined;
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -585,15 +619,9 @@ export function VisualizerM2F({ currentSlab, comparisons, exitHref }: Props) {
                     name: selectedSlab.marbleName ?? selectedSlab.slabCode ?? "Selected slab",
                     size: currentSlabSize,
                   } : null}
-                  settings={settings}
-                  onSettingsChange={setSettings}
-                  slabSettings={slabSettings}
-                  onSlabSettingsChange={setSlabSettings}
-                  onApply={handleApply}
                   rendering={renderRunning}
                   onReset={handleReset}
-                  moreSettings={moreSettings}
-                  floorControlsDisabled={selectedCat !== "floor"}
+                  settingsPanel={settingsPanel}
                 />
               )}
             </>
@@ -643,7 +671,7 @@ export function VisualizerM2F({ currentSlab, comparisons, exitHref }: Props) {
           {(floorDebugUrl || (renderRunning && selectedCat === "floor")) && (
             <div className="mt-4 border-t border-stone-100 pt-4">
               <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-stone-400">
-                Floor geometry — largest CC · extracted quadrilateral
+                Floor geometry — largest CC · vanishing-point floor square
               </p>
               {renderRunning && selectedCat === "floor" && !floorDebugUrl ? (
                 <div className="flex h-32 items-center justify-center rounded-xl border border-stone-200 bg-stone-50">

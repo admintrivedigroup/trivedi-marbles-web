@@ -41,6 +41,16 @@ async function createPrediction(
   return res.json() as Promise<RepPrediction>;
 }
 
+/** Creates a prediction and returns immediately, without polling for its result. */
+export async function startPrediction(
+  token: string,
+  version: string,
+  input: Record<string, unknown>,
+): Promise<{ id: string }> {
+  const { id } = await createPrediction(token, version, input);
+  return { id };
+}
+
 export async function runPrediction(
   token: string,
   version: string,
