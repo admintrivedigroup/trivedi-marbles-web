@@ -6,6 +6,7 @@ import {
   getSlabImages,
   getSlabMovements,
   getSlabReservationHistory,
+  getSlabSiblingNav,
 } from "@/app/inventory/_lib/slab-detail";
 import { getInTransitSlabIds } from "@/app/inventory/_lib/transfers";
 import { getCurrentUserProfile } from "@/app/inventory/_lib/user-profile";
@@ -42,13 +43,19 @@ export default async function SlabDetailPage({ params }: SlabDetailPageProps) {
     notFound();
   }
 
+  const nav = slab.lotId
+    ? await getSlabSiblingNav(slab.lotId, id)
+    : { prevId: null, nextId: null, position: null, total: 0 };
+
   return (
     <SlabDetail
+      key={slab.id}
       slab={slab}
       movements={movements}
       images={images}
       isInTransit={inTransitSlabIds.has(id)}
       reservationHistory={reservationHistory}
+      nav={nav}
     />
   );
 }

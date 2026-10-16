@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 
 import { withCloudinaryTransforms } from "@/lib/cloudinary/upload";
-import type { SlabImage, SlabMovement, ReservationHistoryEntry } from "@/app/inventory/_lib/slab-detail";
+import type { SlabImage, SlabMovement, ReservationHistoryEntry, SlabSiblingNav } from "@/app/inventory/_lib/slab-detail";
 
 import type { InventoryListSlab } from "@/app/inventory/_lib/inventory-list";
 import {
@@ -47,6 +47,7 @@ type SlabDetailProps = {
   reservationHistory: ReservationHistoryEntry[];
   slab: InventoryListSlab;
   isInTransit?: boolean;
+  nav?: SlabSiblingNav;
 };
 
 
@@ -205,7 +206,7 @@ function ReservationHistory({ entries }: { entries: ReservationHistoryEntry[] })
   );
 }
 
-export function SlabDetail({ images, movements, reservationHistory, slab, isInTransit = false }: SlabDetailProps) {
+export function SlabDetail({ images, movements, reservationHistory, slab, isInTransit = false, nav }: SlabDetailProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [pendingAction, setPendingAction] = useState<SlabStatusName | null>(
@@ -241,6 +242,32 @@ export function SlabDetail({ images, movements, reservationHistory, slab, isInTr
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [isFullscreen, images.length]);
+
+  const prevSlabId = nav?.prevId ?? null;
+  const nextSlabId = nav?.nextId ?? null;
+
+  function goToSlab(id: string | null) {
+    if (id) router.push(`/inventory/slab/${id}`, { scroll: false });
+  }
+
+  useEffect(() => {
+    if (prevSlabId) router.prefetch(`/inventory/slab/${prevSlabId}`);
+    if (nextSlabId) router.prefetch(`/inventory/slab/${nextSlabId}`);
+  }, [router, prevSlabId, nextSlabId]);
+
+  // Arrow keys step through slabs in the lot (fullscreen uses them for photos instead).
+  const anyDialogOpen = isFullscreen || showDeleteConfirm || showReserveDialog || pendingAction !== null;
+  useEffect(() => {
+    if (anyDialogOpen) return;
+    function onKey(e: KeyboardEvent) {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))) return;
+      if (e.key === "ArrowLeft" && prevSlabId) router.push(`/inventory/slab/${prevSlabId}`, { scroll: false });
+      if (e.key === "ArrowRight" && nextSlabId) router.push(`/inventory/slab/${nextSlabId}`, { scroll: false });
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [anyDialogOpen, prevSlabId, nextSlabId, router]);
 
   const sqft = slab.sqft ?? 0;
 
@@ -317,7 +344,7 @@ export function SlabDetail({ images, movements, reservationHistory, slab, isInTr
           {/* Left column — fixed narrow width */}
           <div className="shrink-0 space-y-3 lg:w-172.5">
             {/* Main photo */}
-            <div className="overflow-hidden rounded-2xl border border-border bg-muted shadow-sm">
+            <div className="relative overflow-hidden rounded-2xl border border-border bg-muted shadow-sm">
               {images.length > 0 ? (
                 <div className="relative">
                   <button
@@ -350,6 +377,37 @@ export function SlabDetail({ images, movements, reservationHistory, slab, isInTr
                 <div className="flex aspect-9/8 items-center justify-center">
                   <Package className="h-16 w-16 text-muted-foreground" />
                 </div>
+              )}
+
+              {/* Prev / next slab in this lot */}
+              {nav && nav.total > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => goToSlab(prevSlabId)}
+                    disabled={!prevSlabId}
+                    aria-label="Previous slab"
+                    title="Previous slab (←)"
+                    className="absolute left-3 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white shadow-md backdrop-blur-sm transition-colors hover:bg-black/80 disabled:pointer-events-none disabled:opacity-30"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => goToSlab(nextSlabId)}
+                    disabled={!nextSlabId}
+                    aria-label="Next slab"
+                    title="Next slab (→)"
+                    className="absolute right-3 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/55 text-white shadow-md backdrop-blur-sm transition-colors hover:bg-black/80 disabled:pointer-events-none disabled:opacity-30"
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+                  {nav.position && (
+                    <div className="pointer-events-none absolute bottom-3 left-1/2 z-10 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
+                      Slab {nav.position} of {nav.total}
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
