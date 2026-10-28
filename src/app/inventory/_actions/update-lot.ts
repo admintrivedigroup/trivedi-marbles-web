@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/app/inventory/_lib/audit";
 import { requirePermission } from "@/app/inventory/_lib/action-auth";
+import { renameSlabCode } from "@/app/inventory/_lib/slab-code";
 
 export type UpdateLotResult = {
   error: string | null;
@@ -81,6 +82,37 @@ export async function updateLot(
     };
   }
 
+  // Slab codes embed the lot number (e.g. FGP-116-S10), so carry a rename over.
+  const oldLotNumber = before?.lot_number ?? "";
+  let slabsRenamed = 0;
+  let slabRenameError: string | null = null;
+
+  if (oldLotNumber && oldLotNumber.trim() !== lotNumber) {
+    const { data: slabs, error: slabsError } = await supabase
+      .from("slabs")
+      .select("id, slab_code")
+      .eq("lot_id", lotId);
+
+    if (slabsError) {
+      slabRenameError = slabsError.message;
+    } else {
+      const renames = (slabs ?? []).flatMap((slab) => {
+        const code = typeof slab.slab_code === "string" ? slab.slab_code : "";
+        const next = renameSlabCode(code, oldLotNumber, lotNumber);
+        return next ? [{ id: slab.id, slabCode: next }] : [];
+      });
+
+      const results = await Promise.all(
+        renames.map(({ id, slabCode }) =>
+          supabase.from("slabs").update({ slab_code: slabCode }).eq("id", id),
+        ),
+      );
+      const failed = results.find((r) => r.error);
+      slabsRenamed = results.filter((r) => !r.error).length;
+      if (failed?.error) slabRenameError = failed.error.message;
+    }
+  }
+
   logAudit({
     userId: user.id,
     userEmail: user.email ?? null,
@@ -96,6 +128,7 @@ export async function updateLot(
       after: {
         lotNumber,
         marbleName,
+        ...(slabsRenamed ? { slabsRenamed } : {}),
       },
     },
   }).catch(() => {});
@@ -104,6 +137,12 @@ export async function updateLot(
   revalidatePath("/inventory/list");
   revalidatePath("/inventory/dashboard");
   revalidatePath("/collection");
+
+  if (slabRenameError) {
+    return {
+      error: `Lot saved, but some slab codes could not be updated to "${lotNumber}". ${slabRenameError}`,
+    };
+  }
 
   return { error: null };
 }

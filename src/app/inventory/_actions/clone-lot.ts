@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/app/inventory/_lib/audit";
 import { requirePermission } from "@/app/inventory/_lib/action-auth";
+import { renameSlabCode } from "@/app/inventory/_lib/slab-code";
 
 export type CloneLotResult = {
   error: string | null;
@@ -35,7 +36,7 @@ export async function cloneLot(
   const { data: sourceLot, error: lotFetchError } = await supabase
     .from("marble_lots")
     .select(
-      "marble_name, category_id, thickness_id, warehouse_id, status_id, selling_price, dealer_price, notes, show_on_website",
+      "lot_number, marble_name, category_id, thickness_id, warehouse_id, status_id, selling_price, dealer_price, notes, show_on_website",
     )
     .eq("id", sourceLotId)
     .single();
@@ -100,7 +101,8 @@ export async function cloneLot(
   if (sourceSlabs && sourceSlabs.length > 0) {
     const slabPayloads = sourceSlabs.map((slab) => ({
       lot_id: newLot.id,
-      slab_code: slab.slab_code,
+      slab_code:
+        renameSlabCode(slab.slab_code ?? "", sourceLot.lot_number ?? "", trimmed) ?? slab.slab_code,
       length: slab.length,
       width: slab.width,
       sqft: slab.sqft,
