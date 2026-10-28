@@ -149,7 +149,7 @@ export default function Hero() {
             transition={{ duration: 1, delay: 0.2 }}
             className="mb-6 font-serif text-4xl leading-tight text-white sm:text-5xl md:text-7xl"
           >
-            Premium Marble, Crafted by Nature, Perfected by Trivedi&apos;s.
+            Premium Marble, Crafted by Nature, Perfected by Trivedis.
           </motion.h1>
           <motion.p
             initial={{ opacity: 0 }}
